@@ -26,7 +26,7 @@ Create local env files from examples:
 - `server/.env.example` -> `server/.env`
 
 ## Install Dependencies
-
+Delete package-lock.json where have README.md if error
 From repository root:
 
 ```bash
