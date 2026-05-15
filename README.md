@@ -61,6 +61,7 @@ Backend API base: `http://localhost:5000/api`
 - `POST /api/auth/logout`
 - `GET /api/auth/me` (protected)
 - `GET /api/auth/admin` (admin-only)
+- `GET /api/csrf-token` (CSRF bootstrap endpoint)
 
 ## Deployment Notes
 

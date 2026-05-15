@@ -13,4 +13,9 @@ describe("Auth API", () => {
 
     expect(meRes.statusCode).toBe(401);
   });
+
+  it("rejects state-changing requests without csrf token", async () => {
+    const logoutRes = await request(app).post("/api/auth/logout");
+    expect(logoutRes.statusCode).toBe(403);
+  });
 });

@@ -3,9 +3,10 @@ const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const env = require("../config/env");
+const { getCookie } = require("../utils/cookies");
 
 const protect = asyncHandler(async (req, res, next) => {
-  const token = req.cookies.token;
+  const token = getCookie(req, "token");
 
   if (!token) {
     throw new AppError("Not authenticated", 401);

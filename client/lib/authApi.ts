@@ -8,17 +8,34 @@ interface AuthResponse {
   message?: string;
 }
 
+const ensureCsrfToken = async () => {
+  const response = await api.get<{ data: { csrfToken: string } }>(
+    "/csrf-token"
+  );
+  return response.data.data.csrfToken;
+};
+
 export const authApi = {
   register: async (payload: {
     name: string;
     email: string;
     password: string;
   }) => {
-    const response = await api.post<AuthResponse>("/auth/register", payload);
+    const token = await ensureCsrfToken();
+    const response = await api.post<AuthResponse>("/auth/register", payload, {
+      headers: {
+        "x-csrf-token": token,
+      },
+    });
     return response.data;
   },
   login: async (payload: { email: string; password: string }) => {
-    const response = await api.post<AuthResponse>("/auth/login", payload);
+    const token = await ensureCsrfToken();
+    const response = await api.post<AuthResponse>("/auth/login", payload, {
+      headers: {
+        "x-csrf-token": token,
+      },
+    });
     return response.data;
   },
   me: async () => {
@@ -26,6 +43,15 @@ export const authApi = {
     return response.data;
   },
   logout: async () => {
-    await api.post("/auth/logout");
+    const token = await ensureCsrfToken();
+    await api.post(
+      "/auth/logout",
+      {},
+      {
+        headers: {
+          "x-csrf-token": token,
+        },
+      }
+    );
   },
 };

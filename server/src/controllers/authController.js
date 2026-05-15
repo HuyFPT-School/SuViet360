@@ -7,6 +7,13 @@ const env = require("../config/env");
 const signToken = (id) =>
   jwt.sign({ id }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
 
+const normalizeEmail = (value) => `${value || ""}`.trim().toLowerCase();
+const isValidEmail = (email) => {
+  const atIndex = email.indexOf("@");
+  const dotIndex = email.lastIndexOf(".");
+  return atIndex > 0 && dotIndex > atIndex + 1 && dotIndex < email.length - 1;
+};
+
 const cookieOptions = {
   httpOnly: true,
   secure: env.cookieSecure,
@@ -35,24 +42,35 @@ const sendAuthResponse = (res, statusCode, user, message) => {
 
 const register = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
+  const normalizedEmail = normalizeEmail(email);
 
-  const existingUser = await User.findOne({ email });
+  if (!isValidEmail(normalizedEmail)) {
+    throw new AppError("Please provide a valid email", 400);
+  }
+
+  const existingUser = await User.findOne({ email: normalizedEmail });
   if (existingUser) {
     throw new AppError("Email already in use", 400);
   }
 
-  const user = await User.create({ name, email, password });
+  const user = await User.create({ name, email: normalizedEmail, password });
   sendAuthResponse(res, 201, user, "User registered successfully");
 });
 
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+  const normalizedEmail = normalizeEmail(email);
 
-  if (!email || !password) {
+  if (!normalizedEmail || !password) {
     throw new AppError("Email and password are required", 400);
   }
+  if (!isValidEmail(normalizedEmail)) {
+    throw new AppError("Please provide a valid email", 400);
+  }
 
-  const user = await User.findOne({ email }).select("+password");
+  const user = await User.findOne({ email: normalizedEmail }).select(
+    "+password"
+  );
   if (!user || !(await user.comparePassword(password))) {
     throw new AppError("Invalid email or password", 401);
   }
