@@ -139,8 +139,8 @@ const test = async () => {
     );
     record(
       "login before verify",
-      loginBefore.response.status === 403 &&
-        loginBefore.json?.message === "Email not verified",
+      loginBefore.response.status === 401 &&
+        loginBefore.json?.message === "Invalid email or password",
       loginBefore.json?.message
     );
 

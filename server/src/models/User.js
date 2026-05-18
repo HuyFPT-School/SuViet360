@@ -41,7 +41,6 @@ const userSchema = new mongoose.Schema(
     emailVerificationExpires: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
-    refreshTokenHash: String,
   },
   {
     timestamps: true,
@@ -90,12 +89,5 @@ userSchema.methods.createPasswordResetToken =
 
     return token;
   };
-
-userSchema.methods.setRefreshToken = function setRefreshToken(token) {
-  this.refreshTokenHash = crypto
-    .createHash("sha256")
-    .update(token)
-    .digest("hex");
-};
 
 module.exports = mongoose.model("User", userSchema);

@@ -22,7 +22,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.2",
     "morgan": "^1.10.1",
-    "nodemailer": "^6.9.15"
+    "nodemailer": "^6.9.15",
+    "redis": "^4.7.0"
   },
   "devDependencies": {
     "@rolldown/binding-win32-x64-msvc": "1.0.1",
