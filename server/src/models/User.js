@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 
 const userSchema = new mongoose.Schema(
   {
@@ -24,30 +25,77 @@ const userSchema = new mongoose.Schema(
       minlength: 8,
       select: false,
     },
+    passwordChangedAt: {
+      type: Date,
+    },
     role: {
       type: String,
       enum: ["admin", "user"],
       default: "user",
     },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: String,
+    emailVerificationExpires: Date,
+    passwordResetToken: String,
+    passwordResetExpires: Date,
+    refreshTokenHash: String,
   },
   {
     timestamps: true,
   }
 );
 
-userSchema.pre("save", async function preSave(next) {
+userSchema.pre("save", async function preSave() {
   if (!this.isModified("password")) {
-    return next();
+    return;
   }
 
   this.password = await bcrypt.hash(this.password, 12);
-  return next();
+  if (!this.isNew) {
+    this.passwordChangedAt = Date.now() - 1000;
+  }
 });
 
 userSchema.methods.comparePassword = function comparePassword(
   candidatePassword
 ) {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+userSchema.methods.createEmailVerificationToken =
+  function createEmailVerificationToken() {
+    const token = crypto.randomBytes(32).toString("hex");
+
+    this.emailVerificationToken = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+    this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
+
+    return token;
+  };
+
+userSchema.methods.createPasswordResetToken =
+  function createPasswordResetToken() {
+    const token = crypto.randomBytes(32).toString("hex");
+
+    this.passwordResetToken = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+    this.passwordResetExpires = Date.now() + 60 * 60 * 1000;
+
+    return token;
+  };
+
+userSchema.methods.setRefreshToken = function setRefreshToken(token) {
+  this.refreshTokenHash = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
 };
 
 module.exports = mongoose.model("User", userSchema);

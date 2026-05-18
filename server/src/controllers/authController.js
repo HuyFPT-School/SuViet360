@@ -1,11 +1,19 @@
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const env = require("../config/env");
+const { sendEmail, buildEmailTemplate } = require("../utils/mailer");
+const { getCookie } = require("../utils/cookies");
 
-const signToken = (id) =>
+const signAccessToken = (id) =>
   jwt.sign({ id }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
+
+const signRefreshToken = (id) =>
+  jwt.sign({ id }, env.jwtRefreshSecret, {
+    expiresIn: env.jwtRefreshExpiresIn,
+  });
 
 const normalizeEmail = (value) => `${value || ""}`.trim().toLowerCase();
 const isValidEmail = (email) => {
@@ -14,29 +22,143 @@ const isValidEmail = (email) => {
   return atIndex > 0 && dotIndex > atIndex + 1 && dotIndex < email.length - 1;
 };
 
-const cookieOptions = {
+const accessCookieOptions = {
   httpOnly: true,
   secure: env.cookieSecure,
   sameSite: env.cookieSecure ? "none" : "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
-const sendAuthResponse = (res, statusCode, user, message) => {
-  const token = signToken(user._id);
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: env.cookieSecure,
+  sameSite: env.cookieSecure ? "none" : "lax",
+  maxAge: 30 * 24 * 60 * 60 * 1000,
+};
 
-  res.cookie("token", token, cookieOptions);
+const hashToken = (token) =>
+  crypto.createHash("sha256").update(token).digest("hex");
 
-  res.status(statusCode).json({
-    status: "success",
-    message,
-    data: {
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+const ensureStrongPassword = (password) => {
+  if (!password) {
+    throw new AppError("Password is required", 400);
+  }
+
+  const rules = [
+    {
+      test: (value) => value.length >= 8,
+      message: "Password must be at least 8 characters",
     },
+    {
+      test: (value) => /[A-Z]/.test(value),
+      message: "Password must include an uppercase letter",
+    },
+    {
+      test: (value) => /[a-z]/.test(value),
+      message: "Password must include a lowercase letter",
+    },
+    {
+      test: (value) => /[0-9]/.test(value),
+      message: "Password must include a number",
+    },
+    {
+      test: (value) => /[^A-Za-z0-9]/.test(value),
+      message: "Password must include a special character",
+    },
+  ];
+
+  const failedRule = rules.find((rule) => !rule.test(password));
+  if (failedRule) {
+    throw new AppError(failedRule.message, 400);
+  }
+};
+
+const setAuthCookies = (res, accessToken, refreshToken) => {
+  res.cookie("token", accessToken, accessCookieOptions);
+  res.cookie("refreshToken", refreshToken, refreshCookieOptions);
+};
+
+const clearAuthCookies = (res) => {
+  res.cookie("token", "", {
+    ...accessCookieOptions,
+    maxAge: 0,
+  });
+  res.cookie("refreshToken", "", {
+    ...refreshCookieOptions,
+    maxAge: 0,
+  });
+};
+
+const sendAuthResponse = (res, statusCode, user, message) => {
+  const accessToken = signAccessToken(user._id);
+  const refreshToken = signRefreshToken(user._id);
+
+  user.setRefreshToken(refreshToken);
+
+  return user.save({ validateBeforeSave: false }).then(() => {
+    setAuthCookies(res, accessToken, refreshToken);
+    res.status(statusCode).json({
+      status: "success",
+      message,
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      },
+    });
+  });
+};
+
+const sendVerificationEmail = async (user, token) => {
+  const verifyUrl = `${env.clientUrl}/verify-email?token=${token}`;
+
+  const subject = "Verify your email";
+  const text = `Hello ${user.name || "there"},\n\nPlease verify your email by visiting: ${verifyUrl}\n\nIf you did not create an account, you can ignore this email.`;
+  const html = buildEmailTemplate({
+    title: "Verify your email",
+    preheader: "Confirm your email address to complete registration.",
+    greeting: `Hello ${user.name || "there"},`,
+    intro:
+      "Thanks for joining SuViet360. Please confirm your email address to finish setting up your account.",
+    ctaLabel: "Verify email",
+    ctaUrl: verifyUrl,
+    note: "If the button does not work, copy and paste the link into your browser.",
+    footerNote: "This link expires in 24 hours.",
+  });
+
+  await sendEmail({
+    to: user.email,
+    subject,
+    text,
+    html,
+  });
+};
+
+const sendResetPasswordEmail = async (user, token) => {
+  const resetUrl = `${env.clientUrl}/reset-password?token=${token}`;
+
+  const subject = "Reset your password";
+  const text = `Hello ${user.name || "there"},\n\nReset your password by visiting: ${resetUrl}\n\nThis link will expire in 1 hour.`;
+  const html = buildEmailTemplate({
+    title: "Reset your password",
+    preheader: "Create a new password for your SuViet360 account.",
+    greeting: `Hello ${user.name || "there"},`,
+    intro:
+      "We received a request to reset your password. Use the button below to set a new one.",
+    ctaLabel: "Reset password",
+    ctaUrl: resetUrl,
+    note: "If you did not request this, you can ignore this email.",
+    footerNote: "This link expires in 1 hour.",
+  });
+
+  await sendEmail({
+    to: user.email,
+    subject,
+    text,
+    html,
   });
 };
 
@@ -48,13 +170,31 @@ const register = asyncHandler(async (req, res) => {
     throw new AppError("Please provide a valid email", 400);
   }
 
+  ensureStrongPassword(password);
+
   const existingUser = await User.findOne({ email: normalizedEmail });
   if (existingUser) {
     throw new AppError("Email already in use", 400);
   }
 
   const user = await User.create({ name, email: normalizedEmail, password });
-  sendAuthResponse(res, 201, user, "User registered successfully");
+  const verificationToken = user.createEmailVerificationToken();
+
+  await user.save({ validateBeforeSave: false });
+  await sendVerificationEmail(user, verificationToken);
+
+  res.status(201).json({
+    status: "success",
+    message: "Registration successful. Please verify your email.",
+    data: {
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    },
+  });
 });
 
 const login = asyncHandler(async (req, res) => {
@@ -75,7 +215,175 @@ const login = asyncHandler(async (req, res) => {
     throw new AppError("Invalid email or password", 401);
   }
 
-  sendAuthResponse(res, 200, user, "Login successful");
+  if (!user.isEmailVerified) {
+    throw new AppError("Email not verified", 403);
+  }
+
+  await sendAuthResponse(res, 200, user, "Login successful");
+});
+
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    throw new AppError("Verification token is required", 400);
+  }
+
+  const tokenHash = hashToken(token);
+  const user = await User.findOne({
+    emailVerificationToken: tokenHash,
+    emailVerificationExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    throw new AppError("Verification token is invalid or expired", 400);
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+
+  await sendAuthResponse(res, 200, user, "Email verified successfully");
+});
+
+const resendVerification = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!isValidEmail(normalizedEmail)) {
+    throw new AppError("Please provide a valid email", 400);
+  }
+
+  const user = await User.findOne({ email: normalizedEmail });
+
+  if (!user) {
+    return res.status(200).json({
+      status: "success",
+      message: "If the account exists, a verification email has been sent",
+    });
+  }
+
+  if (user.isEmailVerified) {
+    return res.status(200).json({
+      status: "success",
+      message: "Email already verified",
+    });
+  }
+
+  const verificationToken = user.createEmailVerificationToken();
+  await user.save({ validateBeforeSave: false });
+  await sendVerificationEmail(user, verificationToken);
+
+  return res.status(200).json({
+    status: "success",
+    message: "Verification email sent",
+  });
+});
+
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!isValidEmail(normalizedEmail)) {
+    throw new AppError("Please provide a valid email", 400);
+  }
+
+  const user = await User.findOne({ email: normalizedEmail });
+
+  if (!user) {
+    return res.status(200).json({
+      status: "success",
+      message: "If the account exists, a reset email has been sent",
+    });
+  }
+
+  const resetToken = user.createPasswordResetToken();
+  await user.save({ validateBeforeSave: false });
+
+  await sendResetPasswordEmail(user, resetToken);
+
+  return res.status(200).json({
+    status: "success",
+    message: "Password reset email sent",
+  });
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.query;
+  const { password } = req.body;
+
+  if (!token) {
+    throw new AppError("Reset token is required", 400);
+  }
+
+  ensureStrongPassword(password);
+
+  const tokenHash = hashToken(token);
+  const user = await User.findOne({
+    passwordResetToken: tokenHash,
+    passwordResetExpires: { $gt: Date.now() },
+  }).select("+password");
+
+  if (!user) {
+    throw new AppError("Reset token is invalid or expired", 400);
+  }
+
+  user.password = password;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+
+  await sendAuthResponse(res, 200, user, "Password reset successful");
+});
+
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    throw new AppError("Current password and new password are required", 400);
+  }
+
+  ensureStrongPassword(newPassword);
+
+  const user = await User.findById(req.user._id).select("+password");
+
+  if (!user || !(await user.comparePassword(currentPassword))) {
+    throw new AppError("Current password is incorrect", 401);
+  }
+
+  user.password = newPassword;
+
+  await sendAuthResponse(res, 200, user, "Password changed successfully");
+});
+
+const refreshToken = asyncHandler(async (req, res) => {
+  const existingToken = getCookie(req, "refreshToken");
+
+  if (!existingToken) {
+    throw new AppError("Refresh token is required", 401);
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(existingToken, env.jwtRefreshSecret);
+  } catch (error) {
+    throw new AppError("Invalid refresh token", 401);
+  }
+
+  const user = await User.findById(decoded.id);
+
+  if (!user || !user.refreshTokenHash) {
+    throw new AppError("Invalid refresh token", 401);
+  }
+
+  if (hashToken(existingToken) !== user.refreshTokenHash) {
+    throw new AppError("Invalid refresh token", 401);
+  }
+
+  if (!user.isEmailVerified) {
+    throw new AppError("Email not verified", 403);
+  }
+
+  await sendAuthResponse(res, 200, user, "Token refreshed successfully");
 });
 
 const me = asyncHandler(async (req, res) => {
@@ -100,10 +408,22 @@ const adminOnly = asyncHandler(async (req, res) => {
 });
 
 const logout = asyncHandler(async (req, res) => {
-  res.cookie("token", "", {
-    ...cookieOptions,
-    maxAge: 0,
-  });
+  const existingToken = getCookie(req, "refreshToken");
+
+  if (existingToken) {
+    try {
+      const decoded = jwt.verify(existingToken, env.jwtRefreshSecret);
+      const user = await User.findById(decoded.id);
+      if (user) {
+        user.refreshTokenHash = undefined;
+        await user.save({ validateBeforeSave: false });
+      }
+    } catch (error) {
+      // Ignore invalid token during logout
+    }
+  }
+
+  clearAuthCookies(res);
 
   res.status(200).json({
     status: "success",
@@ -114,6 +434,12 @@ const logout = asyncHandler(async (req, res) => {
 module.exports = {
   register,
   login,
+  verifyEmail,
+  resendVerification,
+  forgotPassword,
+  resetPassword,
+  changePassword,
+  refreshToken,
   me,
   logout,
   adminOnly,
