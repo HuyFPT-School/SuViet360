@@ -19,6 +19,14 @@ const protect = asyncHandler(async (req, res, next) => {
     throw new AppError("User no longer exists", 401);
   }
 
+  if (user.passwordChangedAt && decoded.iat * 1000 < user.passwordChangedAt) {
+    throw new AppError("Password recently changed. Please login again", 401);
+  }
+
+  if (!user.isEmailVerified) {
+    throw new AppError("Email not verified", 403);
+  }
+
   req.user = user;
   next();
 });
