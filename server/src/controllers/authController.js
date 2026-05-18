@@ -4,6 +4,7 @@ const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const env = require("../config/env");
+const { redisClient } = require("../config/redis");
 const { sendEmail, buildEmailTemplate } = require("../utils/mailer");
 const { getCookie } = require("../utils/cookies");
 
@@ -38,6 +39,51 @@ const refreshCookieOptions = {
 
 const hashToken = (token) =>
   crypto.createHash("sha256").update(token).digest("hex");
+
+const ensureRedisClient = () => {
+  if (!redisClient) {
+    throw new AppError("Redis is not configured", 500);
+  }
+
+  return redisClient;
+};
+
+const refreshTokenTtlSeconds = env.redisRefreshTtlMinutes * 60;
+const buildRefreshTokenKey = (token) => `refresh:${token}`;
+
+const storeRefreshToken = async (userId, token) => {
+  const client = ensureRedisClient();
+  await client.set(buildRefreshTokenKey(token), String(userId), {
+    EX: refreshTokenTtlSeconds,
+  });
+};
+
+const getRefreshTokenUserId = async (token) => {
+  const client = ensureRedisClient();
+  return client.get(buildRefreshTokenKey(token));
+};
+
+const deleteRefreshToken = async (token) => {
+  const client = ensureRedisClient();
+  await client.del(buildRefreshTokenKey(token));
+};
+
+const revokeAllRefreshTokensForUser = async (userId) => {
+  const client = ensureRedisClient();
+  const keys = await client.keys("refresh:*");
+  if (!keys || keys.length === 0) return;
+
+  for (const k of keys) {
+    try {
+      const v = await client.get(k);
+      if (v === String(userId)) {
+        await client.del(k);
+      }
+    } catch (e) {
+      // ignore per-key errors
+    }
+  }
+};
 
 const ensureStrongPassword = (password) => {
   if (!password) {
@@ -89,26 +135,24 @@ const clearAuthCookies = (res) => {
   });
 };
 
-const sendAuthResponse = (res, statusCode, user, message) => {
+const sendAuthResponse = async (res, statusCode, user, message) => {
   const accessToken = signAccessToken(user._id);
   const refreshToken = signRefreshToken(user._id);
 
-  user.setRefreshToken(refreshToken);
-
-  return user.save({ validateBeforeSave: false }).then(() => {
-    setAuthCookies(res, accessToken, refreshToken);
-    res.status(statusCode).json({
-      status: "success",
-      message,
-      data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
+  await user.save({ validateBeforeSave: false });
+  await storeRefreshToken(user._id, refreshToken);
+  setAuthCookies(res, accessToken, refreshToken);
+  res.status(statusCode).json({
+    status: "success",
+    message,
+    data: {
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
       },
-    });
+    },
   });
 };
 
@@ -216,7 +260,7 @@ const login = asyncHandler(async (req, res) => {
   }
 
   if (!user.isEmailVerified) {
-    throw new AppError("Email not verified", 403);
+    throw new AppError("Invalid email or password", 401);
   }
 
   await sendAuthResponse(res, 200, user, "Login successful");
@@ -332,6 +376,13 @@ const resetPassword = asyncHandler(async (req, res) => {
   user.passwordResetToken = undefined;
   user.passwordResetExpires = undefined;
 
+  // Revoke all existing refresh tokens for this user (force logout everywhere)
+  try {
+    await revokeAllRefreshTokensForUser(user._id);
+  } catch (err) {
+    // ignore revoke errors
+  }
+
   await sendAuthResponse(res, 200, user, "Password reset successful");
 });
 
@@ -352,6 +403,13 @@ const changePassword = asyncHandler(async (req, res) => {
 
   user.password = newPassword;
 
+  // Revoke all existing refresh tokens for this user (force logout everywhere)
+  try {
+    await revokeAllRefreshTokensForUser(user._id);
+  } catch (err) {
+    // ignore revoke errors
+  }
+
   await sendAuthResponse(res, 200, user, "Password changed successfully");
 });
 
@@ -369,13 +427,15 @@ const refreshToken = asyncHandler(async (req, res) => {
     throw new AppError("Invalid refresh token", 401);
   }
 
-  const user = await User.findById(decoded.id);
-
-  if (!user || !user.refreshTokenHash) {
+  const storedUserId = await getRefreshTokenUserId(existingToken);
+  if (!storedUserId || storedUserId !== String(decoded.id)) {
     throw new AppError("Invalid refresh token", 401);
   }
 
-  if (hashToken(existingToken) !== user.refreshTokenHash) {
+  const user = await User.findById(decoded.id);
+  await deleteRefreshToken(existingToken);
+
+  if (!user) {
     throw new AppError("Invalid refresh token", 401);
   }
 
@@ -412,12 +472,7 @@ const logout = asyncHandler(async (req, res) => {
 
   if (existingToken) {
     try {
-      const decoded = jwt.verify(existingToken, env.jwtRefreshSecret);
-      const user = await User.findById(decoded.id);
-      if (user) {
-        user.refreshTokenHash = undefined;
-        await user.save({ validateBeforeSave: false });
-      }
+      await deleteRefreshToken(existingToken);
     } catch (error) {
       // Ignore invalid token during logout
     }
