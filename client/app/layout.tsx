@@ -14,30 +14,47 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full bg-slate-50 text-slate-900">
+    <html lang="vi" className="h-full antialiased">
+      <body className="min-h-full sv-body">
         <Providers>
-          <header className="border-b bg-white/90 backdrop-blur">
-            <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3">
-              <Link href="/" className="text-lg font-semibold text-blue-700">
-                SuViet360
-              </Link>
-              <div className="flex gap-3 text-sm">
-                <Link href="/login" className="hover:text-blue-700">
-                  Login
+          <header className="sv-header">
+            <nav className="sv-topbar">
+              <div className="sv-brand">
+                <img
+                  className="sv-brand-logo"
+                  src="/images/Logo_SuViet-remove.png"
+                  alt="Hành Trình Sử Việt"
+                />
+                <span className="sv-brand-text">Hành Trình Sử Việt</span>
+              </div>
+              <div className="sv-menu">
+                <Link href="/" className="sv-menu-link">
+                  Trang Chủ
                 </Link>
-                <Link href="/register" className="hover:text-blue-700">
-                  Register
+                <Link href="/explore" className="sv-menu-link">
+                  Bản Đồ Di Sản
                 </Link>
-                <Link href="/dashboard" className="hover:text-blue-700">
-                  Dashboard
+                <Link href="/library" className="sv-menu-link">
+                  Hành Trình
                 </Link>
+                <Link href="/courses" className="sv-menu-link">
+                  Bảng Vàng 
+                </Link>
+                <Link href="/community" className="sv-menu-link">
+                  Kho Báu
+                </Link>
+              </div>
+              <div className="sv-search">
+                <span className="sv-search-icon" />
+                <input
+                  className="sv-search-input"
+                  placeholder="Tìm kiếm..."
+                  aria-label="Tìm kiếm"
+                />
               </div>
             </nav>
           </header>
-          <main className="mx-auto w-full max-w-6xl px-4 py-10">
-            {children}
-          </main>
+          <main className="sv-main">{children}</main>
         </Providers>
       </body>
     </html>
