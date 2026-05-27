@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import AuthForm from "@/components/auth-form";
 import { authApi } from "@/lib/authApi";
+import { setUser } from "@/store/features/authSlice";
+import { useAppDispatch } from "@/store";
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+
   useEffect(() => {
     document.body.classList.add("sv-auth-mode");
     return () => document.body.classList.remove("sv-auth-mode");
@@ -60,6 +66,11 @@ export default function RegisterPage() {
                   response.message ||
                   "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản."
                 );
+              }}
+              onGoogleSuccess={async (credential) => {
+                const response = await authApi.googleLogin(credential);
+                dispatch(setUser(response.data.user));
+                router.push("/dashboard");
               }}
             />
 

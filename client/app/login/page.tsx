@@ -65,6 +65,11 @@ export default function LoginPage() {
                 dispatch(setUser(response.data.user));
                 router.push("/dashboard");
               }}
+              onGoogleSuccess={async (credential) => {
+                const response = await authApi.googleLogin(credential);
+                dispatch(setUser(response.data.user));
+                router.push("/dashboard");
+              }}
             />
 
             <p className="sv-auth-footer">

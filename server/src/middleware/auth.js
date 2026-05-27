@@ -12,7 +12,12 @@ const protect = asyncHandler(async (req, res, next) => {
     throw new AppError("Not authenticated", 401);
   }
 
-  const decoded = jwt.verify(token, env.jwtSecret);
+  let decoded;
+  try {
+    decoded = jwt.verify(token, env.jwtSecret);
+  } catch (err) {
+    throw new AppError("Not authenticated", 401);
+  }
   const user = await User.findById(decoded.id);
 
   if (!user) {

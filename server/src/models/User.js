@@ -19,11 +19,21 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Please provide a valid email"],
     },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
     password: {
       type: String,
-      required: [true, "Password is required"],
       minlength: 8,
       select: false,
+      validate: {
+        validator: function () {
+          return this.googleId || this.password;
+        },
+        message: "Password is required for non-OAuth accounts",
+      },
     },
     passwordChangedAt: {
       type: Date,
@@ -58,9 +68,8 @@ userSchema.pre("save", async function preSave() {
   }
 });
 
-userSchema.methods.comparePassword = function comparePassword(
-  candidatePassword
-) {
+userSchema.methods.comparePassword = function comparePassword(candidatePassword) {
+  if (!this.password) return Promise.resolve(false);
   return bcrypt.compare(candidatePassword, this.password);
 };
 
@@ -90,4 +99,4 @@ userSchema.methods.createPasswordResetToken =
     return token;
   };
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.models.User || mongoose.model("User", userSchema);
