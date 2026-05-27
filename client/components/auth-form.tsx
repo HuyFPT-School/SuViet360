@@ -24,12 +24,15 @@ type AuthFormValues = {
 
 interface AuthFormProps {
   mode: "login" | "register";
-  onSubmit: (values: RegisterFormValues | LoginFormValues) => Promise<void>;
+  onSubmit: (
+    values: RegisterFormValues | LoginFormValues
+  ) => Promise<string | void>;
 }
 
 export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
   const schema = mode === "register" ? registerSchema : loginSchema;
   const [serverError, setServerError] = useState("");
+  const [serverSuccess, setServerSuccess] = useState("");
 
   const {
     register,
@@ -42,7 +45,13 @@ export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
   const submitHandler = async (values: AuthFormValues) => {
     try {
       setServerError("");
-      await onSubmit(values as RegisterFormValues | LoginFormValues);
+      setServerSuccess("");
+      const message = await onSubmit(
+        values as RegisterFormValues | LoginFormValues
+      );
+      if (message) {
+        setServerSuccess(message);
+      }
     } catch (error) {
       const message =
         error instanceof AxiosError
@@ -53,67 +62,99 @@ export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(submitHandler)} className="space-y-4">
+    <form onSubmit={handleSubmit(submitHandler)} className="sv-auth-form">
+      {serverSuccess && (
+        <div className="sv-auth-success" role="status">
+          {serverSuccess}
+        </div>
+      )}
+      {serverError && (
+        <div className="sv-auth-error" role="alert">
+          {serverError}
+        </div>
+      )}
       {mode === "register" && (
-        <div>
-          <label htmlFor="name" className="mb-1 block text-sm font-medium">
-            Full name
+        <div className="sv-auth-field">
+          <label htmlFor="name" className="sv-auth-label">
+            Họ và Tên
           </label>
           <input
             id="name"
             type="text"
             {...register("name")}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            autoComplete="name"
+            placeholder="Nhập họ và tên đầy đủ của bạn"
+            className="sv-auth-input"
+            aria-invalid={Boolean(errors.name)}
           />
           {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+            <p className="sv-auth-help">{errors.name.message}</p>
           )}
         </div>
       )}
 
-      <div>
-        <label htmlFor="email" className="mb-1 block text-sm font-medium">
+      <div className="sv-auth-field">
+        <label htmlFor="email" className="sv-auth-label">
           Email
         </label>
         <input
           id="email"
           type="email"
           {...register("email")}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          autoComplete="email"
+          placeholder="Nhập email của bạn"
+          className="sv-auth-input"
+          aria-invalid={Boolean(errors.email)}
         />
         {errors.email && (
-          <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+          <p className="sv-auth-help">{errors.email.message}</p>
         )}
       </div>
 
-      <div>
-        <label htmlFor="password" className="mb-1 block text-sm font-medium">
-          Password
+      <div className="sv-auth-field">
+        <label htmlFor="password" className="sv-auth-label">
+          Mật khẩu
         </label>
         <input
           id="password"
           type="password"
           {...register("password")}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          autoComplete={mode === "login" ? "current-password" : "new-password"}
+          placeholder="Nhập mật khẩu"
+          className="sv-auth-input"
+          aria-invalid={Boolean(errors.password)}
         />
         {errors.password && (
-          <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+          <p className="sv-auth-help">{errors.password.message}</p>
         )}
       </div>
 
-      {serverError && <p className="text-sm text-red-600">{serverError}</p>}
+      {mode === "login" && (
+        <button type="button" className="sv-auth-link">
+          Quên mật khẩu?
+        </button>
+      )}
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        className="sv-auth-submit"
       >
         {isSubmitting
-          ? "Please wait..."
+          ? "Đang xử lý..."
           : mode === "login"
-            ? "Sign in"
-            : "Create account"}
+            ? "Đăng nhập"
+            : "Đăng ký"}
       </button>
+
+      <div className="sv-auth-divider">
+        {mode === "login" ? "Hoặc đăng nhập với" : "Hoặc đăng ký với"}
+      </div>
+      <div className="sv-auth-social">
+        <button type="button" className="sv-auth-social-button">
+          G
+        </button>
+      </div>
     </form>
   );
 }
