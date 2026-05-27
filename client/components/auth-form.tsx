@@ -5,6 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AxiosError } from "axios";
+import Link from "next/link";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -27,9 +29,10 @@ interface AuthFormProps {
   onSubmit: (
     values: RegisterFormValues | LoginFormValues
   ) => Promise<string | void>;
+  onGoogleSuccess?: (credential: string) => Promise<void>;
 }
 
-export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
+export default function AuthForm({ mode, onSubmit, onGoogleSuccess }: AuthFormProps) {
   const schema = mode === "register" ? registerSchema : loginSchema;
   const [serverError, setServerError] = useState("");
   const [serverSuccess, setServerSuccess] = useState("");
@@ -130,9 +133,9 @@ export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
       </div>
 
       {mode === "login" && (
-        <button type="button" className="sv-auth-link">
+        <Link href="/forgot-password" className="sv-auth-link">
           Quên mật khẩu?
-        </button>
+        </Link>
       )}
 
       <button
@@ -151,9 +154,29 @@ export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
         {mode === "login" ? "Hoặc đăng nhập với" : "Hoặc đăng ký với"}
       </div>
       <div className="sv-auth-social">
-        <button type="button" className="sv-auth-social-button">
-          G
-        </button>
+        <GoogleLogin
+          onSuccess={async (credentialResponse: CredentialResponse) => {
+            if (credentialResponse.credential && onGoogleSuccess) {
+              try {
+                setServerError("");
+                await onGoogleSuccess(credentialResponse.credential);
+              } catch (error) {
+                const message =
+                  error instanceof AxiosError
+                    ? error.response?.data?.message || "Đăng nhập Google thất bại"
+                    : "Đăng nhập Google thất bại";
+                setServerError(message);
+              }
+            }
+          }}
+          onError={() => {
+            setServerError("Đăng nhập Google thất bại");
+          }}
+          theme="outline"
+          size="large"
+          width="100%"
+          text={mode === "login" ? "signin_with" : "signup_with"}
+        />
       </div>
     </form>
   );

@@ -21,4 +21,5 @@ module.exports = {
   redisRefreshTtlMinutes: Number(
     process.env.REDIS_REFRESH_TTL_MINUTES || 10080
   ),
+  googleClientId: process.env.GOOGLE_CLIENT_ID || "",
 };
