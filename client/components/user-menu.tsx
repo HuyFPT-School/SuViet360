@@ -24,7 +24,7 @@ export default function UserMenu() {
     return (
       <div className="flex items-center gap-3">
         <Link
-          href="/dashboard"
+          href="/profile"
           className="text-[#f0ddb7] font-semibold text-xs tracking-wider uppercase hover:text-[#c9a15a] transition duration-200 whitespace-nowrap"
         >
           {user.name}
