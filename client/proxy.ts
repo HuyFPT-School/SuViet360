@@ -13,7 +13,7 @@ export function proxy(request: NextRequest) {
     (pathname.startsWith("/login") || pathname.startsWith("/register")) &&
     token
   ) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();

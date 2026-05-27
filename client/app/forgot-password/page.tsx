@@ -58,6 +58,7 @@ export default function ForgotPasswordPage() {
               <span>Hành Trình Sử Việt</span>
             </div>
 
+            <div className="pt-8 md:pt-12" />
             <div className="sv-auth-heading">
               <h1 className="sv-auth-title">Quên Mật Khẩu</h1>
               <p className="sv-auth-subtitle">

@@ -63,12 +63,12 @@ export default function LoginPage() {
                   values as { email: string; password: string }
                 );
                 dispatch(setUser(response.data.user));
-                router.push("/dashboard");
+                router.push("/");
               }}
               onGoogleSuccess={async (credential) => {
                 const response = await authApi.googleLogin(credential);
                 dispatch(setUser(response.data.user));
-                router.push("/dashboard");
+                router.push("/");
               }}
             />
 

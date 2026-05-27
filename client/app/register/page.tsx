@@ -70,7 +70,7 @@ export default function RegisterPage() {
               onGoogleSuccess={async (credential) => {
                 const response = await authApi.googleLogin(credential);
                 dispatch(setUser(response.data.user));
-                router.push("/dashboard");
+                router.push("/");
               }}
             />
 

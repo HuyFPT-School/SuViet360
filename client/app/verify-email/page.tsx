@@ -34,7 +34,7 @@ function VerifyEmailContent() {
         dispatch(setUser(response.data.user));
         setStatus("success");
         setMessage("Email đã được xác thực thành công!");
-        setTimeout(() => router.push("/dashboard"), 2000);
+        setTimeout(() => router.push("/"), 2000);
       } catch {
         setStatus("error");
         setMessage("Token xác thực không hợp lệ hoặc đã hết hạn.");
@@ -64,6 +64,7 @@ function VerifyEmailContent() {
               <span>Hành Trình Sử Việt</span>
             </div>
 
+            <div className="pt-8 md:pt-12" />
             <div className="sv-auth-heading">
               <h1 className="sv-auth-title">Xác Thực Email</h1>
             </div>
