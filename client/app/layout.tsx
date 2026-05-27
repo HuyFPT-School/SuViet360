@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Providers from "@/components/providers";
+import UserMenu from "@/components/user-menu";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -52,6 +53,7 @@ export default function RootLayout({
                   aria-label="Tìm kiếm"
                 />
               </div>
+              <UserMenu />
             </nav>
           </header>
           <main className="sv-main">{children}</main>
