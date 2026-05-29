@@ -9,6 +9,7 @@ const errorHandler = require("./middleware/errorHandler");
 const { setCsrfToken, requireCsrfToken } = require("./middleware/csrf");
 
 const app = express();
+app.set("trust proxy", 1);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
