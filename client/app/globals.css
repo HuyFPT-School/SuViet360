@@ -1524,7 +1524,7 @@ body {
 .breadcrumb {
   font-family: "Cinzel", serif;
   font-size: 11px;
-  color: var(--gold-dark);
+  color: var(--gold-mid);
   margin-bottom: 20px;
   letter-spacing: 1px;
 }
@@ -1724,7 +1724,7 @@ body {
 
 .info-row__label {
   font-family: "Cinzel", serif;
-  font-size: 12px; color: var(--gold-dark); letter-spacing: 0.5px;
+  font-size: 12px; color: var(--gold-mid); letter-spacing: 0.5px;
 }
 
 .info-row__value {
