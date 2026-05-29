@@ -9,7 +9,7 @@ import { useAppDispatch, useAppSelector } from "@/store";
 export const useAuth = () => {
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const { user, isLoading } = useAppSelector((state) => state.auth);
+  const { user, token, isLoading } = useAppSelector((state) => state.auth);
 
   const refreshUser = useCallback(async () => {
     dispatch(setLoading(true));
@@ -32,6 +32,7 @@ export const useAuth = () => {
 
   return {
     user,
+    token,
     isLoading,
     refreshUser,
     logout,
