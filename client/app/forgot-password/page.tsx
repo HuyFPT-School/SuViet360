@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { authApi } from "@/lib/authApi";
 import { AxiosError } from "axios";
+import { toVietnameseAuthMessage } from "@/lib/authMessages";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -15,6 +16,15 @@ export default function ForgotPasswordPage() {
     document.body.classList.add("sv-auth-mode");
     return () => document.body.classList.remove("sv-auth-mode");
   }, []);
+
+  useEffect(() => {
+    if (!serverError && !serverSuccess) return;
+    const timer = setTimeout(() => {
+      setServerError("");
+      setServerSuccess("");
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [serverError, serverSuccess]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,10 +38,10 @@ export default function ForgotPasswordPage() {
         "Nếu email tồn tại trong hệ thống, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu."
       );
     } catch (error) {
-      const message =
-        error instanceof AxiosError
-          ? error.response?.data?.message || "Đã xảy ra lỗi"
-          : "Đã xảy ra lỗi";
+      const message = toVietnameseAuthMessage(
+        error instanceof AxiosError ? error.response?.data?.message : undefined,
+        "Đã xảy ra lỗi."
+      );
       setServerError(message);
     } finally {
       setIsSubmitting(false);
@@ -42,6 +52,20 @@ export default function ForgotPasswordPage() {
     <section className="sv-auth sv-auth-login">
       <div className="sv-auth-shell">
         <div className="sv-auth-panel">
+          {(serverSuccess || serverError) && (
+            <div className="sv-auth-toast" aria-live="polite">
+              {serverSuccess && (
+                <div className="sv-auth-success" role="status">
+                  {serverSuccess}
+                </div>
+              )}
+              {serverError && (
+                <div className="sv-auth-error" role="alert">
+                  {serverError}
+                </div>
+              )}
+            </div>
+          )}
           <img
             src="/images/login_form.png"
             alt=""
@@ -67,17 +91,6 @@ export default function ForgotPasswordPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="sv-auth-form">
-              {serverSuccess && (
-                <div className="sv-auth-success" role="status">
-                  {serverSuccess}
-                </div>
-              )}
-              {serverError && (
-                <div className="sv-auth-error" role="alert">
-                  {serverError}
-                </div>
-              )}
-
               <div className="sv-auth-field">
                 <label htmlFor="email" className="sv-auth-label">
                   Email
