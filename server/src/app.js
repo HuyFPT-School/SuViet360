@@ -5,6 +5,7 @@ const rateLimit = require("express-rate-limit");
 
 const env = require("./config/env");
 const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
 const errorHandler = require("./middleware/errorHandler");
 const { setCsrfToken, requireCsrfToken } = require("./middleware/csrf");
 
@@ -44,6 +45,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/user", userRoutes);
 app.use(errorHandler);
 
 module.exports = app;

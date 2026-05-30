@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
-// Styles are in globals.css
+import { profileApi, type ProfileUpdatePayload } from "@/lib/profileApi";
 
 /* ─── Data ─────────────────────────────────── */
 
@@ -40,7 +40,33 @@ const sidebarItems = [
   "Cài đặt tài khoản",
 ];
 
+const GENDER_MAP: Record<string, string> = {
+  male: "Nam",
+  female: "Nữ",
+  other: "Khác",
+};
 
+/* ─── Helpers ────────────────────────────────── */
+
+function formatDate(dateStr?: string) {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("vi-VN");
+  } catch {
+    return dateStr;
+  }
+}
+
+function toInputDate(dateStr?: string) {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    return d.toISOString().split("T")[0];
+  } catch {
+    return "";
+  }
+}
 
 /* ─── Sub-components ────────────────────────── */
 
@@ -63,6 +89,17 @@ export default function ProfilePage() {
   const { user, isLoading, refreshUser } = useAuth();
   const router = useRouter();
 
+  /* ── Edit state ── */
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+  const [editForm, setEditForm] = useState<ProfileUpdatePayload>({});
+
+  /* ── Avatar state ── */
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     refreshUser().catch(() => {});
   }, [refreshUser]);
@@ -73,6 +110,127 @@ export default function ProfilePage() {
     }
   }, [user, isLoading, router]);
 
+  /* ── Populate form when user loads ── */
+  useEffect(() => {
+    if (user) {
+      setEditForm({
+        name: user.name || "",
+        phone: user.phone || "",
+        birthDate: toInputDate(user.birthDate),
+        gender: user.gender,
+        address: user.address || "",
+        bio: user.bio || "",
+      });
+    }
+  }, [user]);
+
+  /* ── Handlers ── */
+  const handleEditToggle = useCallback(() => {
+    if (isEditing) {
+      // Cancel → reset form
+      if (user) {
+        setEditForm({
+          name: user.name || "",
+          phone: user.phone || "",
+          birthDate: toInputDate(user.birthDate),
+          gender: user.gender,
+          address: user.address || "",
+          bio: user.bio || "",
+        });
+      }
+    }
+    setSaveMessage("");
+    setIsEditing((prev) => !prev);
+  }, [isEditing, user]);
+
+  const handleSaveProfile = useCallback(async () => {
+    setIsSaving(true);
+    setSaveMessage("");
+    try {
+      await profileApi.updateProfile(editForm);
+      await refreshUser();
+      setIsEditing(false);
+      setSaveMessage("Cập nhật thành công!");
+      setTimeout(() => setSaveMessage(""), 3000);
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { message?: string } } }).response
+              ?.data?.message || "Có lỗi xảy ra"
+          : "Có lỗi xảy ra";
+      setSaveMessage(msg);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [editForm, refreshUser]);
+
+  const handleAvatarClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleAvatarChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      // Validate client-side
+      if (!file.type.startsWith("image/")) {
+        setSaveMessage("Vui lòng chọn file ảnh");
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        setSaveMessage("Ảnh tối đa 2MB");
+        return;
+      }
+
+      // Preview
+      const reader = new FileReader();
+      reader.onloadend = () => setAvatarPreview(reader.result as string);
+      reader.readAsDataURL(file);
+
+      // Upload
+      setIsUploadingAvatar(true);
+      setSaveMessage("");
+      try {
+        await profileApi.uploadAvatar(file);
+        await refreshUser();
+        setSaveMessage("Cập nhật ảnh đại diện thành công!");
+        setTimeout(() => setSaveMessage(""), 3000);
+      } catch {
+        setSaveMessage("Upload ảnh thất bại");
+        setAvatarPreview(null);
+      } finally {
+        setIsUploadingAvatar(false);
+        // Reset input so same file can be selected again
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    },
+    [refreshUser]
+  );
+
+  const handleDeleteAvatar = useCallback(async () => {
+    setIsUploadingAvatar(true);
+    try {
+      await profileApi.deleteAvatar();
+      await refreshUser();
+      setAvatarPreview(null);
+      setSaveMessage("Đã xóa ảnh đại diện");
+      setTimeout(() => setSaveMessage(""), 3000);
+    } catch {
+      setSaveMessage("Xóa ảnh thất bại");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  }, [refreshUser]);
+
+  const handleFormChange = useCallback(
+    (field: keyof ProfileUpdatePayload, value: string) => {
+      setEditForm((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
+
+  /* ── Loading state ── */
   if (isLoading) {
     return (
       <div className="profile-page flex items-center justify-center min-h-screen">
@@ -85,15 +243,15 @@ export default function ProfilePage() {
 
   const name = user?.name || "Nguyễn Văn An";
   const email = user?.email || "nguyenvanan@gmail.com";
+  const avatarUrl = avatarPreview || user?.avatar || "";
 
   const personalInfo = [
-    { label: "Họ và tên",      value: name },
-    { label: "Email",          value: email },
-    { label: "Số điện thoại",  value: "0987 654 321" },
-    { label: "Ngày sinh",      value: "12/05/1990" },
-    { label: "Giới tính",      value: "Nam" },
-    { label: "Địa chỉ",        value: "Hà Nội, Việt Nam" },
-    { label: "Tham gia",       value: "15/03/2024" },
+    { label: "Họ và tên",      value: name,                                          field: "name" as const },
+    { label: "Email",          value: email,                                          field: null },
+    { label: "Số điện thoại",  value: user?.phone || "Chưa cập nhật",               field: "phone" as const },
+    { label: "Ngày sinh",      value: formatDate(user?.birthDate) || "Chưa cập nhật", field: "birthDate" as const },
+    { label: "Giới tính",      value: user?.gender ? GENDER_MAP[user.gender] : "Chưa cập nhật", field: "gender" as const },
+    { label: "Địa chỉ",        value: user?.address || "Chưa cập nhật",              field: "address" as const },
   ];
 
   return (
@@ -132,10 +290,45 @@ export default function ProfilePage() {
 
               {/* Avatar column */}
               <div className="profile-card__avatar-col">
-                <div className="avatar-wrap">
-                  <div className="avatar-circle" />
-                  <div className="avatar-edit">+</div>
+                <div className="avatar-wrap" onClick={handleAvatarClick} style={{ cursor: "pointer" }}>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar"
+                      className="avatar-circle"
+                      style={{
+                        objectFit: "cover",
+                        width: 110,
+                        height: 110,
+                      }}
+                    />
+                  ) : (
+                    <div className="avatar-circle" />
+                  )}
+                  <div className="avatar-edit">
+                    {isUploadingAvatar ? "⏳" : "+"}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    style={{ display: "none" }}
+                    onChange={handleAvatarChange}
+                  />
                 </div>
+
+                {/* Delete avatar button */}
+                {user?.avatar && !isUploadingAvatar && (
+                  <button
+                    className="profile-avatar-delete-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteAvatar();
+                    }}
+                  >
+                    Xóa ảnh
+                  </button>
+                )}
 
                 <div className="profile-name">{name}</div>
                 <div className="profile-role-badge">Nhà khám phá</div>
@@ -151,11 +344,23 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Quote */}
-                <div className="profile-quote">
-                  "Yêu lịch sử, đam mê khám phá và muốn tìm hiểu sâu hơn về hành trình
-                  dựng nước và giữ nước của dân tộc Việt Nam."
-                </div>
+                {/* Quote / Bio */}
+                {isEditing ? (
+                  <textarea
+                    className="profile-bio-input"
+                    placeholder="Viết giới thiệu bản thân..."
+                    value={editForm.bio || ""}
+                    onChange={(e) => handleFormChange("bio", e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                  />
+                ) : (
+                  <div className="profile-quote">
+                    {user?.bio
+                      ? `"${user.bio}"`
+                      : "\"Yêu lịch sử, đam mê khám phá và muốn tìm hiểu sâu hơn về hành trình dựng nước và giữ nước của dân tộc Việt Nam.\""}
+                  </div>
+                )}
               </div>
 
               {/* Info panel */}
@@ -163,16 +368,78 @@ export default function ProfilePage() {
                 <div className="section-title">Thông Tin Cá Nhân</div>
                 <div className="divider-line" />
 
+                {/* Success/Error message */}
+                {saveMessage && (
+                  <div className={`profile-save-message ${saveMessage.includes("thành công") ? "profile-save-message--success" : "profile-save-message--error"}`}>
+                    {saveMessage}
+                  </div>
+                )}
+
                 <div className="info-table">
-                  {personalInfo.map(({ label, value }) => (
+                  {personalInfo.map(({ label, value, field }) => (
                     <div key={label} className="info-row">
                       <span className="info-row__label">{label}</span>
-                      <span className="info-row__value">{value}</span>
+                      {isEditing && field ? (
+                        <span className="info-row__value">
+                          {field === "gender" ? (
+                            <select
+                              className="profile-edit-input profile-edit-select"
+                              value={editForm.gender || ""}
+                              onChange={(e) => handleFormChange("gender", e.target.value)}
+                            >
+                              <option value="">Chọn giới tính</option>
+                              <option value="male">Nam</option>
+                              <option value="female">Nữ</option>
+                              <option value="other">Khác</option>
+                            </select>
+                          ) : field === "birthDate" ? (
+                            <input
+                              type="date"
+                              className="profile-edit-input"
+                              value={editForm.birthDate || ""}
+                              onChange={(e) => handleFormChange("birthDate", e.target.value)}
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              className="profile-edit-input"
+                              value={(editForm[field] as string) || ""}
+                              onChange={(e) => handleFormChange(field, e.target.value)}
+                              placeholder={label}
+                            />
+                          )}
+                        </span>
+                      ) : (
+                        <span className="info-row__value">{value}</span>
+                      )}
                     </div>
                   ))}
                 </div>
 
-                <button className="btn-edit">Chỉnh Sửa Thông Tin</button>
+                <div className="profile-actions">
+                  {isEditing ? (
+                    <>
+                      <button
+                        className="btn-edit btn-edit--save"
+                        onClick={handleSaveProfile}
+                        disabled={isSaving}
+                      >
+                        {isSaving ? "Đang lưu..." : "Lưu Thay Đổi"}
+                      </button>
+                      <button
+                        className="btn-edit btn-edit--cancel"
+                        onClick={handleEditToggle}
+                        disabled={isSaving}
+                      >
+                        Hủy
+                      </button>
+                    </>
+                  ) : (
+                    <button className="btn-edit" onClick={handleEditToggle}>
+                      Chỉnh Sửa Thông Tin
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

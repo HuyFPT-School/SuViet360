@@ -22,4 +22,7 @@ module.exports = {
     process.env.REDIS_REFRESH_TTL_MINUTES || 10080
   ),
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || "",
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || "",
 };
