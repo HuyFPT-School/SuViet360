@@ -226,7 +226,8 @@ export default function PhaserGame() {
         // --- Popup khi đến gần ---
         const px = this.player.x;
         const py = this.player.y;
-        let nearest: typeof this.interactPoints[0] | null = null;
+        type InteractPoint = { cx: number; cy: number; title: string; content: string };
+        let nearest: InteractPoint | null = null;
         let nearestDist = Infinity;
 
         this.interactPoints.forEach((pt) => {
