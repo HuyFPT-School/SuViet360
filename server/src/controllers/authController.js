@@ -7,6 +7,7 @@ const env = require("../config/env");
 const { redisClient } = require("../config/redis");
 const { sendEmail, buildEmailTemplate } = require("../utils/mailer");
 const { getCookie } = require("../utils/cookies");
+const { OAuth2Client } = require("google-auth-library");
 
 const signAccessToken = (id) =>
   jwt.sign({ id }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
@@ -486,6 +487,59 @@ const logout = asyncHandler(async (req, res) => {
   });
 });
 
+const googleOAuthClient = new OAuth2Client(env.googleClientId);
+
+const googleLogin = asyncHandler(async (req, res) => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    throw new AppError("Google ID token is required", 400);
+  }
+
+  let payload;
+  try {
+    const ticket = await googleOAuthClient.verifyIdToken({
+      idToken,
+      audience: env.googleClientId,
+    });
+    payload = ticket.getPayload();
+  } catch (error) {
+    throw new AppError("Invalid Google ID token", 401);
+  }
+
+  if (!payload || !payload.email) {
+    throw new AppError("Unable to retrieve email from Google", 400);
+  }
+
+  const email = normalizeEmail(payload.email);
+  const googleId = payload.sub;
+  const name = payload.name || email.split("@")[0];
+
+  let user = await User.findOne({
+    $or: [{ googleId }, { email }],
+  });
+
+  if (user) {
+    // Link Google account if user exists by email but not yet linked
+    if (!user.googleId) {
+      user.googleId = googleId;
+    }
+    if (!user.isEmailVerified) {
+      user.isEmailVerified = true;
+    }
+  } else {
+    // Create new user from Google profile
+    user = await User.create({
+      name,
+      email,
+      googleId,
+      isEmailVerified: true,
+    });
+  }
+
+  await sendAuthResponse(res, 200, user, "Google login successful");
+});
+
 module.exports = {
   register,
   login,
@@ -498,4 +552,5 @@ module.exports = {
   me,
   logout,
   adminOnly,
+  googleLogin,
 };

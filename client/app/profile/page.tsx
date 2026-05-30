@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 // Styles are in globals.css
 
 /* ─── Data ─────────────────────────────────── */
@@ -38,15 +40,7 @@ const sidebarItems = [
   "Cài đặt tài khoản",
 ];
 
-const personalInfo = [
-  { label: "Họ và tên",      value: "Nguyễn Văn An" },
-  { label: "Email",          value: "nguyenvanan@gmail.com" },
-  { label: "Số điện thoại",  value: "0987 654 321" },
-  { label: "Ngày sinh",      value: "12/05/1990" },
-  { label: "Giới tính",      value: "Nam" },
-  { label: "Địa chỉ",        value: "Hà Nội, Việt Nam" },
-  { label: "Tham gia",       value: "15/03/2024" },
-];
+
 
 /* ─── Sub-components ────────────────────────── */
 
@@ -66,6 +60,41 @@ function CardHeader({ title }: { title: string }) {
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState(0);
+  const { user, isLoading, refreshUser } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    refreshUser().catch(() => {});
+  }, [refreshUser]);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <div className="profile-page flex items-center justify-center min-h-screen">
+        <p className="text-[#f0ddb7] text-lg font-semibold animate-pulse uppercase tracking-widest">
+          Đang tải hồ sơ...
+        </p>
+      </div>
+    );
+  }
+
+  const name = user?.name || "Nguyễn Văn An";
+  const email = user?.email || "nguyenvanan@gmail.com";
+
+  const personalInfo = [
+    { label: "Họ và tên",      value: name },
+    { label: "Email",          value: email },
+    { label: "Số điện thoại",  value: "0987 654 321" },
+    { label: "Ngày sinh",      value: "12/05/1990" },
+    { label: "Giới tính",      value: "Nam" },
+    { label: "Địa chỉ",        value: "Hà Nội, Việt Nam" },
+    { label: "Tham gia",       value: "15/03/2024" },
+  ];
 
   return (
     <div className="profile-page">
@@ -108,7 +137,7 @@ export default function ProfilePage() {
                   <div className="avatar-edit">+</div>
                 </div>
 
-                <div className="profile-name">Nguyễn Văn An</div>
+                <div className="profile-name">{name}</div>
                 <div className="profile-role-badge">Nhà khám phá</div>
 
                 {/* XP bar */}

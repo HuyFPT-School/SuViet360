@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Providers from "@/components/providers";
+import UserMenu from "@/components/user-menu";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className="h-full antialiased">
+    <html lang="vi" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full sv-body">
         <Providers>
           <header className="sv-header">
@@ -38,7 +39,7 @@ export default function RootLayout({
                   Hành Trình
                 </Link>
                 <Link href="/courses" className="sv-menu-link">
-                  Bảng Vàng 
+                  Bảng Vàng
                 </Link>
                 <Link href="/community" className="sv-menu-link">
                   Kho Báu
@@ -52,6 +53,7 @@ export default function RootLayout({
                   aria-label="Tìm kiếm"
                 />
               </div>
+              <UserMenu />
             </nav>
           </header>
           <main className="sv-main">{children}</main>

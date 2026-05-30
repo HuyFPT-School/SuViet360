@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthForm from "@/components/auth-form";
 import { authApi } from "@/lib/authApi";
@@ -11,30 +12,77 @@ export default function RegisterPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
+  useEffect(() => {
+    document.body.classList.add("sv-auth-mode");
+    return () => document.body.classList.remove("sv-auth-mode");
+  }, []);
+
   return (
-    <section className="mx-auto max-w-md rounded-2xl border bg-white p-6 shadow-sm">
-      <h1 className="text-2xl font-semibold">Create account</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        Sign up to start using the platform.
-      </p>
-      <div className="mt-6">
-        <AuthForm
-          mode="register"
-          onSubmit={async (values) => {
-            const response = await authApi.register(
-              values as { name: string; email: string; password: string }
-            );
-            dispatch(setUser(response.data.user));
-            router.push("/dashboard");
-          }}
-        />
+    <section className="sv-auth sv-auth-register">
+      <div className="sv-auth-shell">
+        <div className="sv-auth-panel">
+          <img
+            src="/images/login_form.png"
+            alt=""
+            aria-hidden="true"
+            className="sv-auth-frame"
+          />
+          <div className="sv-auth-panel-inner">
+            <div className="sv-auth-brand">
+              <img
+                src="/images/Logo_SuViet-remove.png"
+                alt="Hành Trình Sử Việt"
+                className="sv-auth-emblem"
+              />
+              <span>Hành Trình Sử Việt</span>
+            </div>
+
+            <div className="sv-auth-tabs">
+              <Link href="/login" className="sv-auth-tab">
+                Đăng nhập
+              </Link>
+              <Link
+                href="/register"
+                className="sv-auth-tab sv-auth-tab-active"
+              >
+                Đăng ký
+              </Link>
+            </div>
+
+            <div className="sv-auth-heading">
+              <h1 className="sv-auth-title">Tạo Tài Khoản Mới</h1>
+              <p className="sv-auth-subtitle">
+                Điền thông tin để bắt đầu hành trình khám phá.
+              </p>
+            </div>
+
+            <AuthForm
+              mode="register"
+              onSubmit={async (values) => {
+                const response = await authApi.register(
+                  values as { name: string; email: string; password: string }
+                );
+                return (
+                  response.message ||
+                  "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản."
+                );
+              }}
+              onGoogleSuccess={async (credential) => {
+                const response = await authApi.googleLogin(credential);
+                dispatch(setUser(response.data.user));
+                router.push("/");
+              }}
+            />
+
+            <p className="sv-auth-footer">
+              Đã có tài khoản?{" "}
+              <Link href="/login" className="sv-auth-footer-link">
+                Đăng nhập ngay
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
-      <p className="mt-4 text-sm text-slate-600">
-        Already have an account?{" "}
-        <Link href="/login" className="font-medium text-blue-700">
-          Sign in
-        </Link>
-      </p>
     </section>
   );
 }
