@@ -32,6 +32,9 @@ export default function RootLayout({
                 <Link href="/" className="sv-menu-link">
                   Trang Chủ
                 </Link>
+                <Link href="/game" className="sv-menu-link">
+                  Game
+                </Link>
                 <Link href="/explore" className="sv-menu-link">
                   Bản Đồ Di Sản
                 </Link>
