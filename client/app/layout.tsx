@@ -38,8 +38,8 @@ export default function RootLayout({
                 <Link href="/library" className="sv-menu-link">
                   Hành Trình
                 </Link>
-                <Link href="/leaderboard" className="sv-menu-link">
-                  Bảng Vàng
+                <Link href="/courses" className="sv-menu-link">
+                  Bảng Vàng 
                 </Link>
                 <Link href="/community" className="sv-menu-link">
                   Kho Báu
