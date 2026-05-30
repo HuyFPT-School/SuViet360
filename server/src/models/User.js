@@ -49,6 +49,36 @@ const userSchema = new mongoose.Schema(
     },
     emailVerificationToken: String,
     emailVerificationExpires: Date,
+    avatar: {
+      type: String,
+      default: "",
+    },
+    avatarPublicId: {
+      type: String,
+      default: "",
+    },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: 15,
+    },
+    birthDate: {
+      type: Date,
+    },
+    gender: {
+      type: String,
+      enum: ["male", "female", "other"],
+    },
+    address: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+    },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
     passwordResetToken: String,
     passwordResetExpires: Date,
   },
