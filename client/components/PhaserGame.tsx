@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import * as Phaser from "phaser";
 
 type FrameDef = { key: string; file: string };
+type InteractPoint = { cx: number; cy: number; title: string; content: string };
 
 const IDLE_FRAMES: FrameDef[] = [
   { key: "player-idle-0", file: "/Bai15/0.png" },
@@ -34,7 +35,7 @@ export default function PhaserGame() {
     class Bai15Scene extends Phaser.Scene {
       private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
       private player!: Phaser.Physics.Matter.Sprite;
-      private interactPoints: { cx: number; cy: number; title: string; content: string }[] = [];
+      private interactPoints: InteractPoint[] = [];
       private popupEl: HTMLDivElement | null = null;
       private currentPopup: string | null = null;
 
@@ -46,66 +47,48 @@ export default function PhaserGame() {
       }
 
       create() {
-        // --- Ảnh nền ---
         this.add.image(0, 0, "bai15-bg").setOrigin(0, 0).setDisplaySize(MAP_WIDTH, MAP_HEIGHT);
 
-        // --- Đọc Object Layer ---
         const map = this.make.tilemap({ key: "bai15-map" });
         const objectLayer = map.getObjectLayer("CollisionsBai15");
 
         if (objectLayer?.objects?.length) {
           objectLayer.objects.forEach((obj) => {
-            const props = (obj as unknown as { properties?: { name: string; value: string }[] }).properties;
+            type ObjWithProps = { properties?: { name: string; value: string }[] };
+            const props = (obj as unknown as ObjWithProps).properties;
             const propValue = props?.[0]?.value ?? null;
             const objName = obj.name ?? "";
 
-            // --- POLYGON thật sự dùng Matter ---
+            const saveInteract = (cx: number, cy: number) => {
+              if (propValue && objName) {
+                this.interactPoints.push({
+                  cx, cy,
+                  title: objName.replace(/_/g, " "),
+                  content: propValue,
+                });
+              }
+            };
+
             if (obj.polygon && obj.polygon.length > 0) {
               const pts = obj.polygon as { x: number; y: number }[];
-
-              // Tính centroid để đặt body đúng vị trí
               let cx = 0, cy = 0;
-              pts.forEach((p) => { cx += p.x; cy += p.y; });
-              cx /= pts.length;
-              cy /= pts.length;
+              let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+              pts.forEach((p) => {
+                cx += p.x; cy += p.y;
+                minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+                minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+              });
+              cx /= pts.length; cy /= pts.length;
 
-              // Vertices relative to centroid
               const vertices = pts.map((p) => ({ x: p.x - cx, y: p.y - cy }));
-
               const worldX = (obj.x ?? 0) + cx;
               const worldY = (obj.y ?? 0) + cy;
 
               try {
-                const body = this.matter.add.fromVertices(worldX, worldY, vertices, {
-                  isStatic: true,
-                  friction: 0,
-                  frictionStatic: 0,
-                  restitution: 0,
-                  label: objName || "collision",
+                this.matter.add.fromVertices(worldX, worldY, vertices, {
+                  isStatic: true, friction: 0, frictionStatic: 0, restitution: 0,
                 }, true);
-
-                // Lưu interact point nếu có nội dung
-                if (propValue && objName) {
-                  // Dùng bounding box của polygon để tính center hiển thị
-                  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                  pts.forEach((p) => {
-                    minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
-                    minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
-                  });
-                  this.interactPoints.push({
-                    cx: (obj.x ?? 0) + (minX + maxX) / 2,
-                    cy: (obj.y ?? 0) + (minY + maxY) / 2,
-                    title: objName.replace(/_/g, " "),
-                    content: propValue,
-                  });
-                }
               } catch {
-                // Fallback nếu polygon lỗi (tự giao): dùng bounding box
-                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                pts.forEach((p) => {
-                  minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
-                  minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
-                });
                 const w = maxX - minX, h = maxY - minY;
                 if (w > 4 && h > 4) {
                   this.matter.add.rectangle(
@@ -115,40 +98,30 @@ export default function PhaserGame() {
                   );
                 }
               }
+
+              saveInteract(
+                (obj.x ?? 0) + (minX + maxX) / 2,
+                (obj.y ?? 0) + (minY + maxY) / 2
+              );
               return;
             }
 
-            // --- RECTANGLE ---
             if (!obj.width || !obj.height) return;
             const rx = (obj.x ?? 0) + obj.width / 2;
             const ry = (obj.y ?? 0) + obj.height / 2;
-
             this.matter.add.rectangle(rx, ry, obj.width, obj.height, {
-              isStatic: true,
-              friction: 0,
-              frictionStatic: 0,
-              restitution: 0,
-              label: objName || "collision",
+              isStatic: true, friction: 0, frictionStatic: 0, restitution: 0,
             });
-
-            if (propValue && objName) {
-              this.interactPoints.push({
-                cx: rx, cy: ry,
-                title: objName.replace(/_/g, " "),
-                content: propValue,
-              });
-            }
+            saveInteract(rx, ry);
           });
         }
 
-        // --- Player dùng Matter ---
         this.player = this.matter.add.sprite(MAP_WIDTH / 2, MAP_HEIGHT / 2, IDLE_FRAMES[0].key);
         this.player.setBody({ type: "rectangle", width: 20, height: 20 });
-        this.player.setFixedRotation(); // không bị xoay khi va chạm
+        this.player.setFixedRotation();
         this.player.setFriction(0);
         this.player.setFrictionAir(0.3);
 
-        // --- Animations ---
         this.anims.create({
           key: "idle",
           frames: IDLE_FRAMES.map((f) => ({ key: f.key })),
@@ -161,43 +134,27 @@ export default function PhaserGame() {
         });
         this.player.play("idle");
 
-        // --- World bounds ---
         this.matter.world.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT);
-
-        // --- Camera ---
         this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
-        // --- DOM Popup ---
         const parent = this.game.canvas.parentElement;
         if (parent) {
           parent.style.position = "relative";
           const popup = document.createElement("div");
           popup.style.cssText = `
-            display: none;
-            position: absolute;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80%;
-            max-width: 560px;
-            background: rgba(255, 248, 220, 0.97);
-            border: 3px solid #8B6914;
-            border-radius: 12px;
-            padding: 16px 20px;
-            font-family: 'Times New Roman', serif;
-            font-size: 14px;
-            line-height: 1.6;
-            color: #3b2000;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-            z-index: 100;
-            pointer-events: none;
+            display:none; position:absolute; bottom:24px; left:50%;
+            transform:translateX(-50%); width:80%; max-width:560px;
+            background:rgba(255,248,220,0.97); border:3px solid #8B6914;
+            border-radius:12px; padding:16px 20px;
+            font-family:'Times New Roman',serif; font-size:14px;
+            line-height:1.6; color:#3b2000;
+            box-shadow:0 4px 20px rgba(0,0,0,0.4); z-index:100; pointer-events:none;
           `;
           parent.appendChild(popup);
           this.popupEl = popup;
         }
 
-        // --- Hint ---
         this.add.text(MAP_WIDTH / 2, 20, "Đi gần vật thể để xem thông tin", {
           fontSize: "13px", color: "#ffffff",
           backgroundColor: "#00000066",
@@ -219,31 +176,28 @@ export default function PhaserGame() {
         else if (this.cursors.down?.isDown)  { vy =  speed; moving = true; }
 
         if (vx !== 0 && vy !== 0) { vx *= 0.707; vy *= 0.707; }
-
         this.player.setVelocity(vx, vy);
         this.player.play(moving ? "run" : "idle", true);
 
-        // --- Popup khi đến gần ---
         const px = this.player.x;
         const py = this.player.y;
-        type InteractPoint = { cx: number; cy: number; title: string; content: string };
         let nearest: InteractPoint | null = null;
         let nearestDist = Infinity;
 
-        this.interactPoints.forEach((pt) => {
+        for (const pt of this.interactPoints) {
           const dist = Phaser.Math.Distance.Between(px, py, pt.cx, pt.cy);
           if (dist < INTERACT_DISTANCE && dist < nearestDist) {
             nearest = pt;
             nearestDist = dist;
           }
-        });
+        }
 
         if (this.popupEl) {
-          if (nearest) {
-            const key = nearest.title;
-            if (this.currentPopup !== key) {
-              this.currentPopup = key;
-              const displayTitle = nearest.title
+          if (nearest !== null) {
+            const n = nearest;
+            if (this.currentPopup !== n.title) {
+              this.currentPopup = n.title;
+              const displayTitle = n.title
                 .split(" ")
                 .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
                 .join(" ");
@@ -251,7 +205,7 @@ export default function PhaserGame() {
                 <div style="font-weight:bold;font-size:15px;margin-bottom:8px;color:#5c3300;border-bottom:1px solid #c8a04a;padding-bottom:6px;">
                   📜 ${displayTitle}
                 </div>
-                <div>${nearest.content}</div>
+                <div>${n.content}</div>
               `;
               this.popupEl.style.display = "block";
             }
@@ -276,7 +230,7 @@ export default function PhaserGame() {
         default: "matter",
         matter: {
           gravity: { x: 0, y: 0 },
-          debug: false, // đổi true để thấy collision
+          debug: false,
         },
       },
       scale: {
