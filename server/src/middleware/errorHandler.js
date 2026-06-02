@@ -6,6 +6,28 @@ const errorHandler = (err, req, res, next) => {
   error.message = err.message;
   error.stack = err.stack;
 
+  // Handle Multer file upload errors
+  if (err.name === "MulterError") {
+    let message;
+    if (err.code === "LIMIT_FILE_SIZE") {
+      message = "File size exceeds the allowed limit (max 5 MB)";
+    } else if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      message = `Unexpected file field: ${err.field}`;
+    } else {
+      message = `File upload error: ${err.message}`;
+    }
+    return res.status(400).json({
+      status: "fail",
+      message,
+    });
+  }
+
+  // Handle manual file filter errors (thrown as plain Error)
+  if (err.message && err.message.startsWith("Tilemap JSON") || err.message && err.message.startsWith("Tileset images")) {
+    error.statusCode = 400;
+    error.status = "fail";
+  }
+
   // Handle Mongoose Validation Error
   if (err.name === "ValidationError") {
     error.statusCode = 400;

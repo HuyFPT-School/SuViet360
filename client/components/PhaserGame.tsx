@@ -3,55 +3,88 @@
 import { useEffect, useRef } from "react";
 import * as Phaser from "phaser";
 
-type FrameDef = { key: string; file: string };
+// ─── Types matching API response ──────────────────────────────────────
+export type SpriteFrame = { key: string; frame: number; imageUrl: string };
+export type Tileset = { name: string; imageUrl: string };
+export type LessonGameData = {
+  tilemapJsonUrl: string;
+  tilesets: Tileset[];
+  character: { animations: Record<string, SpriteFrame[]> };
+  spawnPoint: { x: number; y: number };
+};
+
 type InteractPoint = { cx: number; cy: number; title: string; content: string };
 
-const IDLE_FRAMES: FrameDef[] = [
-  { key: "player-idle-0", file: "/Bai15/0.png" },
-  { key: "player-idle-1", file: "/Bai15/1.png" },
-  { key: "player-idle-2", file: "/Bai15/2.png" },
-  { key: "player-idle-3", file: "/Bai15/3.png" },
-];
-const RUN_FRAMES: FrameDef[] = [
-  { key: "player-run-0", file: "/Bai15/4.png" },
-  { key: "player-run-1", file: "/Bai15/5.png" },
-  { key: "player-run-2", file: "/Bai15/6.png" },
-  { key: "player-run-3", file: "/Bai15/7.png" },
-  { key: "player-run-4", file: "/Bai15/8.png" },
-  { key: "player-run-5", file: "/Bai15/9.png" },
-];
-
-const MAP_WIDTH = 1440;
-const MAP_HEIGHT = 1088;
 const INTERACT_DISTANCE = 80;
 
-export default function PhaserGame() {
+interface PhaserGameProps {
+  lessonGame: LessonGameData;
+}
+
+export default function PhaserGame({ lessonGame }: PhaserGameProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
+  // Keep lessonGame in a ref so the scene closure always reads latest
+  const dataRef = useRef(lessonGame);
+  dataRef.current = lessonGame;
 
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return;
 
-    class Bai15Scene extends Phaser.Scene {
+    const data = dataRef.current;
+    const { tilemapJsonUrl, tilesets, character, spawnPoint } = data;
+
+    // Derive animation frames from API data
+    const idleFrames: SpriteFrame[] = character.animations.idle || [];
+    const runFrames: SpriteFrame[] = character.animations.run || [];
+    const allFrames = [...idleFrames, ...runFrames];
+
+    // Background tileset image (first tileset)
+    const bgTileset = tilesets[0];
+
+    class DynamicLessonScene extends Phaser.Scene {
       private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
       private player!: Phaser.Physics.Matter.Sprite;
       private interactPoints: InteractPoint[] = [];
       private popupEl: HTMLDivElement | null = null;
       private currentPopup: string | null = null;
+      private mapWidth = 1440;
+      private mapHeight = 1088;
 
       preload() {
-        this.load.image("bai15-bg", "/Bai15/Bai15.png");
-        this.load.tilemapTiledJSON("bai15-map", "/Bai15/Bai15.json");
-        IDLE_FRAMES.forEach((f) => this.load.image(f.key, f.file));
-        RUN_FRAMES.forEach((f) => this.load.image(f.key, f.file));
+        // Load background tileset image
+        if (bgTileset) {
+          this.load.image("bg-tileset", bgTileset.imageUrl);
+        }
+
+        // Load tilemap JSON from Cloudinary URL
+        this.load.tilemapTiledJSON("lesson-map", tilemapJsonUrl);
+
+        // Load all animation frames from Cloudinary URLs
+        allFrames.forEach((f) => this.load.image(f.key, f.imageUrl));
       }
 
       create() {
-        this.add.image(0, 0, "bai15-bg").setOrigin(0, 0).setDisplaySize(MAP_WIDTH, MAP_HEIGHT);
+        const map = this.make.tilemap({ key: "lesson-map" });
 
-        const map = this.make.tilemap({ key: "bai15-map" });
+        // Try to read map dimensions from tilemap
+        const mapW = (map as any).widthInPixels;
+        const mapH = (map as any).heightInPixels;
+        if (mapW && mapH) {
+          this.mapWidth = mapW;
+          this.mapHeight = mapH;
+        }
+
+        // Show background tileset image
+        if (bgTileset) {
+          this.add
+            .image(0, 0, "bg-tileset")
+            .setOrigin(0, 0)
+            .setDisplaySize(this.mapWidth, this.mapHeight);
+        }
+
+        // ── Build collision bodies from object layer ──
         const objectLayer = map.getObjectLayer("CollisionsBai15");
-
         if (objectLayer?.objects?.length) {
           objectLayer.objects.forEach((obj) => {
             type ObjWithProps = { properties?: { name: string; value: string }[] };
@@ -62,7 +95,8 @@ export default function PhaserGame() {
             const saveInteract = (cx: number, cy: number) => {
               if (propValue && objName) {
                 this.interactPoints.push({
-                  cx, cy,
+                  cx,
+                  cy,
                   title: objName.replace(/_/g, " "),
                   content: propValue,
                 });
@@ -116,28 +150,44 @@ export default function PhaserGame() {
           });
         }
 
-        this.player = this.matter.add.sprite(MAP_WIDTH / 2, MAP_HEIGHT / 2, IDLE_FRAMES[0].key);
+        // ── Player ──
+        const startFrame = idleFrames[0]?.key || allFrames[0]?.key || "bg-tileset";
+        this.player = this.matter.add.sprite(
+          spawnPoint.x || this.mapWidth / 2,
+          spawnPoint.y || this.mapHeight / 2,
+          startFrame
+        );
         this.player.setBody({ type: "rectangle", width: 20, height: 20 });
         this.player.setFixedRotation();
         this.player.setFriction(0);
         this.player.setFrictionAir(0.3);
 
-        this.anims.create({
-          key: "idle",
-          frames: IDLE_FRAMES.map((f) => ({ key: f.key })),
-          frameRate: 6, repeat: -1,
-        });
-        this.anims.create({
-          key: "run",
-          frames: RUN_FRAMES.map((f) => ({ key: f.key })),
-          frameRate: 10, repeat: -1,
-        });
-        this.player.play("idle");
+        // ── Animations ──
+        if (idleFrames.length > 0) {
+          this.anims.create({
+            key: "idle",
+            frames: idleFrames.map((f) => ({ key: f.key })),
+            frameRate: 6,
+            repeat: -1,
+          });
+        }
+        if (runFrames.length > 0) {
+          this.anims.create({
+            key: "run",
+            frames: runFrames.map((f) => ({ key: f.key })),
+            frameRate: 10,
+            repeat: -1,
+          });
+        }
+        if (idleFrames.length > 0) {
+          this.player.play("idle");
+        }
 
-        this.matter.world.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT);
-        this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT);
+        this.matter.world.setBounds(0, 0, this.mapWidth, this.mapHeight);
+        this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
+        // ── Popup ──
         const parent = this.game.canvas.parentElement;
         if (parent) {
           parent.style.position = "relative";
@@ -155,7 +205,7 @@ export default function PhaserGame() {
           this.popupEl = popup;
         }
 
-        this.add.text(MAP_WIDTH / 2, 20, "Đi gần vật thể để xem thông tin", {
+        this.add.text(this.mapWidth / 2, 20, "Đi gần vật thể để xem thông tin", {
           fontSize: "13px", color: "#ffffff",
           backgroundColor: "#00000066",
           padding: { x: 10, y: 4 },
@@ -177,7 +227,12 @@ export default function PhaserGame() {
 
         if (vx !== 0 && vy !== 0) { vx *= 0.707; vy *= 0.707; }
         this.player.setVelocity(vx, vy);
-        this.player.play(moving ? "run" : "idle", true);
+
+        if (moving && this.anims.exists("run")) {
+          this.player.play("run", true);
+        } else if (!moving && this.anims.exists("idle")) {
+          this.player.play("idle", true);
+        }
 
         const px = this.player.x;
         const py = this.player.y;
@@ -237,7 +292,7 @@ export default function PhaserGame() {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
       },
-      scene: Bai15Scene,
+      scene: DynamicLessonScene,
     });
 
     gameRef.current = game;
