@@ -39,6 +39,9 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
     const runFrames: SpriteFrame[] = character.animations.run || [];
     const allFrames = [...idleFrames, ...runFrames];
 
+    // Background tileset image (first tileset)
+    const bgTileset = tilesets[0];
+
     class DynamicLessonScene extends Phaser.Scene {
       private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
       private player!: Phaser.Physics.Matter.Sprite;
@@ -49,10 +52,10 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
       private mapHeight = 1088;
 
       preload() {
-        // Load all tileset images using their name as the image key
-        tilesets.forEach((ts) => {
-          this.load.image(ts.name, ts.imageUrl);
-        });
+        // Load background tileset image
+        if (bgTileset) {
+          this.load.image("bg-tileset", bgTileset.imageUrl);
+        }
 
         // Load tilemap JSON from Cloudinary URL
         this.load.tilemapTiledJSON("lesson-map", tilemapJsonUrl);
@@ -65,34 +68,23 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
         const map = this.make.tilemap({ key: "lesson-map" });
 
         // Try to read map dimensions from tilemap
-        const mapW = map.widthInPixels;
-        const mapH = map.heightInPixels;
+        const mapW = (map as any).widthInPixels;
+        const mapH = (map as any).heightInPixels;
         if (mapW && mapH) {
           this.mapWidth = mapW;
           this.mapHeight = mapH;
         }
 
-        // Associate loaded tileset images with the tilemap data
-        const phaserTilesets = tilesets
-          .map((ts) => map.addTilesetImage(ts.name, ts.name))
-          .filter(Boolean) as Phaser.Tilemaps.Tileset[];
-
-        // Render all Tile layers dynamically from the Tiled JSON
-        map.layers.forEach((layer) => {
-          map.createLayer(layer.name, phaserTilesets, 0, 0);
-        });
+        // Show background tileset image
+        if (bgTileset) {
+          this.add
+            .image(0, 0, "bg-tileset")
+            .setOrigin(0, 0)
+            .setDisplaySize(this.mapWidth, this.mapHeight);
+        }
 
         // ── Build collision bodies from object layer ──
-        // Try finding "CollisionsBai15" or fallback to any object layer containing "collision"
-        let objectLayer = map.getObjectLayer("CollisionsBai15");
-        if (!objectLayer && map.objects) {
-          const collisionLayerObj = map.objects.find((layer) =>
-            layer.name.toLowerCase().includes("collision")
-          );
-          if (collisionLayerObj) {
-            objectLayer = map.getObjectLayer(collisionLayerObj.name);
-          }
-        }
+        const objectLayer = map.getObjectLayer("CollisionsBai15");
         if (objectLayer?.objects?.length) {
           objectLayer.objects.forEach((obj) => {
             type ObjWithProps = { properties?: { name: string; value: string }[] };

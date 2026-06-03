@@ -50,8 +50,8 @@ export default function LessonsPage() {
         `/lessons/${id}`
       );
       setSelectedLesson(res.data.lesson);
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
