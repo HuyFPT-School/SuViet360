@@ -79,9 +79,7 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
 
         // Render all Tile layers dynamically from the Tiled JSON
         map.layers.forEach((layer) => {
-          if (layer.type === "tilelayer") {
-            map.createLayer(layer.name, phaserTilesets, 0, 0);
-          }
+          map.createLayer(layer.name, phaserTilesets, 0, 0);
         });
 
         // ── Build collision bodies from object layer ──
