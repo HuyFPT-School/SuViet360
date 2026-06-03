@@ -113,15 +113,13 @@ export default function ProfilePage() {
   /* ── Populate form when user loads ── */
   useEffect(() => {
     if (user) {
-      Promise.resolve().then(() => {
-        setEditForm({
-          name: user.name || "",
-          phone: user.phone || "",
-          birthDate: toInputDate(user.birthDate),
-          gender: user.gender,
-          address: user.address || "",
-          bio: user.bio || "",
-        });
+      setEditForm({
+        name: user.name || "",
+        phone: user.phone || "",
+        birthDate: toInputDate(user.birthDate),
+        gender: user.gender,
+        address: user.address || "",
+        bio: user.bio || "",
       });
     }
   }, [user]);
@@ -552,7 +550,7 @@ export default function ProfilePage() {
 
         {/* Footer quote */}
         <div className="profile-footer">
-          <div className="profile-footer__open-quote">&ldquo;</div>
+          <div className="profile-footer__open-quote">"</div>
           <div className="profile-footer__text">
             Dòng chảy lịch sử không ngừng trôi,<br />
             Hiểu quá khứ – Trân trọng hiện tại – Kiến tạo tương lai.
