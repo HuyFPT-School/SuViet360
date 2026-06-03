@@ -35,6 +35,9 @@ export default function RootLayout({
                 <Link href="/game" className="sv-menu-link">
                   Game
                 </Link>
+                <Link href="/lessons" className="sv-menu-link">
+                  Bài Học
+                </Link>
                 <Link href="/explore" className="sv-menu-link">
                   Bản Đồ Di Sản
                 </Link>
