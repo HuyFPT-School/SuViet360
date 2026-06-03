@@ -13,8 +13,12 @@ function VerifyEmailContent() {
   const dispatch = useAppDispatch();
   const token = searchParams.get("token");
 
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    token ? "loading" : "error"
+  );
+  const [message, setMessage] = useState(
+    token ? "" : "Token xác thực không hợp lệ."
+  );
 
   useEffect(() => {
     document.body.classList.add("sv-auth-mode");
@@ -22,11 +26,7 @@ function VerifyEmailContent() {
   }, []);
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-      setMessage("Token xác thực không hợp lệ.");
-      return;
-    }
+    if (!token) return;
 
     const verify = async () => {
       try {
