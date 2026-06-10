@@ -300,6 +300,6 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
   }, []);
 
   return (
-    <div ref={containerRef} style={{ width: "100%", height: "70vh", minHeight: 480 }} />
+    <div ref={containerRef} className="sv-phaser-container" />
   );
 }

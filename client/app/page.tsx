@@ -57,7 +57,7 @@ export default function Home() {
     <div>
 
       {/* ── HERO ── */}
-      <section className="relative isolate overflow-hidden" style={{ height: "600px" }}>
+      <section className="relative isolate overflow-hidden h-[450px] sm:h-[520px] lg:h-[600px]">
         <Image
           src="/images/HeroSection.png"
           alt="Phù điêu hành trình lịch sử Việt"
@@ -188,7 +188,7 @@ export default function Home() {
             <AnimateIn variant="fade-up">
               <SectionHeader title="Sự Kiện Gần Đây" />
             </AnimateIn>
-            <AnimateIn variant="fade-scale" delay={60} stagger className="mt-6 grid gap-5 sm:grid-cols-3">
+            <AnimateIn variant="fade-scale" delay={60} stagger className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {EVENTS.map((e) => (
                 <Link
                   key={e.title}

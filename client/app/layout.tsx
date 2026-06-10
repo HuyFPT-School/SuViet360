@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Providers from "@/components/providers";
 import UserMenu from "@/components/user-menu";
+import MobileMenu from "@/components/mobile-menu";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,7 +29,7 @@ export default function RootLayout({
                 />
                 <span className="sv-brand-text">Hành Trình Sử Việt</span>
               </div>
-              <div className="sv-menu">
+              <div className="sv-menu hidden lg:flex">
                 <Link href="/" className="sv-menu-link">
                   Trang Chủ
                 </Link>
@@ -51,7 +52,7 @@ export default function RootLayout({
                   Kho Báu
                 </Link>
               </div>
-              <div className="sv-search">
+              <div className="sv-search hidden lg:flex">
                 <span className="sv-search-icon" />
                 <input
                   className="sv-search-input"
@@ -59,7 +60,10 @@ export default function RootLayout({
                   aria-label="Tìm kiếm"
                 />
               </div>
-              <UserMenu />
+              <div className="hidden lg:flex">
+                <UserMenu />
+              </div>
+              <MobileMenu />
             </nav>
           </header>
           <main className="sv-main">{children}</main>
@@ -68,3 +72,4 @@ export default function RootLayout({
     </html>
   );
 }
+
