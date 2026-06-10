@@ -16,7 +16,7 @@ router.get("/", getAllLessons);
 router.get("/:id", getLessonById);
 
 // Admin only: create, update, delete
-router.use(protect, authorize("admin"));
+router.use(protect, authorize("admin", "staff"));
 
 router.post(
   "/",

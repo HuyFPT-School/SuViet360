@@ -66,6 +66,9 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
 
       create() {
         const map = this.make.tilemap({ key: "lesson-map" });
+        const mapData = this.cache.tilemap.get("lesson-map")?.data as
+          | { layers?: Array<{ type?: string; objects?: unknown[] }> }
+          | undefined;
 
         // Try to read map dimensions from tilemap
         const mapW = (map as any).widthInPixels;
@@ -83,9 +86,13 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
             .setDisplaySize(this.mapWidth, this.mapHeight);
         }
 
-        // ── Build collision bodies from object layer ──
-        const objectLayer = map.getObjectLayer("CollisionsBai15");
-        if (objectLayer?.objects?.length) {
+        // ── Build collision bodies from every object layer in the map ──
+        const objectLayers = (mapData?.layers ?? []).filter(
+          (layer): layer is { type?: string; objects?: any[] } =>
+            layer.type === "objectgroup" && Array.isArray(layer.objects)
+        );
+
+        for (const objectLayer of objectLayers) {
           objectLayer.objects.forEach((obj) => {
             type ObjWithProps = { properties?: { name: string; value: string }[] };
             const props = (obj as unknown as ObjWithProps).properties;
