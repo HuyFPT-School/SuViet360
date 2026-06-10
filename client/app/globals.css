@@ -37,6 +37,12 @@
 /* ─────────────────────────────────────────
    BASE
    ───────────────────────────────────────── */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -1357,6 +1363,26 @@ body {
 /* ─────────────────────────────────────────
    RESPONSIVE
    ───────────────────────────────────────── */
+@media (max-width: 1280px) and (min-width: 1024px) {
+  .sv-topbar {
+    gap: 12px !important;
+    padding: 0 16px !important;
+  }
+  .sv-menu {
+    gap: 12px !important;
+  }
+  .sv-brand-logo {
+    transform: scale(2.0) !important;
+    margin-right: 32px !important;
+  }
+  .sv-search {
+    padding: 6px 10px !important;
+  }
+  .sv-search-input {
+    width: 100px !important;
+  }
+}
+
 @media (max-width: 1024px) {
   .sv-panels { grid-template-columns: repeat(2, 1fr); }
   .profile-bottom { grid-template-columns: 1fr 1fr; }
