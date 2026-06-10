@@ -93,7 +93,7 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
         );
 
         for (const objectLayer of objectLayers) {
-          objectLayer.objects.forEach((obj) => {
+          for (const obj of objectLayer.objects ?? []) {
             type ObjWithProps = { properties?: { name: string; value: string }[] };
             const props = (obj as unknown as ObjWithProps).properties;
             const propValue = props?.[0]?.value ?? null;
@@ -154,7 +154,7 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
               isStatic: true, friction: 0, frictionStatic: 0, restitution: 0,
             });
             saveInteract(rx, ry);
-          });
+          }
         }
 
         // ── Player ──
