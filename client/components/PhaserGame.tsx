@@ -52,9 +52,6 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
       private mapHeight = 1088;
 
       preload() {
-        // Allow cross-origin asset loading from Cloudinary
-        this.load.crossOrigin = "anonymous";
-
         // Load background tileset image
         if (bgTileset) {
           this.load.image("bg-tileset", bgTileset.imageUrl);

@@ -44,11 +44,11 @@ const uploadTilesetImage = async (buffer, folder = "suviet360/tilesets") => {
 /**
  * Upload a single animation sprite frame to Cloudinary.
  * @param {Buffer} buffer - image buffer
- * @param {string} folder - Cloudinary folder path
+ * @param {string} animationName - e.g. "idle", "run"
  * @returns {{ secure_url: string, public_id: string }}
  */
-const uploadAnimationSprite = async (buffer, folder = "suviet360/sprites") => {
-  return uploadImage(buffer, folder);
+const uploadAnimationSprite = async (buffer, animationName) => {
+  return uploadImage(buffer, `suviet360/sprites/${animationName}`);
 };
 
 /**
