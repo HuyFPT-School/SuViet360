@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthForm from "@/components/auth-form";
 import { authApi } from "@/lib/authApi";
@@ -11,16 +11,38 @@ import { useAppDispatch } from "@/store";
 export default function LoginPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const [notice, setNotice] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     document.body.classList.add("sv-auth-mode");
     return () => document.body.classList.remove("sv-auth-mode");
   }, []);
 
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   return (
     <section className="sv-auth sv-auth-login">
       <div className="sv-auth-shell">
         <div className="sv-auth-panel">
+          {notice && (
+            <div className="sv-auth-toast" aria-live="polite">
+              <div
+                className={
+                  notice.type === "error" ? "sv-auth-error" : "sv-auth-success"
+                }
+                role={notice.type === "error" ? "alert" : "status"}
+              >
+                {notice.message}
+              </div>
+            </div>
+          )}
           <img
             src="/images/login_form.png"
             alt=""
@@ -38,10 +60,7 @@ export default function LoginPage() {
             </div>
 
             <div className="sv-auth-tabs">
-              <Link
-                href="/login"
-                className="sv-auth-tab sv-auth-tab-active"
-              >
+              <Link href="/login" className="sv-auth-tab sv-auth-tab-active">
                 Đăng nhập
               </Link>
               <Link href="/register" className="sv-auth-tab">
@@ -58,6 +77,7 @@ export default function LoginPage() {
 
             <AuthForm
               mode="login"
+              onNotice={setNotice}
               onSubmit={async (values) => {
                 const response = await authApi.login(
                   values as { email: string; password: string }

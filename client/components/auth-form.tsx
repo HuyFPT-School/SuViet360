@@ -30,9 +30,17 @@ interface AuthFormProps {
     values: RegisterFormValues | LoginFormValues
   ) => Promise<string | void>;
   onGoogleSuccess?: (credential: string) => Promise<void>;
+  onNotice?: (
+    notice: { type: "success" | "error"; message: string } | null
+  ) => void;
 }
 
-export default function AuthForm({ mode, onSubmit, onGoogleSuccess }: AuthFormProps) {
+export default function AuthForm({
+  mode,
+  onSubmit,
+  onGoogleSuccess,
+  onNotice,
+}: AuthFormProps) {
   const schema = mode === "register" ? registerSchema : loginSchema;
   const [serverError, setServerError] = useState("");
   const [serverSuccess, setServerSuccess] = useState("");
@@ -46,22 +54,41 @@ export default function AuthForm({ mode, onSubmit, onGoogleSuccess }: AuthFormPr
     resolver: zodResolver(schema),
   });
 
+  const clearNotice = () => {
+    if (onNotice) {
+      onNotice(null);
+    }
+    setServerError("");
+    setServerSuccess("");
+  };
+
+  const pushNotice = (type: "success" | "error", message: string) => {
+    if (onNotice) {
+      onNotice({ type, message });
+      return;
+    }
+    if (type === "error") {
+      setServerError(message);
+    } else {
+      setServerSuccess(message);
+    }
+  };
+
   const submitHandler = async (values: AuthFormValues) => {
     try {
-      setServerError("");
-      setServerSuccess("");
+      clearNotice();
       const message = await onSubmit(
         values as RegisterFormValues | LoginFormValues
       );
       if (message) {
-        setServerSuccess(message);
+        pushNotice("success", message);
       }
     } catch (error) {
       const message =
         error instanceof AxiosError
           ? error.response?.data?.message || "Authentication failed"
           : "Authentication failed";
-      setServerError(message);
+      pushNotice("error", message);
     }
   };
 
@@ -91,9 +118,7 @@ export default function AuthForm({ mode, onSubmit, onGoogleSuccess }: AuthFormPr
             className="sv-auth-input"
             aria-invalid={Boolean(errors.name)}
           />
-          {errors.name && (
-            <p className="sv-auth-help">{errors.name.message}</p>
-          )}
+          {errors.name && <p className="sv-auth-help">{errors.name.message}</p>}
         </div>
       )}
 
@@ -110,9 +135,7 @@ export default function AuthForm({ mode, onSubmit, onGoogleSuccess }: AuthFormPr
           className="sv-auth-input"
           aria-invalid={Boolean(errors.email)}
         />
-        {errors.email && (
-          <p className="sv-auth-help">{errors.email.message}</p>
-        )}
+        {errors.email && <p className="sv-auth-help">{errors.email.message}</p>}
       </div>
 
       <div className="sv-auth-field">
@@ -124,7 +147,9 @@ export default function AuthForm({ mode, onSubmit, onGoogleSuccess }: AuthFormPr
             id="password"
             type={showPassword ? "text" : "password"}
             {...register("password")}
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            autoComplete={
+              mode === "login" ? "current-password" : "new-password"
+            }
             placeholder="Nhập mật khẩu"
             className="sv-auth-input pr-10"
             style={{ width: "100%" }}
@@ -137,13 +162,38 @@ export default function AuthForm({ mode, onSubmit, onGoogleSuccess }: AuthFormPr
             aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
           >
             {showPassword ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                />
               </svg>
             ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
               </svg>
             )}
           </button>
@@ -159,11 +209,7 @@ export default function AuthForm({ mode, onSubmit, onGoogleSuccess }: AuthFormPr
         </Link>
       )}
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="sv-auth-submit"
-      >
+      <button type="submit" disabled={isSubmitting} className="sv-auth-submit">
         {isSubmitting
           ? "Đang xử lý..."
           : mode === "login"
@@ -179,19 +225,20 @@ export default function AuthForm({ mode, onSubmit, onGoogleSuccess }: AuthFormPr
           onSuccess={async (credentialResponse: CredentialResponse) => {
             if (credentialResponse.credential && onGoogleSuccess) {
               try {
-                setServerError("");
+                clearNotice();
                 await onGoogleSuccess(credentialResponse.credential);
               } catch (error) {
                 const message =
                   error instanceof AxiosError
-                    ? error.response?.data?.message || "Đăng nhập Google thất bại"
+                    ? error.response?.data?.message ||
+                      "Đăng nhập Google thất bại"
                     : "Đăng nhập Google thất bại";
-                setServerError(message);
+                pushNotice("error", message);
               }
             }
           }}
           onError={() => {
-            setServerError("Đăng nhập Google thất bại");
+            pushNotice("error", "Đăng nhập Google thất bại");
           }}
           theme="outline"
           size="large"

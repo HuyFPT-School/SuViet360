@@ -7,6 +7,7 @@ import { authApi } from "@/lib/authApi";
 import { setUser } from "@/store/features/authSlice";
 import { useAppDispatch } from "@/store";
 import { AxiosError } from "axios";
+import { toVietnameseAuthMessage } from "@/lib/authMessages";
 
 function ResetPasswordContent() {
   const router = useRouter();
@@ -25,6 +26,12 @@ function ResetPasswordContent() {
     document.body.classList.add("sv-auth-mode");
     return () => document.body.classList.remove("sv-auth-mode");
   }, []);
+
+  useEffect(() => {
+    if (!serverError) return;
+    const timer = setTimeout(() => setServerError(""), 4000);
+    return () => clearTimeout(timer);
+  }, [serverError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,10 +53,10 @@ function ResetPasswordContent() {
       dispatch(setUser(response.data.user));
       router.push("/");
     } catch (error) {
-      const message =
-        error instanceof AxiosError
-          ? error.response?.data?.message || "Đã xảy ra lỗi"
-          : "Đã xảy ra lỗi";
+      const message = toVietnameseAuthMessage(
+        error instanceof AxiosError ? error.response?.data?.message : undefined,
+        "Đã xảy ra lỗi."
+      );
       setServerError(message);
     } finally {
       setIsSubmitting(false);
@@ -82,6 +89,13 @@ function ResetPasswordContent() {
     <section className="sv-auth sv-auth-login">
       <div className="sv-auth-shell">
         <div className="sv-auth-panel">
+          {serverError && (
+            <div className="sv-auth-toast" aria-live="polite">
+              <div className="sv-auth-error" role="alert">
+                {serverError}
+              </div>
+            </div>
+          )}
           <img
             src="/images/login_form.png"
             alt=""
@@ -107,12 +121,6 @@ function ResetPasswordContent() {
             </div>
 
             <form onSubmit={handleSubmit} className="sv-auth-form">
-              {serverError && (
-                <div className="sv-auth-error" role="alert">
-                  {serverError}
-                </div>
-              )}
-
               <div className="sv-auth-field">
                 <label htmlFor="password" className="sv-auth-label">
                   Mật khẩu mới
@@ -137,13 +145,38 @@ function ResetPasswordContent() {
                     aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                   >
                     {showPassword ? (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                        />
                       </svg>
                     ) : (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        />
                       </svg>
                     )}
                   </button>
@@ -171,16 +204,43 @@ function ResetPasswordContent() {
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4f361c]/60 hover:text-[#4f361c] cursor-pointer focus:outline-none flex items-center justify-center"
-                    aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                    aria-label={
+                      showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
+                    }
                   >
                     {showConfirmPassword ? (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                        />
                       </svg>
                     ) : (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        />
                       </svg>
                     )}
                   </button>
@@ -211,27 +271,29 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={
-      <section className="sv-auth sv-auth-login">
-        <div className="sv-auth-shell">
-          <div className="sv-auth-panel">
-            <div className="sv-auth-panel-inner">
-              <div className="sv-auth-brand">
-                <img
-                  src="/images/Logo_SuViet-remove.png"
-                  alt="Hành Trình Sử Việt"
-                  className="sv-auth-emblem"
-                />
-                <span>Hành Trình Sử Việt</span>
-              </div>
-              <div className="sv-auth-heading">
-                <h1 className="sv-auth-title">Đang tải...</h1>
+    <Suspense
+      fallback={
+        <section className="sv-auth sv-auth-login">
+          <div className="sv-auth-shell">
+            <div className="sv-auth-panel">
+              <div className="sv-auth-panel-inner">
+                <div className="sv-auth-brand">
+                  <img
+                    src="/images/Logo_SuViet-remove.png"
+                    alt="Hành Trình Sử Việt"
+                    className="sv-auth-emblem"
+                  />
+                  <span>Hành Trình Sử Việt</span>
+                </div>
+                <div className="sv-auth-heading">
+                  <h1 className="sv-auth-title">Đang tải...</h1>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-    }>
+        </section>
+      }
+    >
       <ResetPasswordContent />
     </Suspense>
   );
