@@ -35,12 +35,12 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
     const { tilemapJsonUrl, tilesets, character, spawnPoint } = data;
 
     // Derive animation frames from API data
-    const idleFrames: SpriteFrame[] = character.animations.idle || [];
-    const runFrames: SpriteFrame[] = character.animations.run || [];
+    const idleFrames: SpriteFrame[] = character?.animations?.idle || [];
+    const runFrames: SpriteFrame[] = character?.animations?.run || [];
     const allFrames = [...idleFrames, ...runFrames];
 
     // Background tileset image (first tileset)
-    const bgTileset = tilesets[0];
+    const bgTileset = tilesets?.[0];
 
     class DynamicLessonScene extends Phaser.Scene {
       private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -61,7 +61,9 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
         this.load.tilemapTiledJSON("lesson-map", tilemapJsonUrl);
 
         // Load all animation frames from Cloudinary URLs
-        allFrames.forEach((f) => this.load.image(f.key, f.imageUrl));
+        allFrames.forEach((f) => {
+          this.load.image(f.key, f.imageUrl);
+        });
       }
 
       create() {
@@ -144,10 +146,10 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
                 (obj.x ?? 0) + (minX + maxX) / 2,
                 (obj.y ?? 0) + (minY + maxY) / 2
               );
-              return;
+              continue;
             }
 
-            if (!obj.width || !obj.height) return;
+            if (!obj.width || !obj.height) continue;
             const rx = (obj.x ?? 0) + obj.width / 2;
             const ry = (obj.y ?? 0) + obj.height / 2;
             this.matter.add.rectangle(rx, ry, obj.width, obj.height, {
@@ -159,11 +161,19 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
 
         // ── Player ──
         const startFrame = idleFrames[0]?.key || allFrames[0]?.key || "bg-tileset";
+        console.log("[PhaserGame] Calculated startFrame key:", startFrame);
+        console.log("[PhaserGame] Spawn point coordinates:", spawnPoint);
+        
         this.player = this.matter.add.sprite(
           spawnPoint.x || this.mapWidth / 2,
           spawnPoint.y || this.mapHeight / 2,
           startFrame
         );
+        
+        if (this.player) {
+          this.player.setDepth(100); // Force player to render on top of the background image
+        }
+
         this.player.setBody({ type: "rectangle", width: 20, height: 20 });
         this.player.setFixedRotation();
         this.player.setFriction(0);
@@ -171,6 +181,7 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
 
         // ── Animations ──
         if (idleFrames.length > 0) {
+          console.log("[PhaserGame] Creating idle animation...");
           this.anims.create({
             key: "idle",
             frames: idleFrames.map((f) => ({ key: f.key })),
@@ -179,6 +190,7 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
           });
         }
         if (runFrames.length > 0) {
+          console.log("[PhaserGame] Creating run animation...");
           this.anims.create({
             key: "run",
             frames: runFrames.map((f) => ({ key: f.key })),

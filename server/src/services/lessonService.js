@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Lesson = require("../models/Lesson");
 const {
   uploadTilemapJson,
@@ -64,7 +65,8 @@ const createLesson = async ({
   }
 
   // 3. Upload animation sprites grouped by animation name
-  const uploadedAnimations = await processAnimationGroups(animationGroups);
+  const characterId = new mongoose.Types.ObjectId().toString();
+  const uploadedAnimations = await processAnimationGroups(animationGroups, characterId);
 
   // 4. Save to MongoDB
   const lesson = await Lesson.create({
@@ -182,8 +184,10 @@ const updateLesson = async (id, updates) => {
     }
 
     // Upload new animation groups
+    const characterId = new mongoose.Types.ObjectId().toString();
     const newAnimations = await processAnimationGroups(
-      updates.animationGroups
+      updates.animationGroups,
+      characterId
     );
     lesson.game.character.animations = newAnimations;
     lesson.markModified("game.character.animations");
@@ -243,7 +247,7 @@ const extractFrameNumber = (filename) => {
  * @param {Object} animationGroups - { idle: [file, ...], run: [file, ...] }
  * @returns {Array<{ name: string, frames: Array }>}
  */
-const processAnimationGroups = async (animationGroups) => {
+const processAnimationGroups = async (animationGroups, characterId) => {
   if (!animationGroups || Object.keys(animationGroups).length === 0) {
     return [];
   }
@@ -265,7 +269,7 @@ const processAnimationGroups = async (animationGroups) => {
         );
       }
 
-      const imgUpload = await uploadAnimationSprite(file.buffer, animName);
+      const imgUpload = await uploadAnimationSprite(file.buffer, characterId, animName);
 
       // Auto-generate key: player-{animationName}-{sequentialIndex}
       // Sequential index (i) ensures stable ordering regardless of filename
