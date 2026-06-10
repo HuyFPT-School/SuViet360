@@ -63,12 +63,14 @@ export default function LoginPage() {
                   values as { email: string; password: string }
                 );
                 dispatch(setUser(response.data.user));
-                router.push("/");
+                const role = response.data.user.role;
+                router.push(role === "staff" ? "/staff" : "/");
               }}
               onGoogleSuccess={async (credential) => {
                 const response = await authApi.googleLogin(credential);
                 dispatch(setUser(response.data.user));
-                router.push("/");
+                const role = response.data.user.role;
+                router.push(role === "staff" ? "/staff" : "/");
               }}
             />
 
