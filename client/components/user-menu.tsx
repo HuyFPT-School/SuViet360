@@ -34,8 +34,7 @@ export default function UserMenu() {
         )}
         <Link
           href="/profile"
-          className="text-[#f0ddb7] font-semibold text-xs tracking-wider uppercase hover:text-[#c9a15a] transition duration-200 whitespace-nowrap inline-block max-w-[110px] sm:max-w-[140px] truncate align-middle"
-          title={user.name}
+          className="inline-block max-w-[100px] xl:max-w-[180px] truncate text-[#f0ddb7] font-semibold text-xs tracking-wider uppercase hover:text-[#c9a15a] transition duration-200"
         >
           {user.name}
         </Link>

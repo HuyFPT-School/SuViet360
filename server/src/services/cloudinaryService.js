@@ -78,9 +78,46 @@ const uploadImage = async (buffer, folder) => {
 };
 
 /**
+ * Upload a podcast thumbnail image to Cloudinary.
+ * @param {Buffer} buffer - image buffer
+ * @returns {{ secure_url: string, public_id: string }}
+ */
+const uploadPodcastThumbnail = async (buffer) => {
+  return uploadImage(buffer, "suviet360/podcast_thumbnails");
+};
+
+/**
+ * Upload a podcast audio file to Cloudinary.
+ * @param {Buffer} buffer - audio buffer
+ * @returns {{ secure_url: string, public_id: string }}
+ */
+const uploadPodcastAudio = async (buffer) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: "video", // Required for audio files by Cloudinary
+        folder: "suviet360/podcast_audios",
+      },
+      (error, result) => {
+        if (error) {
+          return reject(
+            new AppError(`Failed to upload audio: ${error.message}`, 500)
+          );
+        }
+        resolve({
+          secure_url: result.secure_url,
+          public_id: result.public_id,
+        });
+      }
+    );
+    uploadStream.end(buffer);
+  });
+};
+
+/**
  * Delete a Cloudinary resource by public_id and resource_type.
  * @param {string} publicId
- * @param {"image"|"raw"} resourceType
+ * @param {"image"|"raw"|"video"} resourceType
  */
 const deleteCloudinaryResource = async (publicId, resourceType = "image") => {
   if (!publicId) return;
@@ -95,5 +132,7 @@ module.exports = {
   uploadTilemapJson,
   uploadTilesetImage,
   uploadAnimationSprite,
+  uploadPodcastThumbnail,
+  uploadPodcastAudio,
   deleteCloudinaryResource,
 };
