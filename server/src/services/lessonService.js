@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Lesson = require("../models/Lesson");
 const {
   uploadTilemapJson,
@@ -49,13 +50,16 @@ const createLesson = async ({
     );
   }
 
+  const lessonId = new mongoose.Types.ObjectId();
+  const folder = `suviet360/lessons/${lessonId}`;
+
   // 1. Upload tilemap JSON to Cloudinary
-  const jsonUpload = await uploadTilemapJson(tilemapJsonFile.buffer);
+  const jsonUpload = await uploadTilemapJson(tilemapJsonFile.buffer, `${folder}/maps`);
 
   // 2. Upload all tileset images and map names → URLs
   const uploadedTilesets = [];
   for (let i = 0; i < tilesetFiles.length; i++) {
-    const imgUpload = await uploadTilesetImage(tilesetFiles[i].buffer);
+    const imgUpload = await uploadTilesetImage(tilesetFiles[i].buffer, `${folder}/tilesets`);
     uploadedTilesets.push({
       name: tilesetNames[i],
       imageUrl: imgUpload.secure_url,
@@ -64,10 +68,11 @@ const createLesson = async ({
   }
 
   // 3. Upload animation sprites grouped by animation name
-  const uploadedAnimations = await processAnimationGroups(animationGroups);
+  const uploadedAnimations = await processAnimationGroups(animationGroups, folder);
 
   // 4. Save to MongoDB
   const lesson = await Lesson.create({
+    _id: lessonId,
     title,
     content,
     game: {
@@ -124,6 +129,8 @@ const updateLesson = async (id, updates) => {
   if (updates.spawnX !== undefined) lesson.game.spawnPoint.x = updates.spawnX;
   if (updates.spawnY !== undefined) lesson.game.spawnPoint.y = updates.spawnY;
 
+  const folder = `suviet360/lessons/${lesson._id}`;
+
   // ── Replace tilemap JSON ─────────────────────────────────────
   if (updates.tilemapJsonFile) {
     // Delete old JSON from Cloudinary
@@ -133,7 +140,7 @@ const updateLesson = async (id, updates) => {
         "raw"
       );
     }
-    const jsonUpload = await uploadTilemapJson(updates.tilemapJsonFile.buffer);
+    const jsonUpload = await uploadTilemapJson(updates.tilemapJsonFile.buffer, `${folder}/maps`);
     lesson.game.tilemapJsonUrl = jsonUpload.secure_url;
     lesson.game.tilemapJsonPublicId = jsonUpload.public_id;
   }
@@ -156,7 +163,8 @@ const updateLesson = async (id, updates) => {
     const newTilesets = [];
     for (let i = 0; i < updates.tilesetFiles.length; i++) {
       const imgUpload = await uploadTilesetImage(
-        updates.tilesetFiles[i].buffer
+        updates.tilesetFiles[i].buffer,
+        `${folder}/tilesets`
       );
       newTilesets.push({
         name: updates.tilesetNames[i],
@@ -183,7 +191,8 @@ const updateLesson = async (id, updates) => {
 
     // Upload new animation groups
     const newAnimations = await processAnimationGroups(
-      updates.animationGroups
+      updates.animationGroups,
+      folder
     );
     lesson.game.character.animations = newAnimations;
     lesson.markModified("game.character.animations");
@@ -243,7 +252,7 @@ const extractFrameNumber = (filename) => {
  * @param {Object} animationGroups - { idle: [file, ...], run: [file, ...] }
  * @returns {Array<{ name: string, frames: Array }>}
  */
-const processAnimationGroups = async (animationGroups) => {
+const processAnimationGroups = async (animationGroups, baseFolder) => {
   if (!animationGroups || Object.keys(animationGroups).length === 0) {
     return [];
   }
@@ -265,7 +274,8 @@ const processAnimationGroups = async (animationGroups) => {
         );
       }
 
-      const imgUpload = await uploadAnimationSprite(file.buffer, animName);
+      const folderPath = baseFolder ? `${baseFolder}/sprites/${animName}` : `suviet360/sprites/${animName}`;
+      const imgUpload = await uploadAnimationSprite(file.buffer, folderPath);
 
       // Auto-generate key: player-{animationName}-{sequentialIndex}
       // Sequential index (i) ensures stable ordering regardless of filename
