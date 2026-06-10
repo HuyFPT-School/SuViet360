@@ -1381,6 +1381,13 @@ body {
   .sv-search-input {
     width: 100px !important;
   }
+  .profile-bottom {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .sv-footer-new-inner {
+    grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr !important;
+    gap: 20px !important;
+  }
 }
 
 @media (max-width: 1024px) {
