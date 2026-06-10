@@ -7,6 +7,7 @@ const env = require("./config/env");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const lessonRoutes = require("./routes/lessonRoutes");
+const podcastRoutes = require("./routes/podcastRoutes");
 const errorHandler = require("./middleware/errorHandler");
 const { setCsrfToken, requireCsrfToken } = require("./middleware/csrf");
 
@@ -48,6 +49,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/lessons", lessonRoutes);
+app.use("/api", podcastRoutes);
 app.use(errorHandler);
 
 module.exports = app;
