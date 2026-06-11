@@ -24,7 +24,6 @@ interface PhaserGameProps {
 export default function PhaserGame({ lessonGame }: PhaserGameProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
-  // Keep lessonGame in a ref so the scene closure always reads latest
   const dataRef = useRef(lessonGame);
   dataRef.current = lessonGame;
 
@@ -34,12 +33,10 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
     const data = dataRef.current;
     const { tilemapJsonUrl, tilesets, character, spawnPoint } = data;
 
-    // Derive animation frames from API data
     const idleFrames: SpriteFrame[] = character?.animations?.idle || [];
     const runFrames: SpriteFrame[] = character?.animations?.run || [];
     const allFrames = [...idleFrames, ...runFrames];
 
-    // Background tileset image (first tileset)
     const bgTileset = tilesets?.[0];
 
     class DynamicLessonScene extends Phaser.Scene {
@@ -51,16 +48,14 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
       private mapWidth = 1440;
       private mapHeight = 1088;
 
+      // Khóa tương tác tạm thời khi người chơi chọn đáp án để đợi hiệu ứng chuyển câu
+      private isAnswering = false;
+
       preload() {
-        // Load background tileset image
         if (bgTileset) {
           this.load.image("bg-tileset", bgTileset.imageUrl);
         }
-
-        // Load tilemap JSON from Cloudinary URL
         this.load.tilemapTiledJSON("lesson-map", tilemapJsonUrl);
-
-        // Load all animation frames from Cloudinary URLs
         allFrames.forEach((f) => {
           this.load.image(f.key, f.imageUrl);
         });
@@ -72,7 +67,6 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
           | { layers?: Array<{ type?: string; objects?: unknown[] }> }
           | undefined;
 
-        // Try to read map dimensions from tilemap
         const mapW = (map as any).widthInPixels;
         const mapH = (map as any).heightInPixels;
         if (mapW && mapH) {
@@ -80,7 +74,6 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
           this.mapHeight = mapH;
         }
 
-        // Show background tileset image
         if (bgTileset) {
           this.add
             .image(0, 0, "bg-tileset")
@@ -88,7 +81,6 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
             .setDisplaySize(this.mapWidth, this.mapHeight);
         }
 
-        // ── Build collision bodies from every object layer in the map ──
         const objectLayers = (mapData?.layers ?? []).filter(
           (layer): layer is { type?: string; objects?: any[] } =>
             layer.type === "objectgroup" && Array.isArray(layer.objects)
@@ -159,19 +151,16 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
           }
         }
 
-        // ── Player ──
         const startFrame = idleFrames[0]?.key || allFrames[0]?.key || "bg-tileset";
-        console.log("[PhaserGame] Calculated startFrame key:", startFrame);
-        console.log("[PhaserGame] Spawn point coordinates:", spawnPoint);
-        
+
         this.player = this.matter.add.sprite(
           spawnPoint.x || this.mapWidth / 2,
           spawnPoint.y || this.mapHeight / 2,
           startFrame
         );
-        
+
         if (this.player) {
-          this.player.setDepth(100); // Force player to render on top of the background image
+          this.player.setDepth(100);
         }
 
         this.player.setBody({ type: "rectangle", width: 20, height: 20 });
@@ -179,9 +168,7 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
         this.player.setFriction(0);
         this.player.setFrictionAir(0.3);
 
-        // ── Animations ──
         if (idleFrames.length > 0) {
-          console.log("[PhaserGame] Creating idle animation...");
           this.anims.create({
             key: "idle",
             frames: idleFrames.map((f) => ({ key: f.key })),
@@ -190,7 +177,6 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
           });
         }
         if (runFrames.length > 0) {
-          console.log("[PhaserGame] Creating run animation...");
           this.anims.create({
             key: "run",
             frames: runFrames.map((f) => ({ key: f.key })),
@@ -206,25 +192,26 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
         this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
-        // ── Popup ──
+        // ── Khởi tạo cấu trúc giao diện HTML cho hộp thoại câu hỏi ──
         const parent = this.game.canvas.parentElement;
         if (parent) {
           parent.style.position = "relative";
           const popup = document.createElement("div");
           popup.style.cssText = `
             display:none; position:absolute; bottom:24px; left:50%;
-            transform:translateX(-50%); width:80%; max-width:560px;
-            background:rgba(255,248,220,0.97); border:3px solid #8B6914;
-            border-radius:12px; padding:16px 20px;
-            font-family:'Times New Roman',serif; font-size:14px;
-            line-height:1.6; color:#3b2000;
-            box-shadow:0 4px 20px rgba(0,0,0,0.4); z-index:100; pointer-events:none;
+            transform:translateX(-50%); width:85%; max-width:580px;
+            background:rgba(255,248,220,0.98); border:3px solid #8B6914;
+            border-radius:12px; padding:18px 22px;
+            font-family:'Times New Roman',serif; font-size:15px;
+            line-height:1.5; color:#3b2000;
+            box-shadow:0 6px 25px rgba(0,0,0,0.5); z-index:100;
+            pointer-events: auto; /* Cho phép nhận tương tác chuột để click chọn */
           `;
           parent.appendChild(popup);
           this.popupEl = popup;
         }
 
-        this.add.text(this.mapWidth / 2, 20, "Đi gần vật thể để xem thông tin", {
+        this.add.text(this.mapWidth / 2, 20, "Đi gần vật thể để xem câu hỏi trắc nghiệm", {
           fontSize: "13px", color: "#ffffff",
           backgroundColor: "#00000066",
           padding: { x: 10, y: 4 },
@@ -233,16 +220,57 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
         this.cursors = this.input.keyboard!.createCursorKeys();
       }
 
+      // Hàm xử lý logic chấm điểm và hiển thị kết quả trực quan
+      handleAnswerClick(btn: HTMLButtonElement, index: number, correctIdx: number) {
+        if (this.isAnswering) return;
+        this.isAnswering = true;
+
+        // Vô hiệu hóa trạng thái tương tác của toàn bộ các nút đáp án trong danh sách
+        const buttons = this.popupEl?.querySelectorAll(".quiz-opt-btn");
+        buttons?.forEach((b) => {
+          (b as HTMLButtonElement).disabled = true;
+          (b as HTMLButtonElement).style.cursor = "not-allowed";
+        });
+
+        if (index === correctIdx) {
+          // Trả lời CHÍNH XÁC: Chuyển nút sang màu xanh lá cổ điển
+          btn.style.backgroundColor = "#2e7d32";
+          btn.style.color = "#ffffff";
+          btn.style.borderColor = "#1b5e20";
+          btn.innerHTML = `✓ ${btn.innerHTML}`;
+        } else {
+          // Trả lời SAI: Chuyển nút bấm hiện tại sang màu đỏ hỏa hoạn
+          btn.style.backgroundColor = "#c62828";
+          btn.style.color = "#ffffff";
+          btn.style.borderColor = "#b71c1c";
+          btn.innerHTML = `✗ ${btn.innerHTML}`;
+
+          // Highlight đáp án đúng để người dùng nhận diện kiến thức
+          if (buttons && buttons[correctIdx]) {
+            const correctBtn = buttons[correctIdx] as HTMLButtonElement;
+            correctBtn.style.backgroundColor = "#2e7d32";
+            correctBtn.style.color = "#ffffff";
+            correctBtn.style.borderColor = "#1b5e20";
+          }
+        }
+
+        // Tạo độ trễ ngắn cho người học kịp ghi nhận kết quả trước khi cho phép đi tiếp
+        this.time.delayedCall(2000, () => {
+          this.isAnswering = false;
+        });
+      }
+
       update() {
         if (!this.player || !this.cursors) return;
 
-        const speed = 5;
+        // Vô hiệu hóa di chuyển nhân vật khi đang đứng trả lời để tránh mất focus
+        const speed = this.isAnswering ? 0 : 5;
         let vx = 0, vy = 0, moving = false;
 
-        if (this.cursors.left?.isDown)       { vx = -speed; this.player.setFlipX(true);  moving = true; }
-        else if (this.cursors.right?.isDown) { vx =  speed; this.player.setFlipX(false); moving = true; }
-        if (this.cursors.up?.isDown)         { vy = -speed; moving = true; }
-        else if (this.cursors.down?.isDown)  { vy =  speed; moving = true; }
+        if (this.cursors.left?.isDown) { vx = -speed; this.player.setFlipX(true); moving = true; }
+        else if (this.cursors.right?.isDown) { vx = speed; this.player.setFlipX(false); moving = true; }
+        if (this.cursors.up?.isDown) { vy = -speed; moving = true; }
+        else if (this.cursors.down?.isDown) { vy = speed; moving = true; }
 
         if (vx !== 0 && vy !== 0) { vx *= 0.707; vy *= 0.707; }
         this.player.setVelocity(vx, vy);
@@ -275,15 +303,78 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
                 .split(" ")
                 .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
                 .join(" ");
-              this.popupEl.innerHTML = `
-                <div style="font-weight:bold;font-size:15px;margin-bottom:8px;color:#5c3300;border-bottom:1px solid #c8a04a;padding-bottom:6px;">
-                  📜 ${displayTitle}
-                </div>
-                <div>${n.content}</div>
-              `;
+
+              // Cấu trúc phân tách dữ liệu mẫu từ Tiled: "Nội dung câu hỏi | Đáp án A | Đáp án B | C | D | Chỉ số đáp án đúng (0-3)"
+              // Nếu chuỗi không chứa ký tự '|', hệ thống sẽ hiển thị ở chế độ Text thông tin thông thường.
+              const tokens = n.content.split("|").map((t) => t.trim());
+
+              if (tokens.length >= 6) {
+                const questionText = tokens[0];
+                const options = [tokens[1], tokens[2], tokens[3], tokens[4]];
+                const correctIdx = parseInt(tokens[5], 10) || 0;
+
+                let optionsHtml = `<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">`;
+                options.forEach((opt, idx) => {
+                  const prefix = String.fromCharCode(65 + idx); // Sinh tự động nhãn A, B, C, D
+                  optionsHtml += `
+                    <button class="quiz-opt-btn" data-idx="${idx}" style="
+                      background: #fff; border: 1.5px solid #bba476; border-radius: 6px;
+                      padding: 8px 12px; text-align: left; font-family: inherit; font-size: 14px;
+                      color: #4a3211; cursor: pointer; transition: all 0.2s ease;
+                      outline: none; font-weight: 500;
+                    ">${prefix}. ${opt}</button>
+                  `;
+                });
+                optionsHtml += `</div>`;
+
+                this.popupEl.innerHTML = `
+                  <div style="font-weight:bold;font-size:15px;margin-bottom:8px;color:#5c3300;border-bottom:1px solid #c8a04a;padding-bottom:6px;">
+                    ❓ ${displayTitle}
+                  </div>
+                  <div style="font-weight: 600; color: #2b1a04;">${questionText}</div>
+                  ${optionsHtml}
+                `;
+
+                // Đăng ký sự kiện click chuột trực tiếp cho các nút bấm vừa được render sinh ra
+                const btns = this.popupEl.querySelectorAll(".quiz-opt-btn");
+                btns.forEach((b) => {
+                  const btnElement = b as HTMLButtonElement;
+
+                  // Hiệu ứng rê chuột (Hover style) bằng JS
+                  btnElement.onmouseenter = () => {
+                    if (!this.isAnswering) {
+                      btnElement.style.background = "#f4ebd0";
+                      btnElement.style.borderColor = "#8b6914";
+                    }
+                  };
+                  btnElement.onmouseleave = () => {
+                    if (!this.isAnswering) {
+                      btnElement.style.background = "#all";
+                      btnElement.style.backgroundColor = "#fff";
+                      btnElement.style.borderColor = "#bba476";
+                    }
+                  };
+
+                  btnElement.onclick = (e) => {
+                    e.preventDefault();
+                    const idx = parseInt(btnElement.getAttribute("data-idx") || "0", 10);
+                    this.handleAnswerClick(btnElement, idx, correctIdx);
+                  };
+                });
+
+              } else {
+                // Chế độ tương thích ngược: Hiện text thuần túy nếu dữ liệu không phải cấu trúc trắc nghiệm
+                this.popupEl.innerHTML = `
+                  <div style="font-weight:bold;font-size:15px;margin-bottom:8px;color:#5c3300;border-bottom:1px solid #c8a04a;padding-bottom:6px;">
+                    📜 ${displayTitle}
+                  </div>
+                  <div>${n.content}</div>
+                `;
+              }
               this.popupEl.style.display = "block";
             }
-          } else if (this.currentPopup !== null) {
+          } else if (this.currentPopup !== null && !this.isAnswering) {
+            // Chỉ ẩn hộp thoại khi nhân vật di chuyển xa khỏi Object và không ở trong trạng thái chờ kết quả
             this.currentPopup = null;
             this.popupEl.style.display = "none";
           }
