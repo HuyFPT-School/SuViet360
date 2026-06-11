@@ -101,7 +101,7 @@ export default function PodcastDetailPage() {
         setNotes(notesRes.data.data || []);
         setComments(commentsRes.data.data || []);
         setDuration(podRes.data.data.duration || 0);
-        
+        setLoading(false);
       } catch (err) {
         console.error("Error fetching podcast details:", err);
         setPodcast(MOCK_PODCAST);
