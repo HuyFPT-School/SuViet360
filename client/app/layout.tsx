@@ -41,7 +41,7 @@ export default function RootLayout({
                 <Link href="/explore" className="sv-menu-link">
                   Bản Đồ Di Sản
                 </Link>
-                <Link href="/library" className="sv-menu-link">
+                <Link href="/podcasts" className="sv-menu-link">
                   Hành Trình
                 </Link>
                 <Link href="/leaderboard" className="sv-menu-link">
