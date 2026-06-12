@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 // --- Icons ---
 const HomeIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
@@ -58,10 +59,19 @@ export default function PodcastDetailPage() {
   const params = useParams();
   const id = params?.id as string;
 
+  const { user } = useAuth();
   const [podcast, setPodcast] = useState<Record<string, any> | null>(null);
   const [notes, setNotes] = useState<Record<string, any>[]>([]);
   const [comments, setComments] = useState<Record<string, any>[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Edit & Delete menu states
+  const [activeNoteMenuId, setActiveNoteMenuId] = useState<string | null>(null);
+  const [activeCommentMenuId, setActiveCommentMenuId] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState("");
 
   // Audio state
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -169,7 +179,13 @@ export default function PodcastDetailPage() {
     if (!commentText.trim()) return;
     try {
       if (id !== "mock-bai-1") {
-        const res = await api.post("/podcast-comments", { podcastId: id, content: commentText });
+        const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+        const csrfToken = csrfRes.data.data.csrfToken;
+        const res = await api.post(
+          "/podcast-comments",
+          { podcastId: id, content: commentText },
+          { headers: { "x-csrf-token": csrfToken } }
+        );
         setComments([res.data.data, ...comments]);
       } else {
         setComments([{ _id: Date.now().toString(), content: commentText, createdAt: new Date().toISOString(), userId: { name: "Bạn" } }, ...comments]);
@@ -193,7 +209,13 @@ export default function PodcastDetailPage() {
     }
     try {
       if (id !== "mock-bai-1") {
-        const res = await api.post("/podcast-notes", { podcastId: id, content: noteText, timestamp: noteTimestamp });
+        const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+        const csrfToken = csrfRes.data.data.csrfToken;
+        const res = await api.post(
+          "/podcast-notes",
+          { podcastId: id, content: noteText, timestamp: noteTimestamp },
+          { headers: { "x-csrf-token": csrfToken } }
+        );
         setNotes([...notes, res.data.data].sort((a,b) => a.timestamp - b.timestamp));
       } else {
         setNotes([...notes, { _id: Date.now().toString(), content: noteText, timestamp: noteTimestamp }].sort((a,b) => a.timestamp - b.timestamp));
@@ -203,6 +225,88 @@ export default function PodcastDetailPage() {
     } catch (err) {
       console.error(err);
       alert("Cần đăng nhập để thêm ghi chú");
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (id === "mock-bai-1") {
+      setNotes(notes.filter(n => n._id !== noteId));
+      return;
+    }
+    const confirmed = window.confirm("Bạn có chắc chắn muốn xóa ghi chú này?");
+    if (!confirmed) return;
+    try {
+      const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+      const csrfToken = csrfRes.data.data.csrfToken;
+      await api.delete(`/podcast-notes/${noteId}`, { headers: { "x-csrf-token": csrfToken } });
+      setNotes(notes.filter(n => n._id !== noteId));
+    } catch (err) {
+      console.error(err);
+      alert("Không thể xóa ghi chú");
+    }
+  };
+
+  const handleUpdateNote = async (noteId: string) => {
+    if (!editingNoteText.trim()) return;
+    if (id === "mock-bai-1") {
+      setNotes(notes.map(n => n._id === noteId ? { ...n, content: editingNoteText } : n));
+      setEditingNoteId(null);
+      return;
+    }
+    try {
+      const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+      const csrfToken = csrfRes.data.data.csrfToken;
+      const res = await api.put(
+        `/podcast-notes/${noteId}`,
+        { content: editingNoteText },
+        { headers: { "x-csrf-token": csrfToken } }
+      );
+      setNotes(notes.map(n => n._id === noteId ? { ...n, content: res.data.data.content } : n));
+      setEditingNoteId(null);
+    } catch (err) {
+      console.error(err);
+      alert("Không thể cập nhật ghi chú");
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (id === "mock-bai-1") {
+      setComments(comments.filter(c => c._id !== commentId));
+      return;
+    }
+    const confirmed = window.confirm("Bạn có chắc chắn muốn xóa bình luận này?");
+    if (!confirmed) return;
+    try {
+      const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+      const csrfToken = csrfRes.data.data.csrfToken;
+      await api.delete(`/podcast-comments/${commentId}`, { headers: { "x-csrf-token": csrfToken } });
+      setComments(comments.filter(c => c._id !== commentId));
+    } catch (err) {
+      console.error(err);
+      alert("Không thể xóa bình luận");
+    }
+  };
+
+  const handleUpdateComment = async (commentId: string) => {
+    if (!editingCommentText.trim()) return;
+    if (id === "mock-bai-1") {
+      setComments(comments.map(c => c._id === commentId ? { ...c, content: editingCommentText } : c));
+      setEditingCommentId(null);
+      return;
+    }
+    try {
+      const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+      const csrfToken = csrfRes.data.data.csrfToken;
+      const res = await api.put(
+        `/podcast-comments/${commentId}`,
+        { content: editingCommentText },
+        { headers: { "x-csrf-token": csrfToken } }
+      );
+      setComments(comments.map(c => c._id === commentId ? { ...c, content: res.data.data.content } : c));
+      setEditingCommentId(null);
+    } catch (err) {
+      console.error(err);
+      alert("Không thể cập nhật bình luận");
     }
   };
 
@@ -391,10 +495,60 @@ export default function PodcastDetailPage() {
                               <h4 className="font-bold text-sm text-[#3a2312]">{c.userId?.name || "Người dùng ẩn danh"}</h4>
                               <div className="flex items-center gap-2 text-xs text-[#8c6a34]">
                                  {formatDate(c.createdAt)}
-                                 <MoreVerticalIcon />
+                                 {user && (c.userId?._id === user.id || ["staff", "admin"].includes(user.role)) && (
+                                    <div className="relative">
+                                       <button 
+                                          onClick={() => setActiveCommentMenuId(activeCommentMenuId === c._id ? null : c._id)}
+                                          className="w-6 h-6 flex items-center justify-center hover:bg-[#f3e9d8] rounded-full transition-colors"
+                                       >
+                                          <MoreVerticalIcon />
+                                       </button>
+                                       {activeCommentMenuId === c._id && (
+                                          <div className="absolute right-0 mt-1 bg-white border border-[#e8d5b5] rounded-md shadow-lg py-1 z-30 w-20 text-left">
+                                             {c.userId?._id === user.id && (
+                                                <button 
+                                                   onClick={() => {
+                                                      setEditingCommentId(c._id);
+                                                      setEditingCommentText(c.content);
+                                                      setActiveCommentMenuId(null);
+                                                   }}
+                                                   className="w-full px-3 py-1.5 text-xs text-[#5c4a3d] hover:bg-[#f3e9d8] flex items-center gap-1.5"
+                                                >
+                                                   Sửa
+                                                </button>
+                                             )}
+                                             <button 
+                                                onClick={() => {
+                                                   handleDeleteComment(c._id);
+                                                   setActiveCommentMenuId(null);
+                                                }}
+                                                className="w-full px-3 py-1.5 text-xs text-red-600 hover:bg-[#f3e9d8] flex items-center gap-1.5 font-medium"
+                                             >
+                                                Xóa
+                                             </button>
+                                          </div>
+                                       )}
+                                    </div>
+                                 )}
                               </div>
                            </div>
-                           <p className="text-sm text-[#5c4a3d]">{c.content}</p>
+                           {editingCommentId === c._id ? (
+                              <div className="mt-2 bg-white p-2 rounded border border-[#c9a15a] shadow-inner">
+                                 <textarea 
+                                    value={editingCommentText}
+                                    onChange={e => setEditingCommentText(e.target.value)}
+                                    className="w-full text-sm outline-none resize-none bg-transparent mb-2 text-[#3a2312] border-b border-[#e8d5b5]/50 pb-1"
+                                    rows={2}
+                                    autoFocus
+                                 />
+                                 <div className="flex justify-end gap-2">
+                                    <button onClick={() => setEditingCommentId(null)} className="text-xs text-[#8c6a34] px-2 py-1">Hủy</button>
+                                    <button onClick={() => handleUpdateComment(c._id)} className="bg-[#c9a15a] text-white text-xs px-3 py-1 rounded">Lưu</button>
+                                 </div>
+                              </div>
+                           ) : (
+                              <p className="text-sm text-[#5c4a3d]">{c.content}</p>
+                           )}
                         </div>
                      </div>
                   ))}
@@ -444,14 +598,58 @@ export default function PodcastDetailPage() {
                               <button onClick={() => seekTo(note.timestamp)} className="w-6 h-6 flex items-center justify-center hover:bg-[#f3e9d8] rounded-full transition-colors" title="Phát từ đây">
                                  <SmallPlayIcon />
                               </button>
-                              <button className="w-6 h-6 flex items-center justify-center hover:bg-[#f3e9d8] rounded-full transition-colors">
-                                 <MoreVerticalIcon />
-                              </button>
+                              <div className="relative">
+                                 <button 
+                                    onClick={() => setActiveNoteMenuId(activeNoteMenuId === note._id ? null : note._id)}
+                                    className="w-6 h-6 flex items-center justify-center hover:bg-[#f3e9d8] rounded-full transition-colors"
+                                 >
+                                    <MoreVerticalIcon />
+                                 </button>
+                                 {activeNoteMenuId === note._id && (
+                                    <div className="absolute right-0 mt-1 bg-white border border-[#e8d5b5] rounded-md shadow-lg py-1 z-30 w-20 text-left">
+                                       <button 
+                                          onClick={() => {
+                                             setEditingNoteId(note._id);
+                                             setEditingNoteText(note.content);
+                                             setActiveNoteMenuId(null);
+                                          }}
+                                          className="w-full px-3 py-1.5 text-xs text-[#5c4a3d] hover:bg-[#f3e9d8] flex items-center gap-1.5"
+                                       >
+                                          Sửa
+                                       </button>
+                                       <button 
+                                          onClick={() => {
+                                             handleDeleteNote(note._id);
+                                             setActiveNoteMenuId(null);
+                                          }}
+                                          className="w-full px-3 py-1.5 text-xs text-red-600 hover:bg-[#f3e9d8] flex items-center gap-1.5 font-medium"
+                                       >
+                                          Xóa
+                                       </button>
+                                    </div>
+                                 )}
+                              </div>
                            </div>
                         </div>
-                        <p className="text-sm text-[#5c4a3d] cursor-pointer" onClick={() => seekTo(note.timestamp)}>
-                           {note.content}
-                        </p>
+                        {editingNoteId === note._id ? (
+                           <div className="mt-2 bg-[#fcf8ef] p-2 rounded border border-[#c9a15a] shadow-inner">
+                              <textarea 
+                                 value={editingNoteText}
+                                 onChange={e => setEditingNoteText(e.target.value)}
+                                 className="w-full text-sm outline-none resize-none bg-transparent mb-2 text-[#3a2312] border-b border-[#e8d5b5]/50 pb-1"
+                                 rows={2}
+                                 autoFocus
+                              />
+                              <div className="flex justify-end gap-2">
+                                 <button onClick={() => setEditingNoteId(null)} className="text-xs text-[#8c6a34] px-2 py-1">Hủy</button>
+                                 <button onClick={() => handleUpdateNote(note._id)} className="bg-[#c9a15a] text-white text-xs px-3 py-1 rounded">Lưu</button>
+                              </div>
+                           </div>
+                        ) : (
+                           <p className="text-sm text-[#5c4a3d] cursor-pointer" onClick={() => seekTo(note.timestamp)}>
+                              {note.content}
+                           </p>
+                        )}
                      </div>
                   ))}
                </div>

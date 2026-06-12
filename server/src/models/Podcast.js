@@ -38,6 +38,11 @@ const podcastSchema = new mongoose.Schema(
       trim: true,
       default: "Medium",
     },
+    category: {
+      type: String,
+      trim: true,
+      default: "Chủ đề chung",
+    },
     viewCount: {
       type: Number,
       default: 0,

@@ -14,9 +14,11 @@ const {
   getNotes,
   createNote,
   deleteNote,
+  updateNote,
   getComments,
   createComment,
   deleteComment,
+  updateComment,
 } = require("../controllers/podcastController");
 
 const router = express.Router();
@@ -40,10 +42,12 @@ router.use(protect);
 // Notes (User specific)
 router.get("/podcast-notes/:podcastId", getNotes);
 router.post("/podcast-notes", createNote);
+router.put("/podcast-notes/:id", updateNote);
 router.delete("/podcast-notes/:id", deleteNote);
 
 // Comments
 router.post("/podcast-comments", createComment);
+router.put("/podcast-comments/:id", updateComment);
 router.delete("/podcast-comments/:id", deleteComment);
 
 // ─── Staff Only Management Routes ────────────────────────────────────

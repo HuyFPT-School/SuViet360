@@ -13,7 +13,7 @@ const {
 
 // Create Podcast
 const createPodcast = asyncHandler(async (req, res) => {
-  const { title, description, content, level } = req.body;
+  const { title, description, content, level, category } = req.body;
 
   if (!title) {
     throw new AppError("Title is required", 400);
@@ -37,6 +37,7 @@ const createPodcast = asyncHandler(async (req, res) => {
     description,
     content,
     level,
+    category: category || "Chủ đề chung",
     thumbnail: thumbResult.secure_url,
     thumbnailPublicId: thumbResult.public_id,
     audioUrl: audioResult.secure_url,
@@ -58,12 +59,13 @@ const updatePodcast = asyncHandler(async (req, res) => {
     throw new AppError("Podcast not found", 404);
   }
 
-  const { title, description, content, level, status } = req.body;
+  const { title, description, content, level, status, category } = req.body;
 
   if (title !== undefined) podcast.title = title;
   if (description !== undefined) podcast.description = description;
   if (content !== undefined) podcast.content = content;
   if (level !== undefined) podcast.level = level;
+  if (category !== undefined) podcast.category = category;
   if (status !== undefined) podcast.status = status === "true" || status === true;
 
   // Check if new thumbnail file is provided
@@ -196,6 +198,10 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
 
   if (req.query.level) {
     queryObj.level = req.query.level;
+  }
+
+  if (req.query.category) {
+    queryObj.category = req.query.category;
   }
 
   if (req.query.keyword) {
@@ -371,6 +377,65 @@ const deleteComment = asyncHandler(async (req, res) => {
   });
 });
 
+// Update Note (Authenticated)
+const updateNote = asyncHandler(async (req, res) => {
+  const { content } = req.body;
+
+  if (!content) {
+    throw new AppError("Content is required", 400);
+  }
+
+  const note = await PodcastNote.findById(req.params.id);
+
+  if (!note) {
+    throw new AppError("Note not found", 404);
+  }
+
+  // Ensure note belongs to user
+  if (note.userId.toString() !== req.user.id) {
+    throw new AppError("Not authorized to update this note", 403);
+  }
+
+  note.content = content;
+  await note.save();
+
+  res.status(200).json({
+    success: true,
+    data: note,
+  });
+});
+
+// Update Comment (Authenticated)
+const updateComment = asyncHandler(async (req, res) => {
+  const { content } = req.body;
+
+  if (!content) {
+    throw new AppError("Content is required", 400);
+  }
+
+  const comment = await PodcastComment.findById(req.params.id);
+
+  if (!comment) {
+    throw new AppError("Comment not found", 404);
+  }
+
+  // Ensure comment belongs to user (only authors can edit comments)
+  if (comment.userId.toString() !== req.user.id) {
+    throw new AppError("Not authorized to update this comment", 403);
+  }
+
+  comment.content = content;
+  await comment.save();
+
+  // Populate user info for frontend response consistency
+  const populatedComment = await PodcastComment.findById(comment._id).populate("userId", "name avatar");
+
+  res.status(200).json({
+    success: true,
+    data: populatedComment,
+  });
+});
+
 module.exports = {
   createPodcast,
   updatePodcast,
@@ -384,7 +449,9 @@ module.exports = {
   getNotes,
   createNote,
   deleteNote,
+  updateNote,
   getComments,
   createComment,
   deleteComment,
+  updateComment,
 };

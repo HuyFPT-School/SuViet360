@@ -60,6 +60,7 @@ type Podcast = {
   thumbnail: string;
   audioUrl: string;
   level: string;
+  category: string;
   status: boolean;
   viewCount: number;
   createdAt: string;
@@ -71,6 +72,7 @@ type PodcastFormState = {
   description: string;
   content: string;
   level: string;
+  category: string;
   status: boolean;
   thumbnailFile: File | null;
   audioFile: File | null;
@@ -81,10 +83,60 @@ const emptyPodcastForm: PodcastFormState = {
   description: "",
   content: "",
   level: "Medium",
+  category: "",
   status: true,
   thumbnailFile: null,
   audioFile: null,
 };
+
+function CustomFileInput({
+  accept,
+  multiple,
+  onChange,
+  fileCount,
+  singleFileName,
+}: {
+  accept?: string;
+  multiple?: boolean;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  fileCount: number;
+  singleFileName?: string;
+}) {
+  return (
+    <div className="mt-2 flex items-center gap-3">
+      <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer transition-colors duration-150 select-none">
+        <svg
+          className="w-3.5 h-3.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+          />
+        </svg>
+        <span>Chọn tệp</span>
+        <input
+          type="file"
+          accept={accept}
+          multiple={multiple}
+          onChange={onChange}
+          className="hidden"
+        />
+      </label>
+      <span className="text-xs text-amber-800 truncate max-w-xs font-medium">
+        {fileCount > 0
+          ? multiple
+            ? `Đã chọn ${fileCount} tệp`
+            : singleFileName || "Đã chọn tệp"
+          : "Chưa chọn tệp"}
+      </span>
+    </div>
+  );
+}
 
 export default function StaffPage() {
   const { user, isLoading: authLoading, refreshUser } = useAuth();
@@ -105,6 +157,20 @@ export default function StaffPage() {
   const [selectedPodcastId, setSelectedPodcastId] = useState<string | null>(null);
   const [podcastFormMode, setPodcastFormMode] = useState<"create" | "edit">("create");
   const [podcastForm, setPodcastForm] = useState<PodcastFormState>(emptyPodcastForm);
+  const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
+  const categoriesList = useMemo(() => {
+    const set = new Set<string>();
+    podcasts.forEach((p) => {
+      if (p.category && p.category.trim()) {
+        set.add(p.category.trim());
+      }
+    });
+    return Array.from(set);
+  }, [podcasts]);
 
   const setPodcastFormField = <K extends keyof PodcastFormState>(
     field: K,
@@ -137,16 +203,21 @@ export default function StaffPage() {
     setPodcastForm(emptyPodcastForm);
     setPodcastFormMode("create");
     setSelectedPodcastId(null);
+    setIsAddingNewCategory(false);
+    setNewCategoryName("");
   };
 
   const handleSelectPodcast = (podcast: Podcast) => {
     setSelectedPodcastId(podcast._id);
     setPodcastFormMode("edit");
+    setIsAddingNewCategory(false);
+    setNewCategoryName("");
     setPodcastForm({
       title: podcast.title,
       description: podcast.description || "",
       content: podcast.content || "",
       level: podcast.level || "Medium",
+      category: podcast.category || "",
       status: podcast.status,
       thumbnailFile: null,
       audioFile: null,
@@ -170,12 +241,15 @@ export default function StaffPage() {
       }
     }
 
+    setSaving(true);
+    setUploadProgress(0);
     try {
       const formData = new FormData();
       formData.append("title", podcastForm.title.trim());
       formData.append("description", podcastForm.description.trim());
       formData.append("content", podcastForm.content.trim());
       formData.append("level", podcastForm.level.trim());
+      formData.append("category", podcastForm.category.trim());
       formData.append("status", String(podcastForm.status));
 
       if (podcastForm.thumbnailFile) {
@@ -186,16 +260,24 @@ export default function StaffPage() {
       }
 
       const csrfToken = await getCsrfToken();
+      const onProgress = (progressEvent: any) => {
+        if (progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percent);
+        }
+      };
 
       if (podcastFormMode === "create") {
         await api.post("/staff/podcasts", formData, {
           headers: { "Content-Type": "multipart/form-data", "x-csrf-token": csrfToken },
+          onUploadProgress: onProgress,
         });
         setMessage({ type: "success", text: "Tạo podcast thành công." });
         resetPodcastForm();
       } else if (selectedPodcastId) {
         await api.put(`/staff/podcasts/${selectedPodcastId}`, formData, {
           headers: { "Content-Type": "multipart/form-data", "x-csrf-token": csrfToken },
+          onUploadProgress: onProgress,
         });
         setMessage({ type: "success", text: "Cập nhật podcast thành công." });
       }
@@ -206,6 +288,9 @@ export default function StaffPage() {
           ? error.response?.data?.message || "Có lỗi xảy ra khi lưu podcast."
           : "Có lỗi xảy ra khi lưu podcast.";
       setMessage({ type: "error", text: messageText });
+    } finally {
+      setSaving(false);
+      setUploadProgress(null);
     }
   };
 
@@ -372,18 +457,29 @@ export default function StaffPage() {
       return;
     }
 
+    setSaving(true);
+    setUploadProgress(0);
     try {
       const formData = buildFormData(formMode);
       const csrfToken = await getCsrfToken();
+      const onProgress = (progressEvent: any) => {
+        if (progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percent);
+        }
+      };
+
       if (formMode === "create") {
         await api.post("/lessons", formData, {
           headers: { "Content-Type": "multipart/form-data", "x-csrf-token": csrfToken },
+          onUploadProgress: onProgress,
         });
         setMessage({ type: "success", text: "Tạo bài học thành công." });
         resetForm();
       } else if (selectedId) {
         await api.put(`/lessons/${selectedId}`, formData, {
           headers: { "Content-Type": "multipart/form-data", "x-csrf-token": csrfToken },
+          onUploadProgress: onProgress,
         });
         setMessage({ type: "success", text: "Cập nhật bài học thành công." });
       }
@@ -396,6 +492,9 @@ export default function StaffPage() {
           ? error.response?.data?.message || "Có lỗi xảy ra khi lưu bài học."
           : "Có lỗi xảy ra khi lưu bài học.";
       setMessage({ type: "error", text: messageText });
+    } finally {
+      setSaving(false);
+      setUploadProgress(null);
     }
   };
 
@@ -615,11 +714,11 @@ export default function StaffPage() {
                 <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
                   Tilemap JSON {formMode === "create" && "(bắt buộc)"}
                 </label>
-                <input
-                  type="file"
+                <CustomFileInput
                   accept="application/json"
                   onChange={(e) => setFormField("tilemapFile", e.target.files?.[0] || null)}
-                  className="mt-2 w-full text-sm text-amber-700"
+                  fileCount={form.tilemapFile ? 1 : 0}
+                  singleFileName={form.tilemapFile?.name}
                 />
               </div>
 
@@ -627,8 +726,7 @@ export default function StaffPage() {
                 <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
                   Tileset images {formMode === "create" && "(bắt buộc)"}
                 </label>
-                <input
-                  type="file"
+                <CustomFileInput
                   accept="image/png,image/jpeg,image/jpg,image/webp"
                   multiple
                   onChange={(e) => {
@@ -641,7 +739,7 @@ export default function StaffPage() {
                     });
                     setFormField("tilesetNames", names);
                   }}
-                  className="mt-2 w-full text-sm text-amber-700"
+                  fileCount={form.tilesetFiles.length}
                 />
               </div>
 
@@ -656,8 +754,7 @@ export default function StaffPage() {
                       <label className="block text-xs font-medium text-amber-800">
                         Idle sprites
                       </label>
-                      <input
-                        type="file"
+                      <CustomFileInput
                         multiple
                         accept="image/png,image/jpeg,image/jpg,image/webp"
                         onChange={(e) =>
@@ -666,15 +763,14 @@ export default function StaffPage() {
                             e.target.files ? Array.from(e.target.files) : []
                           )
                         }
-                        className="mt-2 w-full text-sm text-amber-700"
+                        fileCount={form.idleSprites.length}
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-amber-800">
                         Run sprites
                       </label>
-                      <input
-                        type="file"
+                      <CustomFileInput
                         multiple
                         accept="image/png,image/jpeg,image/jpg,image/webp"
                         onChange={(e) =>
@@ -683,7 +779,7 @@ export default function StaffPage() {
                             e.target.files ? Array.from(e.target.files) : []
                           )
                         }
-                        className="mt-2 w-full text-sm text-amber-700"
+                        fileCount={form.runSprites.length}
                       />
                     </div>
                   </div>
@@ -824,6 +920,50 @@ export default function StaffPage() {
               </div>
 
               <div>
+                <div className="flex items-center justify-between mt-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                    Chủ đề (Category)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingNewCategory(!isAddingNewCategory);
+                      setNewCategoryName("");
+                      setPodcastFormField("category", "");
+                    }}
+                    className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline"
+                  >
+                    {isAddingNewCategory ? "Hủy" : "Tạo mới"}
+                  </button>
+                </div>
+                {isAddingNewCategory ? (
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => {
+                      setNewCategoryName(e.target.value);
+                      setPodcastFormField("category", e.target.value);
+                    }}
+                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    placeholder="Nhập tên chủ đề mới (ví dụ: liên hợp quốc...)"
+                  />
+                ) : (
+                  <select
+                    value={podcastForm.category}
+                    onChange={(e) => setPodcastFormField("category", e.target.value)}
+                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  >
+                    <option value="">Chọn chủ đề (Bắt buộc)</option>
+                    {categoriesList.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
                   Trình độ (Level)
                 </label>
@@ -855,11 +995,11 @@ export default function StaffPage() {
                 <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
                   Ảnh Thumbnail {podcastFormMode === "create" && "(bắt buộc)"}
                 </label>
-                <input
-                  type="file"
+                <CustomFileInput
                   accept="image/*"
                   onChange={(e) => setPodcastFormField("thumbnailFile", e.target.files?.[0] || null)}
-                  className="mt-2 w-full text-sm text-amber-700"
+                  fileCount={podcastForm.thumbnailFile ? 1 : 0}
+                  singleFileName={podcastForm.thumbnailFile?.name}
                 />
               </div>
 
@@ -867,11 +1007,11 @@ export default function StaffPage() {
                 <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
                   File âm thanh {podcastFormMode === "create" && "(bắt buộc)"}
                 </label>
-                <input
-                  type="file"
+                <CustomFileInput
                   accept="audio/*"
                   onChange={(e) => setPodcastFormField("audioFile", e.target.files?.[0] || null)}
-                  className="mt-2 w-full text-sm text-amber-700"
+                  fileCount={podcastForm.audioFile ? 1 : 0}
+                  singleFileName={podcastForm.audioFile?.name}
                 />
               </div>
 
@@ -894,6 +1034,45 @@ export default function StaffPage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {saving && uploadProgress !== null && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+        }}>
+          <div className="bg-[#FFFBF2] border-2 border-amber-700 rounded-xl p-6 w-[90%] max-w-[400px] shadow-2xl text-center">
+            <h3 className="font-semibold text-lg text-amber-900 mb-4 tracking-wider uppercase" style={{ fontFamily: "Cinzel, serif" }}>
+              {uploadProgress === 100 
+                ? "ĐANG XỬ LÝ DỮ LIỆU..." 
+                : activeTab === "lessons" 
+                  ? "ĐANG TẢI BÀI HỌC LÊN..." 
+                  : "ĐANG TẢI PODCAST LÊN..."}
+            </h3>
+            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
+              <div 
+                className="h-full bg-amber-600 rounded-full transition-all duration-200" 
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <div className="text-xl font-bold text-amber-900 mb-2">
+              {uploadProgress}%
+            </div>
+            <p className="text-xs text-amber-800/80">
+              {uploadProgress === 100 
+                ? "Đang lưu thông tin vào cơ sở dữ liệu, vui lòng đợi..." 
+                : activeTab === "lessons"
+                  ? "Đang tải tệp bản đồ và hình ảnh nhân vật lên máy chủ..."
+                  : "Đang tải ảnh thumbnail và tệp âm thanh lên máy chủ..."}
+            </p>
           </div>
         </div>
       )}
