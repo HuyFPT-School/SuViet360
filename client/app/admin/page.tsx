@@ -12,8 +12,8 @@ type AdminTab = "dashboard" | "lessons" | "users";
 const emptyForm: LessonFormValues = {
   title: "",
   content: "",
-  spawnX: "0",
-  spawnY: "0",
+  spawnX: "100",
+  spawnY: "100",
   tilesetNames: "",
   tilemapJson: null,
   tilesets: null,
@@ -497,7 +497,7 @@ function LessonsPanel({
             />
           </label>
 
-          <div className="admin-form-row">
+          <div className="admin-form-row" style={{ display: "none" }}>
             <label>
               <span>Spawn X</span>
               <input
@@ -522,7 +522,7 @@ function LessonsPanel({
             </label>
           </div>
 
-          <label>
+          <label style={{ display: "none" }}>
             <span>Tên tileset</span>
             <input
               value={form.tilesetNames}
@@ -552,26 +552,53 @@ function LessonsPanel({
               accept="image/*"
               multiple
               onChange={(files) =>
-                setForm((prev) => ({ ...prev, tilesets: files }))
-              }
-            />
-            <FileInput
-              label="Idle sprites"
-              accept="image/*"
-              multiple
-              onChange={(files) =>
-                setForm((prev) => ({ ...prev, idleSprites: files }))
-              }
-            />
-            <FileInput
-              label="Run sprites"
-              accept="image/*"
-              multiple
-              onChange={(files) =>
-                setForm((prev) => ({ ...prev, runSprites: files }))
+                setForm((prev) => {
+                  let derivedNames = prev.tilesetNames;
+                  if (files && files.length > 0) {
+                    derivedNames = Array.from(files)
+                      .map((file) => {
+                        const parts = file.name.split(".");
+                        parts.pop();
+                        return parts.join(".");
+                      })
+                      .join(", ");
+                  }
+                  return {
+                    ...prev,
+                    tilesets: files,
+                    tilesetNames: derivedNames,
+                  };
+                })
               }
             />
           </div>
+
+          <details className="admin-details" style={{ border: "1px solid #e5e7eb", borderRadius: "0.5rem", overflow: "hidden", marginTop: "1rem" }}>
+            <summary style={{ padding: "0.75rem 1rem", background: "#f9fafb", cursor: "pointer", fontSize: "0.75rem", fontWeight: "600", color: "#374151" }}>
+              Thay đổi nhân vật (Tuỳ chọn)
+            </summary>
+            <div className="admin-file-grid" style={{ padding: "1rem", background: "#fff", display: "grid", gap: "1rem" }}>
+              <FileInput
+                label="Idle sprites"
+                accept="image/*"
+                multiple
+                onChange={(files) =>
+                  setForm((prev) => ({ ...prev, idleSprites: files }))
+                }
+              />
+              <FileInput
+                label="Run sprites"
+                accept="image/*"
+                multiple
+                onChange={(files) =>
+                  setForm((prev) => ({ ...prev, runSprites: files }))
+                }
+              />
+              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                Khi upload sprite mới, hệ thống sẽ thay toàn bộ animation hiện tại.
+              </div>
+            </div>
+          </details>
 
           <div className="admin-form-actions">
             <button type="submit" disabled={saving}>

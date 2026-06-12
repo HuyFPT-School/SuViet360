@@ -8,6 +8,73 @@ const {
 } = require("./cloudinaryService");
 const AppError = require("../utils/AppError");
 
+const DEFAULT_ANIMATIONS = [
+  {
+    name: "idle",
+    frames: [
+      {
+        key: "player-idle-0",
+        frame: 1,
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201247/suviet360/characters/6a2af95e4c9d3ff442fd8f38/idle/eumvtkr5hfccyf2pnpl7.png",
+        publicId: ""
+      },
+      {
+        key: "player-idle-1",
+        frame: 2,
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201249/suviet360/characters/6a2af95e4c9d3ff442fd8f38/idle/cixrwgikmkidhzztqwgk.png",
+        publicId: ""
+      },
+      {
+        key: "player-idle-2",
+        frame: 3,
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201250/suviet360/characters/6a2af95e4c9d3ff442fd8f38/idle/ycshcervjyffrgdnhu2g.png",
+        publicId: ""
+      },
+      {
+        key: "player-idle-3",
+        frame: 4,
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201253/suviet360/characters/6a2af95e4c9d3ff442fd8f38/idle/caa33tesryog46arnddo.png",
+        publicId: ""
+      }
+    ]
+  },
+  {
+    name: "run",
+    frames: [
+      {
+        key: "player-run-0",
+        frame: 5,
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201254/suviet360/characters/6a2af95e4c9d3ff442fd8f38/run/f0cpsgukkhrlpjmn54l6.png",
+        publicId: ""
+      },
+      {
+        key: "player-run-1",
+        frame: 6,
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201255/suviet360/characters/6a2af95e4c9d3ff442fd8f38/run/dyiibnswiksor2yoqxbp.png",
+        publicId: ""
+      },
+      {
+        key: "player-run-2",
+        frame: 7,
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201257/suviet360/characters/6a2af95e4c9d3ff442fd8f38/run/hkp2vhguoafabhkecxeh.png",
+        publicId: ""
+      },
+      {
+        key: "player-run-3",
+        frame: 8,
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201258/suviet360/characters/6a2af95e4c9d3ff442fd8f38/run/wgwiqmxrphgqppgfrj0q.png",
+        publicId: ""
+      },
+      {
+        key: "player-run-4",
+        frame: 9,
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201260/suviet360/characters/6a2af95e4c9d3ff442fd8f38/run/jk3cvlak02cp5yqsdqjc.png",
+        publicId: ""
+      }
+    ]
+  }
+];
+
 /**
  * Create a new lesson with uploaded map files.
  *
@@ -65,8 +132,32 @@ const createLesson = async ({
   }
 
   // 3. Upload animation sprites grouped by animation name
-  const characterId = new mongoose.Types.ObjectId().toString();
-  const uploadedAnimations = await processAnimationGroups(animationGroups, characterId);
+  let uploadedAnimations = [];
+  if (animationGroups && Object.keys(animationGroups).length > 0) {
+    const characterId = new mongoose.Types.ObjectId().toString();
+    uploadedAnimations = await processAnimationGroups(animationGroups, characterId);
+  }
+
+  // If no animations were uploaded, try to clone from the latest lesson with animations
+  if (uploadedAnimations.length === 0) {
+    const latestLesson = await Lesson.findOne({
+      "game.character.animations": { $exists: true, $not: { $size: 0 } },
+    }).sort({ createdAt: -1 });
+
+    if (latestLesson && latestLesson.game?.character?.animations?.length > 0) {
+      uploadedAnimations = latestLesson.game.character.animations.map((group) => ({
+        name: group.name,
+        frames: group.frames.map((frame) => ({
+          key: frame.key,
+          frame: frame.frame,
+          imageUrl: frame.imageUrl,
+          publicId: "", // Empty to prevent deletion on new lesson updates
+        })),
+      }));
+    } else {
+      uploadedAnimations = DEFAULT_ANIMATIONS;
+    }
+  }
 
   // 4. Save to MongoDB
   const lesson = await Lesson.create({

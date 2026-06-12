@@ -33,15 +33,6 @@ const podcastSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    duration: {
-      type: Number, // duration in seconds
-      default: 0,
-    },
-    category: {
-      type: String,
-      trim: true,
-      default: "General",
-    },
     level: {
       type: String,
       trim: true,
