@@ -443,7 +443,7 @@ body {
   position: relative;
   width: 100%;
   aspect-ratio: 417 / 599;
-  --frame-inset-top: 18%;
+  --frame-inset-top: 21%;
   --frame-inset-side: 7.7%;
   --frame-inset-bottom: 10%;
   padding: 0;
