@@ -58,6 +58,7 @@ export default function AdminPage() {
   const [userQuery, setUserQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -181,9 +182,16 @@ export default function AdminPage() {
     }
 
     setSaving(true);
+    setUploadProgress(0);
     try {
+      const onProgress = (progressEvent: any) => {
+        if (progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percent);
+        }
+      };
       if (editingLesson) {
-        const response = await adminApi.updateLesson(editingLesson._id, form);
+        const response = await adminApi.updateLesson(editingLesson._id, form, onProgress);
         setLessons((items) =>
           items.map((item) =>
             item._id === editingLesson._id ? response.lesson : item
@@ -191,7 +199,7 @@ export default function AdminPage() {
         );
         setMessage("Đã cập nhật lesson.");
       } else {
-        const response = await adminApi.createLesson(form);
+        const response = await adminApi.createLesson(form, onProgress);
         setLessons((items) => [response.lesson, ...items]);
         setMessage("Đã tạo lesson mới.");
       }
@@ -205,6 +213,7 @@ export default function AdminPage() {
       setError(apiMessage || "Không thể lưu lesson. Vui lòng kiểm tra dữ liệu.");
     } finally {
       setSaving(false);
+      setUploadProgress(null);
     }
   };
 
@@ -336,6 +345,71 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+      {saving && uploadProgress !== null && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+        }}>
+          <div style={{
+            background: "#FFFBF2",
+            border: "2px solid #8c6a34",
+            borderRadius: "12px",
+            padding: "24px 32px",
+            width: "90%",
+            maxWidth: "400px",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
+            textAlign: "center"
+          }}>
+            <h3 style={{
+              fontFamily: "Cinzel, serif",
+              fontSize: "18px",
+              fontWeight: "bold",
+              color: "#6b4f14",
+              marginBottom: "16px"
+            }}>
+              {uploadProgress === 100 ? "ĐANG XỬ LÝ DỮ LIỆU..." : "ĐANG TẢI GAME LÊN..."}
+            </h3>
+            <div style={{
+              width: "100%",
+              height: "12px",
+              background: "#e5e7eb",
+              borderRadius: "9999px",
+              overflow: "hidden",
+              marginBottom: "12px"
+            }}>
+              <div style={{
+                height: "100%",
+                width: `${uploadProgress}%`,
+                background: "linear-gradient(90deg, #d2a85b, #9b6b2f)",
+                borderRadius: "9999px",
+                transition: "width 0.2s ease-out-in"
+              }} />
+            </div>
+            <div style={{
+              fontSize: "20px",
+              fontWeight: "bold",
+              color: "#4a1f24",
+              marginBottom: "8px"
+            }}>
+              {uploadProgress}%
+            </div>
+            <p style={{
+              fontSize: "12px",
+              color: "rgba(58, 43, 27, 0.7)"
+            }}>
+              {uploadProgress === 100 
+                ? "Đang lưu thông tin bài học vào cơ sở dữ liệu, vui lòng đợi..." 
+                : "Đang tải tệp tin và hình ảnh lên máy chủ Cloudinary..."}
+            </p>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -665,26 +739,64 @@ function FileInput({
   multiple?: boolean;
   onChange: (files: FileList | null) => void;
 }) {
-  const [fileLabel, setFileLabel] = useState("Chưa chọn file");
+  const [fileLabel, setFileLabel] = useState("Chưa chọn tệp");
 
   return (
-    <label className="admin-file-input">
+    <label className="admin-file-input" style={{ cursor: "pointer" }}>
       <span>{label}</span>
       <input
         type="file"
         accept={accept}
         multiple={multiple}
+        style={{ display: "none" }}
         onChange={(event) => {
           const files = event.target.files;
           onChange(files);
           setFileLabel(
             files?.length
-              ? `${files.length} file đã chọn`
-              : "Chưa chọn file"
+              ? multiple
+                ? `Đã chọn ${files.length} tệp`
+                : files[0].name
+              : "Chưa chọn tệp"
           );
         }}
       />
-      <small>{fileLabel}</small>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "6px 12px",
+            background: "linear-gradient(180deg, #d2a85b, #9b6b2f)",
+            color: "#2b1a0d",
+            fontSize: "12px",
+            fontWeight: "600",
+            borderRadius: "6px",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px"
+          }}
+        >
+          <svg
+            style={{ width: "14px", height: "14px" }}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+            />
+          </svg>
+          Chọn tệp
+        </div>
+        <small style={{ color: "rgba(58, 43, 27, 0.7)", fontSize: "12px", fontWeight: "500", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: "180px" }}>
+          {fileLabel}
+        </small>
+      </div>
     </label>
   );
 }

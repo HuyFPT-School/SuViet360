@@ -125,24 +125,26 @@ export const adminApi = {
     const response = await api.get<LessonsResponse>("/lessons");
     return response.data;
   },
-  createLesson: async (values: LessonFormValues) => {
+  createLesson: async (values: LessonFormValues, onUploadProgress?: (progressEvent: any) => void) => {
     const token = await ensureCsrfToken();
     const response = await api.post<LessonResponse>(
       "/lessons",
       toFormData(values),
       {
         headers: { "x-csrf-token": token },
+        onUploadProgress,
       }
     );
     return response.data;
   },
-  updateLesson: async (id: string, values: LessonFormValues) => {
+  updateLesson: async (id: string, values: LessonFormValues, onUploadProgress?: (progressEvent: any) => void) => {
     const token = await ensureCsrfToken();
     const response = await api.put<LessonResponse>(
       `/lessons/${id}`,
       toFormData(values),
       {
         headers: { "x-csrf-token": token },
+        onUploadProgress,
       }
     );
     return response.data;
