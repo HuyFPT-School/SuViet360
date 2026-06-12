@@ -85,10 +85,19 @@ const toFormData = (values: LessonFormValues) => {
   formData.append("spawnPoint[x]", values.spawnX);
   formData.append("spawnPoint[y]", values.spawnY);
 
-  const names = values.tilesetNames
-    .split(",")
-    .map((name) => name.trim())
-    .filter(Boolean);
+  let names: string[] = [];
+  if (values.tilesetNames && values.tilesetNames.trim()) {
+    names = values.tilesetNames
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean);
+  } else if (values.tilesets) {
+    names = Array.from(values.tilesets).map((file) => {
+      const parts = file.name.split(".");
+      parts.pop();
+      return parts.join(".");
+    });
+  }
 
   if (names.length > 0) {
     formData.append("tilesetNames", JSON.stringify(names));

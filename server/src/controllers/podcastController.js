@@ -13,7 +13,7 @@ const {
 
 // Create Podcast
 const createPodcast = asyncHandler(async (req, res) => {
-  const { title, description, content, category, level } = req.body;
+  const { title, description, content, level } = req.body;
 
   if (!title) {
     throw new AppError("Title is required", 400);
@@ -32,16 +32,11 @@ const createPodcast = asyncHandler(async (req, res) => {
   // Upload audio
   const audioResult = await uploadPodcastAudio(audioFile.buffer);
 
-  // Note: duration can be passed in body or set to 0. If there's a duration in body, use it, else 0
-  const duration = req.body.duration ? Number(req.body.duration) : 0;
-
   const podcast = await Podcast.create({
     title,
     description,
     content,
-    category,
     level,
-    duration,
     thumbnail: thumbResult.secure_url,
     thumbnailPublicId: thumbResult.public_id,
     audioUrl: audioResult.secure_url,
@@ -63,14 +58,12 @@ const updatePodcast = asyncHandler(async (req, res) => {
     throw new AppError("Podcast not found", 404);
   }
 
-  const { title, description, content, category, level, duration, status } = req.body;
+  const { title, description, content, level, status } = req.body;
 
   if (title !== undefined) podcast.title = title;
   if (description !== undefined) podcast.description = description;
   if (content !== undefined) podcast.content = content;
-  if (category !== undefined) podcast.category = category;
   if (level !== undefined) podcast.level = level;
-  if (duration !== undefined) podcast.duration = Number(duration);
   if (status !== undefined) podcast.status = status === "true" || status === true;
 
   // Check if new thumbnail file is provided
@@ -200,10 +193,6 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const queryObj = { status: true };
-
-  if (req.query.category) {
-    queryObj.category = req.query.category;
-  }
 
   if (req.query.level) {
     queryObj.level = req.query.level;
