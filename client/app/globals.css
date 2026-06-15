@@ -1,11 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Merriweather:wght@300;400;700&family=Playfair+Display:wght@400;600;700&display=swap");
+﻿@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Merriweather:wght@300;400;700&family=Playfair+Display:wght@400;600;700&display=swap");
 @import "tailwindcss";
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    ROOT VARIABLES
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 :root {
-  /* ── Design system (global) ── */
+  /* â”€â”€ Design system (global) â”€â”€ */
   --background:   #F7F3E9;
   --foreground:   #2a2016;
   --gold:         #c9a15a;
@@ -17,7 +17,7 @@
   --panel:        #fdf6e8;
   --panel-border: #c7ab73;
 
-  /* ── Profile page extras ── */
+  /* â”€â”€ Profile page extras â”€â”€ */
   --gold-mid:    #c4a052;
   --gold-deeper: #6b4f14;
   --gold-dim:    #4a3510;
@@ -34,9 +34,9 @@
   --color-foreground: var(--foreground);
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    BASE
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 body {
   background: var(--background);
   color: var(--foreground);
@@ -47,9 +47,9 @@ body {
   font-family: "Playfair Display", "Times New Roman", serif;
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    SCROLL-TRIGGERED ANIMATIONS
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sv-animate {
   transition-property: opacity, transform;
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
@@ -87,9 +87,9 @@ body {
   }
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    BODY & LAYOUT
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sv-body {
   background-color: #f7f3e9;
   position: relative;
@@ -129,9 +129,9 @@ body {
   min-height: 100vh;
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    HEADER
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sv-header {
   background: #1f0a0d;
   border-bottom: 2px solid var(--gold-dark);
@@ -254,9 +254,9 @@ body {
 
 .sv-search-input::placeholder { color: rgba(240, 221, 183, 0.5); }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    PAGE
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sv-page {
   display: flex;
   flex-direction: column;
@@ -278,9 +278,9 @@ body {
   z-index: 1;
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    HERO
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sv-hero {
   position: relative;
   min-height: 480px;
@@ -384,7 +384,7 @@ body {
   align-items: center;
 }
 
-/* ── AUTH PAGES ── */
+/* â”€â”€ AUTH PAGES â”€â”€ */
 .sv-body.sv-auth-mode::before {
   content: none;
 }
@@ -433,8 +433,8 @@ body {
 .sv-auth-shell {
   position: relative;
   z-index: 1;
-  /* Trên màn nhỏ: bị giới hạn bởi height để không tràn màn.
-     Trên màn lớn: cho phép rộng hơn tối đa 480px để chữ không lí nhí */
+  /* TrÃªn mÃ n nhá»: bá»‹ giá»›i háº¡n bá»Ÿi height Ä‘á»ƒ khÃ´ng trÃ n mÃ n.
+     TrÃªn mÃ n lá»›n: cho phÃ©p rá»™ng hÆ¡n tá»‘i Ä‘a 480px Ä‘á»ƒ chá»¯ khÃ´ng lÃ­ nhÃ­ */
   --_avail-h: calc(100svh - var(--auth-pad) * 2);
   width: min(92vw, max(calc(var(--_avail-h) * 417 / 599), min(40vw, 480px)));
 }
@@ -457,7 +457,7 @@ body {
   overflow: visible;
 }
 
-/* frame-inset-bottom dùng chung 1 giá trị để tránh lệch vị trí giữa 2 trang */
+/* frame-inset-bottom dÃ¹ng chung 1 giÃ¡ trá»‹ Ä‘á»ƒ trÃ¡nh lá»‡ch vá»‹ trÃ­ giá»¯a 2 trang */
 .sv-auth-login .sv-auth-panel,
 .sv-auth-register .sv-auth-panel {
   --frame-inset-bottom: 10%;
@@ -798,9 +798,9 @@ body {
   background: #f0ddb7;
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    PANELS
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sv-panels {
   max-width: 1200px;
   margin: 0 auto;
@@ -933,9 +933,9 @@ body {
   grid-template-columns: repeat(3, 1fr);
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    FOOTER
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sv-footer-new {
   background: #1f0a0d;
   border-top: 2px solid var(--gold-dark);
@@ -1055,9 +1055,9 @@ body {
   color: rgba(201, 161, 90, 0.6);
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    CONTENT SECTION (LIGHT TONE)
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sv-content {
   background: #e6cfa7;
   padding: 48px 24px 40px;
@@ -1242,9 +1242,9 @@ body {
 .sv-icon-mic,
 .sv-icon-news { background: rgba(255, 255, 255, 0.08); }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    MEMBERSHIP CTA BANNER
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sv-membership-cta {
   position: relative;
   background: linear-gradient(135deg, #4a1f24 0%, #2a0e13 40%, #1a0a06 100%);
@@ -1354,9 +1354,9 @@ body {
   transform: translateY(-1px);
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    RESPONSIVE
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 1440px) {
   .sv-topbar {
     gap: 16px;
@@ -1460,11 +1460,11 @@ body {
   .navbar__links { display: none; }
 }
 
-/* ═══════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    PROFILE PAGE
-   ═══════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* ── Wrapper ── */
+/* â”€â”€ Wrapper â”€â”€ */
 .profile-page {
   min-height: 100vh;
   background: linear-gradient(160deg, #1a0f05 0%, #2c1a08 40%, #1e1005 100%);
@@ -1491,7 +1491,7 @@ body {
     );
 }
 
-/* ── Navbar (profile-specific, reuses sv-header style) ── */
+/* â”€â”€ Navbar (profile-specific, reuses sv-header style) â”€â”€ */
 .navbar {
   position: sticky;
   top: 0;
@@ -1580,7 +1580,7 @@ body {
   color: var(--gold);
 }
 
-/* ── Main content wrapper ── */
+/* â”€â”€ Main content wrapper â”€â”€ */
 .profile-content {
   position: relative;
   z-index: 1;
@@ -1589,7 +1589,7 @@ body {
   padding: 24px 32px 60px;
 }
 
-/* ── Breadcrumb ── */
+/* â”€â”€ Breadcrumb â”€â”€ */
 .breadcrumb {
   font-family: "Cinzel", serif;
   font-size: 11px;
@@ -1601,7 +1601,7 @@ body {
 .breadcrumb__sep     { margin: 0 8px; }
 .breadcrumb__current { color: var(--gold-mid); }
 
-/* ── Top layout ── */
+/* â”€â”€ Top layout â”€â”€ */
 .profile-top {
   display: grid;
   grid-template-columns: 220px 1fr;
@@ -1609,7 +1609,7 @@ body {
   margin-bottom: 28px;
 }
 
-/* ── Shared dark card ── */
+/* â”€â”€ Shared dark card â”€â”€ */
 .card {
   background: linear-gradient(160deg, var(--bg-card) 0%, var(--bg-card-alt) 100%);
   border: 1px solid var(--gold-deeper);
@@ -1629,7 +1629,7 @@ body {
   background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
 
-/* ── Sidebar ── */
+/* â”€â”€ Sidebar â”€â”€ */
 .sidebar { padding: 24px 0; }
 
 .sidebar__title {
@@ -1676,7 +1676,7 @@ body {
 
 .sidebar__item--active .sidebar__item-label { color: var(--gold); }
 
-/* ── Profile card ── */
+/* â”€â”€ Profile card â”€â”€ */
 .profile-card { padding: 32px; }
 .profile-card__inner { display: flex; gap: 32px; }
 
@@ -1817,7 +1817,7 @@ body {
 
 .btn-edit:hover { opacity: 0.9; transform: translateY(-1px); }
 
-/* ── Bottom grid ── */
+/* â”€â”€ Bottom grid â”€â”€ */
 .profile-bottom {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 220px;
@@ -1879,7 +1879,7 @@ body {
   transform: translateY(-1px);
 }
 
-/* ── Achievements ── */
+/* â”€â”€ Achievements â”€â”€ */
 .achievements-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -1917,7 +1917,7 @@ body {
   text-align: center; font-style: italic; line-height: 1.3;
 }
 
-/* ── Journey list ── */
+/* â”€â”€ Journey list â”€â”€ */
 .journey-list { display: flex; flex-direction: column; gap: 14px; }
 
 .journey-item {
@@ -1929,9 +1929,9 @@ body {
 
 .journey-item:hover { border-color: rgba(140,106,52,0.5); }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    LEADERBOARD
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 [data-theme="dark"] {
   --background: #1c1309;
   --foreground: #f2e1bf;
@@ -2226,7 +2226,7 @@ body {
   font-size: 11px; min-width: 34px; text-align: right;
 }
 
-/* ── Heritage ── */
+/* â”€â”€ Heritage â”€â”€ */
 .heritage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 .heritage-item {
@@ -2279,7 +2279,7 @@ body {
 .heritage-item--unlocked .heritage-item__name { color: var(--gold); }
 .heritage-item--locked   .heritage-item__name { color: rgba(201,161,90,0.3); }
 
-/* ── Streak ── */
+/* â”€â”€ Streak â”€â”€ */
 .streak-body {
   display: flex; flex-direction: column;
   align-items: center; gap: 12px;
@@ -2329,7 +2329,7 @@ body {
   color: var(--gold-deeper); text-align: center; line-height: 1.5;
 }
 
-/* ── Profile footer quote ── */
+/* â”€â”€ Profile footer quote â”€â”€ */
 .profile-footer {
   text-align: center; margin-top: 40px; padding: 24px;
   border-top: 1px solid rgba(140,106,52,0.25);
@@ -2347,11 +2347,11 @@ body {
   letter-spacing: 0.5px; line-height: 1.8;
 }
 
-/* ═══════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    PROFILE EDIT MODE
-   ═══════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* ── Edit form inputs ── */
+/* â”€â”€ Edit form inputs â”€â”€ */
 .profile-edit-input {
   width: 100%;
   background: rgba(0, 0, 0, 0.35);
@@ -2396,7 +2396,7 @@ body {
   color-scheme: dark;
 }
 
-/* ── Bio textarea ── */
+/* â”€â”€ Bio textarea â”€â”€ */
 .profile-bio-input {
   width: 100%;
   min-height: 80px;
@@ -2422,7 +2422,7 @@ body {
   color: rgba(201, 161, 90, 0.35);
 }
 
-/* ── Action buttons area ── */
+/* â”€â”€ Action buttons area â”€â”€ */
 .profile-actions {
   display: flex;
   gap: 12px;
@@ -2455,7 +2455,7 @@ body {
   cursor: not-allowed;
 }
 
-/* ── Save message ── */
+/* â”€â”€ Save message â”€â”€ */
 .profile-save-message {
   padding: 10px 16px;
   border-radius: 8px;
@@ -2483,7 +2483,7 @@ body {
   color: #e88070;
 }
 
-/* ── Avatar styles ── */
+/* â”€â”€ Avatar styles â”€â”€ */
 .avatar-wrap {
   position: relative;
   transition: transform 0.2s;
@@ -2522,9 +2522,9 @@ img.avatar-circle {
   color: #f09080;
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    ADMIN
-   ───────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .admin-page {
   min-height: calc(100vh - 80px);
   padding: 28px 24px 64px;
@@ -3168,3 +3168,4 @@ img.avatar-circle {
     grid-template-columns: 1fr;
   }
 }
+
