@@ -554,7 +554,8 @@ export default function StaffPage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-6 py-10 space-y-8">
+    <div className="w-full min-h-screen" style={{ backgroundImage: "linear-gradient(rgba(247, 243, 233, 0.45), rgba(247, 243, 233, 0.45)), url('/textures/paper.jpg')", backgroundSize: "cover", backgroundAttachment: "fixed" }}>
+      <section className="mx-auto w-full max-w-6xl px-6 py-10 space-y-8">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-amber-600">Staff workspace</p>
@@ -563,7 +564,7 @@ export default function StaffPage() {
           </h1>
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <div className="rounded-xl border border-amber-200 bg-white px-4 py-2 shadow-sm">
+          <div className="rounded-xl border border-amber-200 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-sm">
             <p className="text-amber-500 text-xs uppercase tracking-widest">
               {activeTab === "lessons" ? "Tổng bài học" : "Tổng podcast"}
             </p>
@@ -571,7 +572,7 @@ export default function StaffPage() {
               {activeTab === "lessons" ? stats.total : podcasts.length}
             </p>
           </div>
-          <div className="rounded-xl border border-amber-200 bg-white px-4 py-2 shadow-sm">
+          <div className="rounded-xl border border-amber-200 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-sm">
             <p className="text-amber-500 text-xs uppercase tracking-widest">Cập nhật gần nhất</p>
             <p className="text-amber-900 text-sm font-semibold">
               {activeTab === "lessons"
@@ -621,7 +622,7 @@ export default function StaffPage() {
 
       {activeTab === "lessons" ? (
         <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
-          <div className="rounded-2xl border border-amber-200 bg-white shadow-sm">
+          <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
             <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
               <h2 className="font-display text-lg font-semibold text-amber-900">
                 Danh sách bài học
@@ -671,7 +672,7 @@ export default function StaffPage() {
             )}
           </div>
 
-          <div className="rounded-2xl border border-amber-200 bg-white shadow-sm">
+          <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
             <div className="border-b border-amber-100 px-5 py-4">
               <h2 className="font-display text-lg font-semibold text-amber-900">
                 {formMode === "create" ? "Tạo bài học" : "Chỉnh sửa bài học"}
@@ -748,7 +749,7 @@ export default function StaffPage() {
                   <span>Thay đổi nhân vật (Tuỳ chọn)</span>
                   <span className="transition-transform duration-200 group-open:rotate-180 text-amber-600">▼</span>
                 </summary>
-                <div className="p-4 space-y-4 border-t border-amber-100 bg-white">
+                <div className="p-4 space-y-4 border-t border-amber-100 bg-white/95">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="block text-xs font-medium text-amber-800">
@@ -812,7 +813,7 @@ export default function StaffPage() {
         </div>
       ) : (
         <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
-          <div className="rounded-2xl border border-amber-200 bg-white shadow-sm">
+          <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
             <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
               <h2 className="font-display text-lg font-semibold text-amber-900">
                 Danh sách podcast
@@ -867,7 +868,7 @@ export default function StaffPage() {
             )}
           </div>
 
-          <div className="rounded-2xl border border-amber-200 bg-white shadow-sm">
+          <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
             <div className="border-b border-amber-100 px-5 py-4">
               <h2 className="font-display text-lg font-semibold text-amber-900">
                 {podcastFormMode === "create" ? "Tạo podcast" : "Chỉnh sửa podcast"}
@@ -1076,6 +1077,7 @@ export default function StaffPage() {
           </div>
         </div>
       )}
-    </section>
+      </section>
+    </div>
   );
 }

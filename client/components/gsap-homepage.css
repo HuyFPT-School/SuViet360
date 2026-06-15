@@ -1,0 +1,1485 @@
+/* ═══════════════════════════════════════════════════════════════
+   GSAP HOMEPAGE — Premium Vietnamese History Theme
+   ═══════════════════════════════════════════════════════════════ */
+
+.gsap-homepage {
+  overflow-x: hidden;
+  background: #F7F3E9;
+}
+
+/* ── HERO ── */
+.gsap-hero {
+  position: relative;
+  height: 100vh;
+  min-height: 600px;
+  max-height: 1000px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.gsap-hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  will-change: transform;
+}
+
+.gsap-hero-bg img {
+  object-fit: cover;
+  object-position: 93% center;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.gsap-hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.gsap-hero-overlay-side {
+  background: linear-gradient(to right, rgba(26,10,6,0.92) 0%, rgba(26,10,6,0.6) 35%, transparent 70%);
+}
+
+.gsap-hero-overlay-bottom {
+  background: linear-gradient(to top, rgba(15,7,5,0.7) 0%, transparent 50%);
+}
+
+.gsap-hero-overlay-vignette {
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(10,5,2,0.4) 100%);
+}
+
+/* Floating particles */
+.gsap-particle {
+  position: absolute;
+  z-index: 2;
+  color: rgba(201, 161, 90, 0.35);
+  pointer-events: none;
+  will-change: transform;
+  filter: blur(0.5px);
+}
+
+/* Hero content */
+.gsap-hero-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 4rem 0 6rem;
+  max-width: 720px;
+  will-change: transform, opacity;
+}
+
+.gsap-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: "Cinzel", serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: rgba(201, 161, 90, 0.7);
+  margin-bottom: 1.25rem;
+}
+
+.gsap-hero-eyebrow-line {
+  display: inline-block;
+  width: 40px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,161,90,0.5));
+}
+
+.gsap-hero-eyebrow-line:last-child {
+  background: linear-gradient(90deg, rgba(201,161,90,0.5), transparent);
+}
+
+/* Hero title */
+.gsap-hero-title {
+  font-family: "Cinzel", serif;
+  font-size: clamp(2.8rem, 6vw, 5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: #faf3e6;
+  margin: 0;
+  perspective: 600px;
+}
+
+.gsap-word {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+.gsap-word-accent {
+  color: #c9a15a;
+  text-shadow: 0 0 30px rgba(201,161,90,0.3);
+}
+
+/* Hero subtitle */
+.gsap-hero-subtitle {
+  font-family: "Cormorant Garamond", serif;
+  font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+  line-height: 1.75;
+  color: rgba(240, 221, 183, 0.7);
+  margin-top: 1.5rem;
+  max-width: 520px;
+}
+
+/* Hero CTA */
+.gsap-hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 2rem;
+}
+
+.gsap-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #c9a15a 0%, #a07930 100%);
+  color: #1a0a06;
+  font-family: "Cinzel", serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(201,161,90,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: all 0.35s cubic-bezier(0.22,1,0.36,1);
+  position: relative;
+  overflow: hidden;
+}
+
+.gsap-btn-primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.gsap-btn-primary:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 32px rgba(201,161,90,0.5), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.gsap-btn-primary:hover::before {
+  transform: translateX(100%);
+}
+
+.gsap-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 14px 32px;
+  background: transparent;
+  color: rgba(240, 221, 183, 0.85);
+  font-family: "Cinzel", serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: 50px;
+  border: 1px solid rgba(201,161,90,0.35);
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.22,1,0.36,1);
+}
+
+.gsap-btn-secondary:hover {
+  border-color: rgba(201,161,90,0.7);
+  color: #faf3e6;
+  background: rgba(201,161,90,0.08);
+  transform: translateY(-2px);
+}
+
+/* Scroll indicator */
+.gsap-scroll-indicator {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.gsap-scroll-text {
+  font-family: "Cinzel", serif;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(201,161,90,0.5);
+}
+
+.gsap-scroll-arrow {
+  color: rgba(201,161,90,0.5);
+  animation: gsapScrollBounce 2s ease-in-out infinite;
+}
+
+@keyframes gsapScrollBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+
+/* ── STATS BAR ── */
+.gsap-stats {
+  background: linear-gradient(135deg, #1a0a06 0%, #2a1510 50%, #1a0a06 100%);
+  padding: 3rem 2rem;
+  border-top: 1px solid rgba(201,161,90,0.15);
+  border-bottom: 1px solid rgba(201,161,90,0.15);
+}
+
+.gsap-stats-inner {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+}
+
+.gsap-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.gsap-stat-value {
+  font-family: "Cinzel", serif;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 700;
+  color: #c9a15a;
+  text-shadow: 0 0 20px rgba(201,161,90,0.2);
+}
+
+.gsap-stat-label {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 0.85rem;
+  color: rgba(240,221,183,0.5);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ── SECTION HEADERS ── */
+.gsap-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.gsap-section-ornament {
+  color: #c9a15a;
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+.gsap-section-title {
+  font-family: "Cinzel", serif;
+  font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+  font-weight: 700;
+  color: #2a2016;
+  letter-spacing: 0.08em;
+  text-align: center;
+  margin: 0;
+}
+
+.gsap-section-subtitle {
+  text-align: center;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 1rem;
+  color: rgba(42,32,22,0.6);
+  margin-top: 0.5rem;
+  margin-bottom: 3rem;
+}
+
+/* ── TIMELINE SECTION ── */
+.gsap-timeline-section {
+  padding: 5rem 2rem;
+  background: linear-gradient(180deg, #F7F3E9 0%, #f0e8d4 50%, #F7F3E9 100%);
+  position: relative;
+}
+
+.gsap-timeline-container {
+  position: relative;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+
+/* Central line track */
+.gsap-timeline-line-track {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  transform: translateX(-50%);
+  background: rgba(201,161,90,0.1);
+  border-radius: 3px;
+}
+
+.gsap-timeline-line {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #c9a15a 0%, #d4543a 33%, #6b8e6b 66%, #4a7fb5 100%);
+  transform-origin: top center;
+  border-radius: 3px;
+}
+
+/* Timeline cards */
+.gsap-timeline-card {
+  position: relative;
+  width: 42%;
+  margin-bottom: 3.5rem;
+  will-change: transform, opacity;
+}
+
+.gsap-tl-left {
+  margin-left: 0;
+  margin-right: auto;
+  text-align: right;
+}
+
+.gsap-tl-right {
+  margin-left: auto;
+  margin-right: 0;
+  text-align: left;
+}
+
+/* Timeline dot */
+.gsap-timeline-dot {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #F7F3E9;
+  border: 3px solid #c9a15a;
+  top: 1.5rem;
+  z-index: 2;
+  box-shadow: 0 0 0 4px #F7F3E9, 0 0 12px rgba(201,161,90,0.3);
+  will-change: transform, box-shadow;
+}
+
+.gsap-tl-left .gsap-timeline-dot {
+  right: -52px;
+  transform: translateX(50%);
+}
+
+.gsap-tl-right .gsap-timeline-dot {
+  left: -52px;
+  transform: translateX(-50%);
+}
+
+/* Card inner */
+.gsap-timeline-card-inner {
+  background: linear-gradient(rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)), url('/textures/paper.jpg');
+  background-size: cover;
+  border: 1px solid rgba(201, 161, 90, 0.25);
+  border-top: 4px solid #c9a15a;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(28, 18, 12, 0.08);
+  backdrop-filter: blur(8px);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.gsap-timeline-card:hover .gsap-timeline-card-inner {
+  transform: translateY(-5px);
+  border-color: rgba(201, 161, 90, 0.45);
+  box-shadow: 0 16px 48px rgba(28, 18, 12, 0.15);
+}
+
+.gsap-timeline-icon {
+  display: block;
+  width: 2.8rem;
+  height: 2.8rem;
+  margin-bottom: 0.75rem;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.gsap-timeline-card:hover .gsap-timeline-icon {
+  transform: scale(1.15) rotate(5deg);
+}
+
+.gsap-tl-left .gsap-timeline-icon {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.gsap-tl-right .gsap-timeline-icon {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.gsap-timeline-card-title {
+  font-family: "Cinzel", serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #2a2016;
+  margin: 0;
+}
+
+.gsap-timeline-card-date {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.gsap-timeline-card-desc {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 0.95rem;
+  color: rgba(42, 32, 22, 0.75);
+  line-height: 1.6;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+}
+
+/* ── HORIZONTAL SCROLL SECTION ── */
+.gsap-hscroll-section {
+  padding: 5rem 0;
+  background: linear-gradient(135deg, #160805 0%, #25120c 50%, #160805 100%);
+  overflow: hidden;
+  position: relative;
+}
+
+.gsap-hscroll-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 20% 50%, rgba(201, 161, 90, 0.04) 0%, transparent 50%),
+                     radial-gradient(circle at 80% 50%, rgba(201, 161, 90, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.gsap-hscroll-section .gsap-section-title {
+  color: #faf3e6;
+}
+
+.gsap-hscroll-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+  padding: 0 2rem;
+}
+
+.gsap-hscroll-inner {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem 6rem;
+  will-change: transform;
+}
+
+.gsap-hscroll-card {
+  flex-shrink: 0;
+  width: 340px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(201, 161, 90, 0.16);
+  border-radius: 16px;
+  overflow: hidden;
+  text-decoration: none;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+
+.gsap-hscroll-card:hover {
+  border-color: rgba(201, 161, 90, 0.5);
+  transform: translateY(-8px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.gsap-hscroll-card-visual {
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  background: #160805;
+}
+
+.gsap-hscroll-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.gsap-hscroll-card:hover .gsap-hscroll-img {
+  transform: scale(1.08);
+}
+
+.gsap-hscroll-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(22, 8, 5, 0.85) 0%, rgba(22, 8, 5, 0.3) 50%, transparent 100%);
+  z-index: 1;
+}
+
+.gsap-hscroll-card-tag {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  padding: 4px 14px;
+  background: rgba(22, 8, 5, 0.65);
+  backdrop-filter: blur(8px);
+  color: #c9a15a;
+  font-family: "Cinzel", serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  border-radius: 20px;
+  border: 1px solid rgba(201, 161, 90, 0.25);
+}
+
+.gsap-hscroll-card-body {
+  padding: 1.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.gsap-hscroll-card-body h3 {
+  font-family: "Cinzel", serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #faf3e6;
+  margin: 0 0 0.5rem;
+}
+
+.gsap-hscroll-card-body p {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 0.95rem;
+  color: rgba(240, 221, 183, 0.65);
+  line-height: 1.6;
+  margin: 0 0 1.25rem;
+}
+
+.gsap-hscroll-card-cta {
+  font-family: "Cinzel", serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #c9a15a;
+  transition: color 0.3s;
+}
+
+.gsap-hscroll-card:hover .gsap-hscroll-card-cta {
+  color: #e6b86c;
+  text-shadow: 0 0 10px rgba(230, 184, 108, 0.3);
+}
+
+/* ── RESOURCES GRID ── */
+.gsap-resources-section {
+  padding: 5rem 2rem;
+  background: #F7F3E9;
+}
+
+.gsap-resources-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.gsap-resource-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 2.2rem 1.5rem;
+  background: linear-gradient(rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)), url('/textures/paper.jpg');
+  background-size: cover;
+  border: 1px solid rgba(201, 161, 90, 0.22);
+  border-radius: 16px;
+  text-decoration: none;
+  text-align: center;
+  box-shadow: 0 6px 24px rgba(28, 18, 12, 0.05);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+  position: relative;
+  overflow: hidden;
+}
+
+.gsap-resource-item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(201, 161, 90, 0.07) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.gsap-resource-item:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: rgba(201, 161, 90, 0.45);
+  box-shadow: 0 16px 48px rgba(28, 18, 12, 0.12);
+}
+
+.gsap-resource-item:hover::before {
+  opacity: 1;
+}
+
+.gsap-resource-icon {
+  width: 2.8rem;
+  height: 2.8rem;
+  color: #a07930;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s;
+}
+
+.gsap-resource-item:hover .gsap-resource-icon {
+  transform: scale(1.15) rotate(-3deg);
+  color: #c9a15a;
+}
+
+.gsap-resource-label {
+  font-family: "Cinzel", serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #2a2016;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.gsap-resource-desc {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 0.85rem;
+  color: rgba(42, 32, 22, 0.65);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.gsap-resource-arrow {
+  font-size: 1.2rem;
+  color: #c9a15a;
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all 0.3s;
+}
+
+.gsap-resource-item:hover .gsap-resource-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ── CTA SECTION ── */
+.gsap-cta-section {
+  padding: 5rem 2rem;
+  background: linear-gradient(180deg, #F7F3E9 0%, #ede2cc 100%);
+}
+
+.gsap-cta-inner {
+  position: relative;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 3.5rem 3rem;
+  background: linear-gradient(135deg, #1a0a06 0%, #2e1a10 50%, #1a0a06 100%);
+  border: 1px solid rgba(201,161,90,0.25);
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(28,18,12,0.2);
+  overflow: hidden;
+}
+
+.gsap-cta-inner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 20%, rgba(201,161,90,0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 80%, rgba(201,161,90,0.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.gsap-cta-ornament {
+  position: absolute;
+  font-size: 18px;
+  color: rgba(201,161,90,0.25);
+  z-index: 1;
+}
+
+.gsap-cta-ornament-tl { top: 16px; left: 20px; }
+.gsap-cta-ornament-tr { top: 16px; right: 20px; }
+.gsap-cta-ornament-bl { bottom: 16px; left: 20px; }
+.gsap-cta-ornament-br { bottom: 16px; right: 20px; }
+
+.gsap-cta-eyebrow {
+  font-family: "Cinzel", serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: rgba(201,161,90,0.6);
+  margin: 0 0 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.gsap-cta-title {
+  font-family: "Cinzel", serif;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 700;
+  color: #faf3e6;
+  margin: 0 0 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.gsap-cta-sub {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 1rem;
+  color: rgba(240,221,183,0.6);
+  line-height: 1.7;
+  margin: 0 auto 2rem;
+  max-width: 500px;
+  position: relative;
+  z-index: 1;
+}
+
+.gsap-cta-btn {
+  display: inline-block;
+  padding: 14px 40px;
+  background: linear-gradient(135deg, #c9a15a 0%, #a07930 100%);
+  color: #1a0a06;
+  font-family: "Cinzel", serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.22,1,0.36,1);
+  position: relative;
+  z-index: 1;
+}
+
+.gsap-cta-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 32px rgba(201,161,90,0.4);
+}
+
+/* ── GAME SỬ VIỆT 2D ── */
+.gsap-game-section {
+  padding: 6rem 2rem;
+  background: #F7F3E9;
+  position: relative;
+}
+
+.gsap-game-container {
+  max-width: 950px;
+  margin: 0 auto;
+}
+
+.gsap-game-card {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 2.5rem;
+  background: linear-gradient(rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)), url('/textures/paper.jpg');
+  background-size: cover;
+  border: 1px solid rgba(201, 161, 90, 0.25);
+  border-top: 4px solid #c9a15a;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(28, 18, 12, 0.06);
+  will-change: transform, opacity;
+}
+
+.gsap-game-screen {
+  height: 280px;
+  background: #110604;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 4px solid #2a1510;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.85);
+  margin: 1.5rem;
+}
+
+.gsap-game-ui-bar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: "Cinzel", serif;
+  color: #faf3e6;
+  font-size: 11px;
+  z-index: 10;
+  letter-spacing: 0.1em;
+}
+
+.gsap-game-hp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gsap-game-hp span {
+  font-weight: 700;
+  color: #d4543a;
+}
+
+.gsap-game-hp-bar {
+  width: 80px;
+  height: 8px;
+  background: #3e1814;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gsap-game-hp-fill {
+  width: 75%;
+  height: 100%;
+  background: linear-gradient(90deg, #d4543a 0%, #ff765e 100%);
+}
+
+.gsap-game-score {
+  font-weight: 700;
+  color: #c9a15a;
+}
+
+.gsap-game-character-wrapper {
+  position: absolute;
+  bottom: 45px;
+  left: 22%;
+  z-index: 5;
+}
+
+.gsap-game-character {
+  width: 70px;
+  height: 70px;
+  animation: gsapKnightIdle 1.5s ease-in-out infinite alternate;
+}
+
+.gsap-knight-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.gsap-knight-sword {
+  transition: all 0.3s;
+}
+
+.gsap-game-card:hover .gsap-knight-sword {
+  stroke: #ffd993;
+  filter: drop-shadow(0 0 8px #c9a15a);
+}
+
+.gsap-game-fortress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  z-index: 2;
+}
+
+.gsap-fortress-crenelations {
+  height: 12px;
+  display: flex;
+  justify-content: space-around;
+  padding: 0 4px;
+}
+
+.gsap-fortress-crenelations span {
+  width: 13%;
+  height: 100%;
+  background: #2a1510;
+  border-radius: 2px 2px 0 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: none;
+}
+
+.gsap-fortress-body {
+  height: 36px;
+  background: linear-gradient(180deg, #2a1510 0%, #1e0e0a 100%);
+  border-top: 2px solid #3e2218;
+}
+
+.gsap-game-content-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem 2rem 2rem 0;
+}
+
+.gsap-game-tag {
+  font-family: "Cinzel", serif;
+  font-size: 10px;
+  color: #a07930;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.gsap-game-content-panel h3 {
+  font-family: "Cinzel", serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #2a2016;
+  margin: 0 0 1rem;
+  line-height: 1.3;
+}
+
+.gsap-game-content-panel p {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 0.98rem;
+  color: rgba(42, 32, 22, 0.75);
+  line-height: 1.6;
+  margin: 0 0 2rem;
+}
+
+@keyframes gsapKnightIdle {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-6px); }
+}
+
+/* ── BẢNG VÀNG DANH VỌNG ── */
+.gsap-leaderboard-section {
+  padding: 6rem 2rem;
+  background: linear-gradient(to bottom, #F7F3E9 0%, #ede2cc 100%);
+  position: relative;
+}
+
+.gsap-leaderboard-container {
+  max-width: 750px;
+  margin: 0 auto;
+}
+
+.gsap-leaderboard-plaque {
+  background: linear-gradient(rgba(26, 10, 6, 0.97), rgba(26, 10, 6, 0.97)), url('/textures/paper.jpg');
+  background-size: cover;
+  border: 2px solid #c9a15a;
+  border-radius: 20px;
+  padding: 3.5rem 3rem;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(26, 10, 6, 0.25);
+  position: relative;
+  overflow: hidden;
+  will-change: transform, opacity;
+}
+
+.gsap-plaque-ornament {
+  width: 180px;
+  margin: 0 auto 0.75rem;
+  opacity: 0.8;
+}
+
+.gsap-plaque-title {
+  font-family: "Cinzel", serif;
+  font-size: 1.3rem;
+  color: #c9a15a;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  margin: 0 0 2.5rem;
+  text-shadow: 0 0 15px rgba(201, 161, 90, 0.25);
+}
+
+.gsap-leaderboard-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 3rem;
+}
+
+.gsap-leaderboard-row {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(201, 161, 90, 0.12);
+  border-radius: 12px;
+  padding: 0.9rem 1.5rem;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  text-align: left;
+  will-change: transform, opacity;
+}
+
+.gsap-leaderboard-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(201, 161, 90, 0.35);
+  transform: translateX(6px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.gsap-row-rank {
+  flex-shrink: 0;
+}
+
+.gsap-medal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-family: "Cinzel", serif;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1.5px solid currentColor;
+}
+
+.gsap-medal.gold { color: #f2c94c; background: rgba(242, 201, 76, 0.1); }
+.gsap-medal.silver { color: #d0d0d0; background: rgba(208, 208, 208, 0.1); }
+.gsap-medal.bronze { color: #e6b86c; background: rgba(230, 184, 108, 0.1); }
+
+.gsap-row-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(201, 161, 90, 0.15);
+  color: #c9a15a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Cinzel", serif;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 1.25rem;
+  border: 1px solid rgba(201, 161, 90, 0.25);
+}
+
+.gsap-row-info {
+  flex-grow: 1;
+}
+
+.gsap-row-name {
+  display: block;
+  font-family: "Cinzel", serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #faf3e6;
+}
+
+.gsap-row-region {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 11px;
+  color: rgba(240, 221, 183, 0.5);
+}
+
+.gsap-row-stats {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.gsap-row-streak {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 13px;
+  color: #e6b86c;
+  font-weight: 600;
+}
+
+.gsap-row-score {
+  font-family: "Cinzel", serif;
+  font-size: 12px;
+  color: #faf3e6;
+  font-weight: 700;
+}
+
+/* ── PODCAST SỬ KÝ ── */
+.gsap-podcast-section {
+  padding: 6rem 2rem;
+  background: linear-gradient(to bottom, #160805 0%, #22100a 100%);
+  color: #faf3e6;
+  position: relative;
+}
+
+.gsap-podcast-section .gsap-section-title {
+  color: #faf3e6;
+}
+
+.gsap-podcast-section .gsap-section-subtitle {
+  color: rgba(240, 221, 183, 0.6);
+}
+
+.gsap-podcast-container {
+  max-width: 950px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+.gsap-podcast-visual-panel {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  will-change: transform, opacity;
+}
+
+.gsap-podcast-disk-wrapper {
+  position: relative;
+  width: 280px;
+  height: 280px;
+}
+
+.gsap-podcast-disk {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+  will-change: transform;
+  position: relative;
+  z-index: 2;
+}
+
+.gsap-disk-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.gsap-disk-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: #160805;
+  border: 2px solid #c9a15a;
+  border-radius: 50%;
+  z-index: 5;
+}
+
+.gsap-podcast-needle {
+  position: absolute;
+  top: -10px;
+  right: 15px;
+  width: 60px;
+  height: 120px;
+  z-index: 5;
+  transform-origin: 10px 10px;
+  transform: rotate(15deg);
+  transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.gsap-podcast-container:hover .gsap-podcast-needle {
+  transform: rotate(26deg);
+}
+
+.gsap-podcast-playlist {
+  display: flex;
+  flex-direction: column;
+  will-change: transform, opacity;
+}
+
+.gsap-podcast-tag {
+  font-family: "Cinzel", serif;
+  font-size: 10px;
+  color: #c9a15a;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.gsap-podcast-playlist h3 {
+  font-family: "Cinzel", serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #faf3e6;
+  margin: 0 0 1rem;
+}
+
+.gsap-podcast-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.5rem 0 2rem;
+}
+
+.gsap-podcast-track {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(201, 161, 90, 0.12);
+  border-radius: 12px;
+  padding: 1.1rem 1.5rem;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.gsap-podcast-track:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(201, 161, 90, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+}
+
+.gsap-track-play {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(201, 161, 90, 0.15);
+  color: #c9a15a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1.25rem;
+  transition: background 0.35s, color 0.35s, transform 0.35s;
+  flex-shrink: 0;
+}
+
+.gsap-podcast-track:hover .gsap-track-play {
+  background: #c9a15a;
+  color: #160805;
+  transform: scale(1.08);
+}
+
+.gsap-track-info {
+  flex-grow: 1;
+  margin-right: 1rem;
+}
+
+.gsap-track-info h4 {
+  font-family: "Cinzel", serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #faf3e6;
+  margin: 0 0 4px;
+  line-height: 1.4;
+}
+
+.gsap-track-info p {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 11.5px;
+  color: rgba(240, 221, 183, 0.5);
+  margin: 0;
+}
+
+.gsap-track-wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 16px;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.gsap-track-wave span {
+  display: block;
+  width: 2.5px;
+  height: 3px;
+  background: #c9a15a;
+  border-radius: 1px;
+  transition: height 0.3s;
+}
+
+.gsap-podcast-track:hover .gsap-track-wave span {
+  animation: gsapSoundWave 1.2s ease-in-out infinite alternate;
+}
+
+.gsap-podcast-track:hover .gsap-track-wave span:nth-child(2) { animation-delay: 0.25s; }
+.gsap-podcast-track:hover .gsap-track-wave span:nth-child(3) { animation-delay: 0.45s; }
+.gsap-podcast-track:hover .gsap-track-wave span:nth-child(4) { animation-delay: 0.1s; }
+
+@keyframes gsapSoundWave {
+  0% { height: 3px; }
+  100% { height: 16px; }
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE — GSAP Homepage
+   ═══════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  .gsap-hero-content {
+    padding: 0 3rem;
+  }
+
+  .gsap-scroll-indicator {
+    left: 3rem;
+  }
+
+  .gsap-hscroll-inner {
+    padding: 1rem 3rem;
+  }
+
+  .gsap-game-card {
+    gap: 1.5rem;
+  }
+
+  .gsap-podcast-container {
+    gap: 2.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .gsap-hero {
+    min-height: 500px;
+  }
+
+  .gsap-hero-content {
+    padding: 0 1.5rem;
+  }
+
+  .gsap-scroll-indicator {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .gsap-stats-inner {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  /* Timeline */
+  .gsap-timeline-line-track {
+    left: 20px;
+    transform: none;
+  }
+
+  .gsap-timeline-card {
+    width: calc(100% - 50px);
+    margin-left: 50px !important;
+    margin-right: 0 !important;
+    text-align: left !important;
+  }
+
+  .gsap-tl-left .gsap-timeline-dot,
+  .gsap-tl-right .gsap-timeline-dot {
+    left: -42px;
+    right: auto;
+    transform: translateX(-50%);
+  }
+
+  .gsap-tl-left .gsap-timeline-icon,
+  .gsap-tl-right .gsap-timeline-icon {
+    text-align: left;
+  }
+
+  /* Horizontal scroll */
+  .gsap-hscroll-inner {
+    flex-direction: column;
+    padding: 1rem 1.5rem;
+    gap: 1.5rem;
+  }
+
+  .gsap-hscroll-card {
+    width: 100%;
+  }
+
+  .gsap-cta-inner {
+    padding: 2.5rem 1.5rem;
+  }
+
+  /* Game */
+  .gsap-game-card {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .gsap-game-content-panel {
+    padding: 0 2rem 2.5rem;
+  }
+
+  /* Leaderboard */
+  .gsap-leaderboard-plaque {
+    padding: 2.5rem 1.5rem;
+  }
+
+  .gsap-leaderboard-row {
+    padding: 0.8rem 1rem;
+  }
+
+  .gsap-row-avatar {
+    margin: 0 0.75rem;
+  }
+
+  .gsap-row-stats {
+    gap: 0.75rem;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  /* Podcast */
+  .gsap-podcast-container {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+
+  .gsap-podcast-playlist {
+    text-align: center;
+    align-items: center;
+  }
+
+  .gsap-podcast-tracks {
+    width: 100%;
+  }
+
+  .gsap-podcast-track {
+    text-align: left;
+  }
+}
+
+@media (max-width: 480px) {
+  .gsap-hero-title {
+    font-size: 2.2rem;
+  }
+
+  .gsap-hero-eyebrow {
+    font-size: 9px;
+  }
+
+  .gsap-hero-cta {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .gsap-btn-primary,
+  .gsap-btn-secondary {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .gsap-stats-inner {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .gsap-stat-value {
+    font-size: 1.4rem;
+  }
+
+  .gsap-hscroll-card-visual {
+    height: 150px;
+  }
+
+  .gsap-leaderboard-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .gsap-row-stats {
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: 4px;
+  }
+}
+
