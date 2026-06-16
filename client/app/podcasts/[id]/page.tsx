@@ -85,6 +85,16 @@ export default function PodcastDetailPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+
+  const handlePlaybackRateChange = (rate: number) => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = rate;
+      setPlaybackRate(rate);
+    }
+    setShowSpeedMenu(false);
+  };
 
   // Tabs
   const [activeTab, setActiveTab] = useState("noidung");
@@ -176,6 +186,26 @@ export default function PodcastDetailPage() {
         audioRef.current.play();
         setIsPlaying(true);
       }
+    }
+  };
+
+  const downloadAudio = async () => {
+    if (!podcast?.audioUrl) return;
+    try {
+      const response = await fetch(podcast.audioUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const extension = podcast.audioUrl.split(".").pop() || "mp3";
+      link.setAttribute("download", `${podcast.title}.${extension}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+      window.open(podcast.audioUrl, "_blank");
     }
   };
 
@@ -425,14 +455,41 @@ export default function PodcastDetailPage() {
                        />
                     </div>
                     
-                    <button className="text-[#5c4a3d] hover:text-[#a84d28] ml-2"><SettingsIcon /></button>
+                    <div className="relative flex items-center">
+                      <button 
+                        onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                        className="text-[#5c4a3d] hover:text-[#a84d28] ml-2 flex items-center justify-center p-1 rounded hover:bg-[#ebd8b7] transition-all"
+                        title="Tốc độ phát"
+                      >
+                        <SettingsIcon />
+                      </button>
+                      {showSpeedMenu && (
+                        <div className="absolute bottom-full right-0 mb-2 bg-[#fcf8ef] border border-[#e8d5b5] rounded-lg shadow-lg py-1.5 z-30 min-w-[130px] text-xs font-semibold">
+                          <p className="px-3 py-1 font-bold text-[#8c6a34] border-b border-[#e8d5b5] mb-1">Tốc độ phát</p>
+                          {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                            <button
+                              key={rate}
+                              type="button"
+                              onClick={() => handlePlaybackRateChange(rate)}
+                              className={`w-full text-left px-3 py-1.5 hover:bg-[#f3e9d8] transition-colors flex justify-between items-center ${playbackRate === rate ? 'text-[#a84d28]' : 'text-[#5c4a3d]'}`}
+                            >
+                              <span>{rate === 1 ? 'Bình thường' : `${rate}x`}</span>
+                              {playbackRate === rate && <span className="w-1.5 h-1.5 rounded-full bg-[#a84d28]"></span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                  </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex border border-[#e8d5b5] rounded-lg overflow-hidden bg-white">
-                 <button onClick={startAddingNote} className="w-full py-3 flex items-center justify-center gap-2 text-sm font-medium text-[#5c4a3d] hover:bg-[#f3e9d8] transition-colors">
+                 <button onClick={startAddingNote} className="w-full py-3 flex items-center justify-center gap-2 text-sm font-medium text-[#5c4a3d] hover:bg-[#f3e9d8] transition-colors border-r border-[#e8d5b5]">
                     <EditIcon /> Thêm ghi chú tại {formatTime(currentTime)}
+                 </button>
+                 <button onClick={downloadAudio} className="w-full py-3 flex items-center justify-center gap-2 text-sm font-medium text-[#5c4a3d] hover:bg-[#f3e9d8] transition-colors">
+                    <DownloadIcon /> Tải âm thanh (Download)
                  </button>
               </div>
 
