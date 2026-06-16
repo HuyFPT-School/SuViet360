@@ -33,8 +33,23 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
     const data = dataRef.current;
     const { tilemapJsonUrl, tilesets, character, spawnPoint } = data;
 
-    const idleFrames: SpriteFrame[] = character?.animations?.idle || [];
-    const runFrames: SpriteFrame[] = character?.animations?.run || [];
+    let animationsMap: Record<string, SpriteFrame[]> = {};
+    if (Array.isArray(character?.animations)) {
+      for (const group of character.animations) {
+        if (group && group.name) {
+          animationsMap[group.name] = (group.frames || []).map((f: any) => ({
+            key: f.key,
+            frame: f.frame,
+            imageUrl: f.imageUrl,
+          }));
+        }
+      }
+    } else if (character?.animations && typeof character.animations === "object") {
+      animationsMap = character.animations as Record<string, SpriteFrame[]>;
+    }
+
+    const idleFrames: SpriteFrame[] = animationsMap.idle || [];
+    const runFrames: SpriteFrame[] = animationsMap.run || [];
     const allFrames = [...idleFrames, ...runFrames];
 
     const bgTileset = tilesets?.[0];

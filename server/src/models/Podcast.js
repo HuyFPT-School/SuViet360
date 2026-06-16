@@ -53,8 +53,22 @@ const podcastSchema = new mongoose.Schema(
       required: [true, "Creator is required"],
     },
     status: {
-      type: Boolean,
-      default: true,
+      type: String,
+      enum: ["Draft", "Pending_Review", "Published", "Rejected"],
+      default: "Pending_Review",
+    },
+    reviewFeedback: {
+      type: String,
+      default: "",
+    },
+    lessonId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Lesson",
+      default: null,
+    },
+    duration: {
+      type: Number,
+      default: 0,
     },
   },
   {

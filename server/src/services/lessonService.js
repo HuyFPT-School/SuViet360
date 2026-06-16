@@ -183,8 +183,8 @@ const createLesson = async ({
 /**
  * Get all lessons (sorted newest first).
  */
-const getAllLessons = async () => {
-  return Lesson.find().sort({ createdAt: -1 });
+const getAllLessons = async (filter = {}) => {
+  return Lesson.find(filter).sort({ createdAt: -1 });
 };
 
 /**
@@ -212,6 +212,8 @@ const updateLesson = async (id, updates) => {
   // ── Text fields ──────────────────────────────────────────────
   if (updates.title !== undefined) lesson.title = updates.title;
   if (updates.content !== undefined) lesson.content = updates.content;
+  if (updates.status !== undefined) lesson.status = updates.status;
+  if (updates.reviewFeedback !== undefined) lesson.reviewFeedback = updates.reviewFeedback;
 
   // ── Spawn point ──────────────────────────────────────────────
   if (updates.spawnX !== undefined) lesson.game.spawnPoint.x = updates.spawnX;

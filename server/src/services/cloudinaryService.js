@@ -108,6 +108,7 @@ const uploadPodcastAudio = async (buffer) => {
         resolve({
           secure_url: result.secure_url,
           public_id: result.public_id,
+          duration: result.duration || 0,
         });
       }
     );

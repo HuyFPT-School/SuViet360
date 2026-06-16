@@ -7,6 +7,8 @@ const {
   getLessonById,
   updateLesson,
   deleteLesson,
+  approveLesson,
+  rejectLesson,
 } = require("../controllers/lessonController");
 
 const router = express.Router();
@@ -14,6 +16,10 @@ const router = express.Router();
 // Public: get all lessons & get single lesson
 router.get("/", getAllLessons);
 router.get("/:id", getLessonById);
+
+// Teacher/Admin review routes
+router.put("/:id/approve", protect, authorize("admin", "teacher"), approveLesson);
+router.put("/:id/reject", protect, authorize("admin", "teacher"), rejectLesson);
 
 // Admin only: create, update, delete
 router.use(protect, authorize("admin", "staff"));

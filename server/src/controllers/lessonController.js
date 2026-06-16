@@ -1,6 +1,10 @@
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const lessonService = require("../services/lessonService");
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+const env = require("../config/env");
+const { getCookie } = require("../utils/cookies");
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
@@ -77,7 +81,22 @@ const createLesson = asyncHandler(async (req, res) => {
 
 // ─── GET /api/lessons ─────────────────────────────────────────────────
 const getAllLessons = asyncHandler(async (req, res) => {
-  const lessons = await lessonService.getAllLessons();
+  let showAll = false;
+  const token = getCookie(req, "token");
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, env.jwtSecret);
+      const user = await User.findById(decoded.id);
+      if (user && ["admin", "staff", "teacher"].includes(user.role)) {
+        showAll = true;
+      }
+    } catch (err) {
+      // Ignore
+    }
+  }
+
+  const filter = showAll ? {} : { status: "Published" };
+  const lessons = await lessonService.getAllLessons(filter);
 
   res.status(200).json({
     success: true,
@@ -89,6 +108,24 @@ const getAllLessons = asyncHandler(async (req, res) => {
 // ─── GET /api/lessons/:id ─────────────────────────────────────────────
 const getLessonById = asyncHandler(async (req, res) => {
   const lesson = await lessonService.getLessonById(req.params.id);
+  if (lesson.status !== "Published") {
+    let authorized = false;
+    const token = getCookie(req, "token");
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, env.jwtSecret);
+        const user = await User.findById(decoded.id);
+        if (user && ["admin", "staff", "teacher"].includes(user.role)) {
+          authorized = true;
+        }
+      } catch (err) {
+        // Ignore
+      }
+    }
+    if (!authorized) {
+      throw new AppError("Lesson not found", 404);
+    }
+  }
 
   res.status(200).json({
     success: true,
@@ -99,6 +136,8 @@ const getLessonById = asyncHandler(async (req, res) => {
 // ─── PUT /api/lessons/:id ─────────────────────────────────────────────
 const updateLesson = asyncHandler(async (req, res) => {
   const updates = {};
+  updates.status = "Pending_Review";
+  updates.reviewFeedback = "";
 
   // Text fields
   if (req.body.title !== undefined) updates.title = req.body.title;
@@ -171,6 +210,8 @@ const formatLessonResponse = (lesson) => ({
   _id: lesson._id,
   title: lesson.title,
   content: lesson.content,
+  status: lesson.status,
+  reviewFeedback: lesson.reviewFeedback,
   game: {
     tilemapJsonUrl: lesson.game.tilemapJsonUrl,
     tilesets: lesson.game.tilesets.map((ts) => ({
@@ -204,10 +245,41 @@ const formatAnimations = (animations) => {
   return map;
 };
 
+const approveLesson = asyncHandler(async (req, res) => {
+  const lesson = await lessonService.updateLesson(req.params.id, {
+    status: "Published",
+    reviewFeedback: "",
+  });
+
+  res.status(200).json({
+    success: true,
+    lesson: formatLessonResponse(lesson),
+  });
+});
+
+const rejectLesson = asyncHandler(async (req, res) => {
+  const { feedback } = req.body;
+  if (!feedback) {
+    throw new AppError("Feedback is required to reject a lesson", 400);
+  }
+
+  const lesson = await lessonService.updateLesson(req.params.id, {
+    status: "Rejected",
+    reviewFeedback: feedback,
+  });
+
+  res.status(200).json({
+    success: true,
+    lesson: formatLessonResponse(lesson),
+  });
+});
+
 module.exports = {
   createLesson,
   getAllLessons,
   getLessonById,
   updateLesson,
   deleteLesson,
+  approveLesson,
+  rejectLesson,
 };

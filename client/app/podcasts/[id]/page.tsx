@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import dynamic from "next/dynamic";
+
+const PhaserGame = dynamic(() => import("@/components/PhaserGame"), {
+  ssr: false,
+  loading: () => <p className="text-center py-6 text-amber-700 font-semibold">Đang tải game...</p>,
+});
 
 // --- Icons ---
 const HomeIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
@@ -443,117 +449,47 @@ export default function PodcastDetailPage() {
                      onClick={() => setActiveTab("tailieu")}
                      className={`py-4 font-bold text-sm tracking-wider uppercase border-b-2 transition-colors ${activeTab === 'tailieu' ? 'border-[#a84d28] text-[#a84d28]' : 'border-transparent text-[#8c6a34] hover:text-[#5c4a3d]'}`}
                   >TÀI LIỆU LIÊN QUAN</button>
+                  {podcast?.lessonId && (
+                     <button 
+                        onClick={() => setActiveTab("game")}
+                        className={`py-4 font-bold text-sm tracking-wider uppercase border-b-2 transition-colors ml-8 ${activeTab === 'game' ? 'border-[#a84d28] text-[#a84d28]' : 'border-transparent text-[#8c6a34] hover:text-[#5c4a3d]'}`}
+                     >TRÒ CHƠI</button>
+                  )}
                </div>
                
                <div className="p-6 text-sm text-[#5c4a3d] leading-relaxed bg-[#fdfbf7]">
-                  {activeTab === "noidung" ? (
+                  {activeTab === "noidung" && (
                      <div dangerouslySetInnerHTML={{ __html: podcast.content?.replace(/\n/g, '<br/>') || podcast.description }} />
-                  ) : (
+                  )}
+                  {activeTab === "tailieu" && (
                      <p>Chưa có tài liệu liên quan cho bài học này.</p>
                   )}
-                  
-                  <div className="mt-4 text-center">
-                     <button className="text-[#a84d28] font-bold text-xs uppercase flex items-center justify-center gap-1 mx-auto hover:underline">
-                        Xem thêm <ChevronDownIcon />
-                     </button>
-                  </div>
-               </div>
-            </div>
-
-            {/* Comments */}
-            <div className="bg-[#fcf8ef] border border-[#e8d5b5] rounded-xl p-6 shadow-sm">
-               <h3 className="text-[#3a2312] font-bold text-[15px] tracking-wider mb-6 font-display">BÌNH LUẬN</h3>
-               
-               {/* Input */}
-               <form onSubmit={submitComment} className="flex gap-4 mb-8">
-                  <div className="w-10 h-10 rounded-full bg-[#e8d5b5] flex items-center justify-center text-[#5c4a3d] font-bold flex-shrink-0">
-                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  </div>
-                  <input 
-                    type="text" 
-                    placeholder="Viết bình luận của bạn..." 
-                    value={commentText}
-                    onChange={e => setCommentText(e.target.value)}
-                    className="flex-1 bg-white border border-[#e8d5b5] rounded-lg px-4 py-2 text-sm text-[#3a2312] outline-none focus:border-[#c9a15a] shadow-inner"
-                  />
-                  <button type="submit" className="bg-[#c9a15a] hover:bg-[#b58b4c] text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors shadow-md">
-                     Gửi
-                  </button>
-               </form>
-
-               {/* Comment List */}
-               <div className="flex flex-col gap-6">
-                  {comments.length === 0 ? (
-                     <p className="text-sm text-[#8c6a34] text-center">Chưa có bình luận nào.</p>
-                  ) : comments.map(c => (
-                     <div key={c._id} className="flex gap-4">
-                        <div className="w-10 h-10 rounded-full bg-[#d8c39d] flex items-center justify-center text-white font-bold flex-shrink-0 overflow-hidden">
-                           {c.userId?.avatar ? <img src={c.userId.avatar} alt="avt" className="w-full h-full object-cover"/> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
-                        </div>
-                        <div className="flex-1 border-b border-[#e8d5b5]/50 pb-4">
-                           <div className="flex items-center justify-between mb-1">
-                              <h4 className="font-bold text-sm text-[#3a2312]">{c.userId?.name || "Người dùng ẩn danh"}</h4>
-                              <div className="flex items-center gap-2 text-xs text-[#8c6a34]">
-                                 {formatDate(c.createdAt)}
-                                 {user && (c.userId?._id === user.id || ["staff", "admin"].includes(user.role)) && (
-                                    <div className="relative">
-                                       <button 
-                                          onClick={() => setActiveCommentMenuId(activeCommentMenuId === c._id ? null : c._id)}
-                                          className="w-6 h-6 flex items-center justify-center hover:bg-[#f3e9d8] rounded-full transition-colors"
-                                       >
-                                          <MoreVerticalIcon />
-                                       </button>
-                                       {activeCommentMenuId === c._id && (
-                                          <div className="absolute right-0 mt-1 bg-white border border-[#e8d5b5] rounded-md shadow-lg py-1 z-30 w-20 text-left">
-                                             {c.userId?._id === user.id && (
-                                                <button 
-                                                   onClick={() => {
-                                                      setEditingCommentId(c._id);
-                                                      setEditingCommentText(c.content);
-                                                      setActiveCommentMenuId(null);
-                                                   }}
-                                                   className="w-full px-3 py-1.5 text-xs text-[#5c4a3d] hover:bg-[#f3e9d8] flex items-center gap-1.5"
-                                                >
-                                                   Sửa
-                                                </button>
-                                             )}
-                                             <button 
-                                                onClick={() => {
-                                                   handleDeleteComment(c._id);
-                                                   setActiveCommentMenuId(null);
-                                                }}
-                                                className="w-full px-3 py-1.5 text-xs text-red-600 hover:bg-[#f3e9d8] flex items-center gap-1.5 font-medium"
-                                             >
-                                                Xóa
-                                             </button>
-                                          </div>
-                                       )}
-                                    </div>
-                                 )}
-                              </div>
-                           </div>
-                           {editingCommentId === c._id ? (
-                              <div className="mt-2 bg-white p-2 rounded border border-[#c9a15a] shadow-inner">
-                                 <textarea 
-                                    value={editingCommentText}
-                                    onChange={e => setEditingCommentText(e.target.value)}
-                                    className="w-full text-sm outline-none resize-none bg-transparent mb-2 text-[#3a2312] border-b border-[#e8d5b5]/50 pb-1"
-                                    rows={2}
-                                    autoFocus
-                                 />
-                                 <div className="flex justify-end gap-2">
-                                    <button onClick={() => setEditingCommentId(null)} className="text-xs text-[#8c6a34] px-2 py-1">Hủy</button>
-                                    <button onClick={() => handleUpdateComment(c._id)} className="bg-[#c9a15a] text-white text-xs px-3 py-1 rounded">Lưu</button>
-                                 </div>
-                              </div>
+                  {activeTab === "game" && podcast?.lessonId && (
+                     <div className="space-y-4">
+                        <p className="text-sm text-[#8c6a34] font-medium">
+                           Trò chơi 2D tương tác đi kèm bài học. Sử dụng các phím mũi tên di chuyển nhân vật để vượt qua thử thách.
+                        </p>
+                        <div className="border border-[#e8d5b5] rounded-xl overflow-hidden bg-white shadow-inner p-4 flex flex-col items-center justify-center min-h-[450px]">
+                           {typeof podcast.lessonId === "object" && (podcast.lessonId as any).game ? (
+                              <PhaserGame lessonGame={(podcast.lessonId as any).game} />
                            ) : (
-                              <p className="text-sm text-[#5c4a3d]">{c.content}</p>
+                              <p className="text-amber-800">Không tìm thấy dữ liệu game cho bài học này.</p>
                            )}
                         </div>
                      </div>
-                  ))}
+                  )}
+                  
+                  {activeTab !== "game" && (
+                     <div className="mt-4 text-center">
+                        <button className="text-[#a84d28] font-bold text-xs uppercase flex items-center justify-center gap-1 mx-auto hover:underline">
+                           Xem thêm <ChevronDownIcon />
+                        </button>
+                     </div>
+                  )}
                </div>
             </div>
+
+
 
           </div>
 
@@ -685,6 +621,101 @@ export default function PodcastDetailPage() {
                      <span className="w-24 text-[#8c6a34]">Ngày đăng:</span>
                      <span className="flex-1 text-[#3a2312] font-medium">{formatDate(podcast.createdAt)}</span>
                   </div>
+               </div>
+            </div>
+
+            {/* Comments */}
+            <div className="bg-[#fcf8ef] border border-[#e8d5b5] rounded-xl p-6 shadow-sm">
+               <h3 className="text-[#3a2312] font-bold text-[15px] tracking-wider mb-6 font-display">BÌNH LUẬN</h3>
+               
+               {/* Input */}
+               <form onSubmit={submitComment} className="flex gap-4 mb-8">
+                  <div className="w-10 h-10 rounded-full bg-[#e8d5b5] flex items-center justify-center text-[#5c4a3d] font-bold flex-shrink-0">
+                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Viết bình luận của bạn..." 
+                    value={commentText}
+                    onChange={e => setCommentText(e.target.value)}
+                    className="flex-1 bg-white border border-[#e8d5b5] rounded-lg px-4 py-2 text-sm text-[#3a2312] outline-none focus:border-[#c9a15a] shadow-inner"
+                  />
+                  <button type="submit" className="bg-[#c9a15a] hover:bg-[#b58b4c] text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors shadow-md">
+                     Gửi
+                  </button>
+               </form>
+
+               {/* Comment List */}
+               <div className="flex flex-col gap-6">
+                  {comments.length === 0 ? (
+                     <p className="text-sm text-[#8c6a34] text-center">Chưa có bình luận nào.</p>
+                  ) : comments.map(c => (
+                     <div key={c._id} className="flex gap-4">
+                        <div className="w-10 h-10 rounded-full bg-[#d8c39d] flex items-center justify-center text-white font-bold flex-shrink-0 overflow-hidden">
+                           {c.userId?.avatar ? <img src={c.userId.avatar} alt="avt" className="w-full h-full object-cover"/> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
+                        </div>
+                        <div className="flex-1 border-b border-[#e8d5b5]/50 pb-4">
+                           <div className="flex items-center justify-between mb-1">
+                              <h4 className="font-bold text-sm text-[#3a2312]">{c.userId?.name || "Người dùng ẩn danh"}</h4>
+                              <div className="flex items-center gap-2 text-xs text-[#8c6a34]">
+                                 {formatDate(c.createdAt)}
+                                 {user && (c.userId?._id === user.id || ["staff", "admin"].includes(user.role)) && (
+                                    <div className="relative">
+                                       <button 
+                                          onClick={() => setActiveCommentMenuId(activeCommentMenuId === c._id ? null : c._id)}
+                                          className="w-6 h-6 flex items-center justify-center hover:bg-[#f3e9d8] rounded-full transition-colors"
+                                       >
+                                          <MoreVerticalIcon />
+                                       </button>
+                                       {activeCommentMenuId === c._id && (
+                                          <div className="absolute right-0 mt-1 bg-white border border-[#e8d5b5] rounded-md shadow-lg py-1 z-30 w-20 text-left">
+                                             {c.userId?._id === user.id && (
+                                                <button 
+                                                   onClick={() => {
+                                                      setEditingCommentId(c._id);
+                                                      setEditingCommentText(c.content);
+                                                      setActiveCommentMenuId(null);
+                                                   }}
+                                                   className="w-full px-3 py-1.5 text-xs text-[#5c4a3d] hover:bg-[#f3e9d8] flex items-center gap-1.5"
+                                                >
+                                                   Sửa
+                                                </button>
+                                             )}
+                                             <button 
+                                                onClick={() => {
+                                                   handleDeleteComment(c._id);
+                                                   setActiveCommentMenuId(null);
+                                                }}
+                                                className="w-full px-3 py-1.5 text-xs text-red-600 hover:bg-[#f3e9d8] flex items-center gap-1.5 font-medium"
+                                             >
+                                                Xóa
+                                             </button>
+                                          </div>
+                                       )}
+                                    </div>
+                                 )}
+                              </div>
+                           </div>
+                           {editingCommentId === c._id ? (
+                              <div className="mt-2 bg-white p-2 rounded border border-[#c9a15a] shadow-inner">
+                                 <textarea 
+                                    value={editingCommentText}
+                                    onChange={e => setEditingCommentText(e.target.value)}
+                                    className="w-full text-sm outline-none resize-none bg-transparent mb-2 text-[#3a2312] border-b border-[#e8d5b5]/50 pb-1"
+                                    rows={2}
+                                    autoFocus
+                                 />
+                                 <div className="flex justify-end gap-2">
+                                    <button onClick={() => setEditingCommentId(null)} className="text-xs text-[#8c6a34] px-2 py-1">Hủy</button>
+                                    <button onClick={() => handleUpdateComment(c._id)} className="bg-[#c9a15a] text-white text-xs px-3 py-1 rounded">Lưu</button>
+                                 </div>
+                              </div>
+                           ) : (
+                              <p className="text-sm text-[#5c4a3d]">{c.content}</p>
+                           )}
+                        </div>
+                     </div>
+                  ))}
                </div>
             </div>
 

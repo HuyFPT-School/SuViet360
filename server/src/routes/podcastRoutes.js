@@ -19,6 +19,8 @@ const {
   createComment,
   deleteComment,
   updateComment,
+  approvePodcast,
+  rejectPodcast,
 } = require("../controllers/podcastController");
 
 const router = express.Router();
@@ -33,11 +35,16 @@ const upload = multer({
 
 // ─── Public User Routes ──────────────────────────────────────────────
 router.get("/podcasts", getAllPodcasts);
+router.get("/podcasts/review", protect, authorize("admin", "teacher"), getStaffPodcasts);
 router.get("/podcasts/:id", getPodcastById);
 router.get("/podcast-comments/:podcastId", getComments);
 
 // ─── Authenticated User Routes ───────────────────────────────────────
 router.use(protect);
+
+// Teacher/Admin review routes
+router.put("/podcasts/:id/approve", authorize("admin", "teacher"), approvePodcast);
+router.put("/podcasts/:id/reject", authorize("admin", "teacher"), rejectPodcast);
 
 // Notes (User specific)
 router.get("/podcast-notes/:podcastId", getNotes);

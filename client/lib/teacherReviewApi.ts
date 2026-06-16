@@ -2,7 +2,7 @@ import { api } from "@/lib/api";
 
 export type ReviewStatus = "Pending_Review" | "Published" | "Rejected";
 
-export type ReviewContentType = "Lesson";
+export type ReviewContentType = "Lesson" | "Podcast";
 
 export type Tileset = {
   name: string;
@@ -34,6 +34,15 @@ export type UserSummary = {
   role: string;
 } | null;
 
+export type PodcastDetails = {
+  thumbnail: string;
+  audioUrl: string;
+  level: string;
+  category: string;
+  duration: number;
+  lessonId?: any;
+};
+
 export type TeacherReviewItem = {
   id: string;
   title: string;
@@ -42,7 +51,8 @@ export type TeacherReviewItem = {
   submittedAt: string;
   status: ReviewStatus;
   summary: string;
-  game: LessonGame;
+  game?: LessonGame;
+  podcastDetails?: PodcastDetails;
   reviewFeedback?: string;
   reviewedBy?: UserSummary;
   reviewedAt?: string;
@@ -52,6 +62,8 @@ type LessonResponseItem = {
   _id: string;
   title: string;
   content: string;
+  status: ReviewStatus;
+  reviewFeedback?: string;
   game: LessonGame;
   createdAt: string;
 };
@@ -61,37 +73,24 @@ type LessonsResponse = {
   lessons: LessonResponseItem[];
 };
 
-type ReviewOverride = {
+type PodcastResponseItem = {
+  _id: string;
+  title: string;
+  description: string;
+  content: string;
+  thumbnail: string;
+  audioUrl: string;
+  level: string;
+  category: string;
+  duration: number;
+  lessonId?: any;
   status: ReviewStatus;
   reviewFeedback?: string;
-};
-
-const storageKey = "suviet360.teacherReview.lessonOverrides";
-
-const getReviewOverrides = (): Record<string, ReviewOverride> => {
-  if (typeof window === "undefined") return {};
-  const rawValue = window.localStorage.getItem(storageKey);
-  if (!rawValue) return {};
-
-  try {
-    return JSON.parse(rawValue) as Record<string, ReviewOverride>;
-  } catch {
-    return {};
-  }
-};
-
-const saveReviewOverride = (id: string, override: ReviewOverride) => {
-  if (typeof window === "undefined") return;
-  const overrides = getReviewOverrides();
-  window.localStorage.setItem(
-    storageKey,
-    JSON.stringify({ ...overrides, [id]: override })
-  );
+  createdAt: string;
 };
 
 const toReviewItem = (
-  lesson: LessonResponseItem,
-  override?: ReviewOverride
+  lesson: LessonResponseItem
 ): TeacherReviewItem => {
   return {
     id: lesson._id,
@@ -99,10 +98,33 @@ const toReviewItem = (
     type: "Lesson",
     createdBy: "Staff",
     submittedAt: lesson.createdAt,
-    status: override?.status || "Pending_Review",
+    status: lesson.status || "Pending_Review",
     summary: lesson.content,
     game: lesson.game,
-    reviewFeedback: override?.reviewFeedback || "",
+    reviewFeedback: lesson.reviewFeedback || "",
+  };
+};
+
+const podcastToReviewItem = (
+  podcast: PodcastResponseItem
+): TeacherReviewItem => {
+  return {
+    id: podcast._id,
+    title: podcast.title,
+    type: "Podcast",
+    createdBy: "Staff",
+    submittedAt: podcast.createdAt,
+    status: podcast.status || "Pending_Review",
+    summary: podcast.description || podcast.content || "",
+    podcastDetails: {
+      thumbnail: podcast.thumbnail,
+      audioUrl: podcast.audioUrl,
+      level: podcast.level || "Medium",
+      category: podcast.category || "Chủ đề chung",
+      duration: podcast.duration || 0,
+      lessonId: podcast.lessonId,
+    },
+    reviewFeedback: podcast.reviewFeedback || "",
   };
 };
 
@@ -116,26 +138,52 @@ export const rejectionSuggestions = [
   "Cần chỉnh sửa lại nội dung trước khi xuất bản",
 ];
 
+const getCsrfToken = async () => {
+  const response = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+  return response.data.data.csrfToken;
+};
+
 export const teacherReviewApi = {
   getReviewItems: async () => {
-    const response = await api.get<LessonsResponse>("/lessons");
-    const overrides = getReviewOverrides();
+    const [lessonsRes, podcastsRes] = await Promise.all([
+      api.get<LessonsResponse>("/lessons"),
+      api.get<{ success: boolean; data: PodcastResponseItem[] }>("/podcasts/review"),
+    ]);
+
+    const lessonsData = lessonsRes.data.lessons.map((lesson) => toReviewItem(lesson));
+    const podcastsData = podcastsRes.data.data.map((podcast) => podcastToReviewItem(podcast));
+
+    const merged = [...lessonsData, ...podcastsData].sort(
+      (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+    );
+
     return {
-      success: response.data.success,
-      data: response.data.lessons.map((lesson) =>
-        toReviewItem(lesson, overrides[lesson._id])
-      ),
+      success: true,
+      data: merged,
     };
   },
-  approveContent: async (id: string) => {
-    saveReviewOverride(id, { status: "Published" });
+  approveContent: async (id: string, type: ReviewContentType) => {
+    const csrfToken = await getCsrfToken();
+    const endpoint = type === "Lesson" ? `/lessons/${id}/approve` : `/podcasts/${id}/approve`;
+    await api.put(
+      endpoint,
+      {},
+      {
+        headers: { "x-csrf-token": csrfToken },
+      }
+    );
     return { success: true };
   },
-  rejectContent: async (id: string, feedback: string) => {
-    saveReviewOverride(id, {
-      status: "Rejected",
-      reviewFeedback: feedback,
-    });
+  rejectContent: async (id: string, type: ReviewContentType, feedback: string) => {
+    const csrfToken = await getCsrfToken();
+    const endpoint = type === "Lesson" ? `/lessons/${id}/reject` : `/podcasts/${id}/reject`;
+    await api.put(
+      endpoint,
+      { feedback },
+      {
+        headers: { "x-csrf-token": csrfToken },
+      }
+    );
     return { success: true };
   },
 };
