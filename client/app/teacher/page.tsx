@@ -10,12 +10,13 @@ import {
   type LessonGame,
   type ReviewStatus,
   type TeacherReviewItem,
+  type ReviewContentType,
 } from "@/lib/teacherReviewApi";
 
 const statusOptions: Array<{ value: ReviewStatus | "All"; label: string }> = [
-  { value: "Pending_Review", label: "Pending_Review" },
-  { value: "Published", label: "Published" },
-  { value: "Rejected", label: "Rejected" },
+  { value: "Pending_Review", label: "Chờ duyệt" },
+  { value: "Published", label: "Đã xuất bản" },
+  { value: "Rejected", label: "Bị từ chối" },
   { value: "All", label: "Tất cả trạng thái" },
 ];
 
@@ -121,7 +122,7 @@ export default function TeacherPage() {
 
   const handleApprove = async (item: TeacherReviewItem) => {
     const ok = window.confirm(
-      `Duyệt lesson "${item.title}" và cho phép hiển thị với học sinh?`
+      `Duyệt ${item.type === "Lesson" ? "bài học" : "podcast"} "${item.title}" và cho phép hiển thị với học sinh?`
     );
     if (!ok) return;
 
@@ -129,11 +130,11 @@ export default function TeacherPage() {
     setMessage("");
     setError("");
     try {
-      await teacherReviewApi.approveContent(item.id);
+      await teacherReviewApi.approveContent(item.id, item.type);
       await loadItems();
-      setMessage("Đã duyệt lesson và cập nhật trạng thái Published.");
+      setMessage(`Đã duyệt ${item.type === "Lesson" ? "bài học" : "podcast"} và cập nhật trạng thái Published.`);
     } catch {
-      setError("Không thể duyệt lesson này.");
+      setError(`Không thể duyệt ${item.type === "Lesson" ? "bài học" : "podcast"} này.`);
     } finally {
       setSaving(false);
     }
@@ -159,13 +160,13 @@ export default function TeacherPage() {
     setMessage("");
     setError("");
     try {
-      await teacherReviewApi.rejectContent(rejectingItem.id, trimmedFeedback);
+      await teacherReviewApi.rejectContent(rejectingItem.id, rejectingItem.type, trimmedFeedback);
       await loadItems();
       setRejectingItem(null);
       setFeedback("");
-      setMessage("Đã từ chối lesson và lưu feedback cho Staff.");
+      setMessage(`Đã từ chối ${rejectingItem.type === "Lesson" ? "bài học" : "podcast"} và lưu feedback cho Staff.`);
     } catch {
-      setError("Không thể từ chối lesson này.");
+      setError(`Không thể từ chối ${rejectingItem.type === "Lesson" ? "bài học" : "podcast"} này.`);
     } finally {
       setSaving(false);
     }
@@ -222,8 +223,8 @@ export default function TeacherPage() {
           </div>
           <div className="teacher-review-rules">
             <strong>Quyền Teacher</strong>
-            <span>Xem chi tiết lesson</span>
-            <span>Kiểm tra nội dung và game trong lesson</span>
+            <span>Xem chi tiết lesson/podcast</span>
+            <span>Kiểm tra nội dung, game & audio</span>
             <span>Approve hoặc Reject kèm feedback</span>
           </div>
         </aside>
@@ -242,7 +243,7 @@ export default function TeacherPage() {
           <div className="admin-stack">
             <div className="admin-heading">
               <div>
-                <p className="admin-kicker">Duyệt lesson</p>
+                <p className="admin-kicker">Duyệt lesson & podcast</p>
                 <h2>Teacher Review Dashboard</h2>
               </div>
             </div>
@@ -251,7 +252,7 @@ export default function TeacherPage() {
               <StatCard label="Chờ duyệt" value={stats.pending} />
               <StatCard label="Đã xuất bản" value={stats.published} />
               <StatCard label="Bị từ chối" value={stats.rejected} />
-              <StatCard label="Tổng lesson" value={stats.total} />
+              <StatCard label="Tổng mục" value={stats.total} />
             </div>
 
             <div className="admin-panel">
@@ -260,7 +261,7 @@ export default function TeacherPage() {
                   className="admin-search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Tìm theo tên lesson..."
+                  placeholder="Tìm theo tiêu đề..."
                 />
                 <select
                   value={statusFilter}
@@ -278,13 +279,13 @@ export default function TeacherPage() {
               </div>
 
               <div className="admin-panel-heading teacher-list-heading">
-                <h3>Danh sách lesson từ API</h3>
+                <h3>Danh sách bài học & podcast</h3>
                 <span>{filteredItems.length} mục</span>
               </div>
 
               <div className="admin-table teacher-review-table teacher-review-table--lesson">
                 <div className="admin-table-head">
-                  <span>Lesson</span>
+                  <span>Tiêu đề</span>
                   <span>Loại</span>
                   <span>Người tạo</span>
                   <span>Ngày gửi</span>
@@ -295,22 +296,24 @@ export default function TeacherPage() {
                   <div key={item.id} className="admin-table-row">
                     <div>
                       <strong>{item.title}</strong>
-                      <small>{item.summary}</small>
+                      <small className="line-clamp-2">{item.summary}</small>
                     </div>
-                    <span className="teacher-type-badge">Lesson</span>
+                    <span className={`teacher-type-badge ${item.type === "Podcast" ? "teacher-type-badge--podcast" : ""}`}>
+                      {item.type}
+                    </span>
                     <span>{item.createdBy}</span>
                     <span>{formatDate(item.submittedAt)}</span>
                     <StatusBadge status={item.status} />
                     <div className="admin-row-actions teacher-row-actions">
                       <button type="button" onClick={() => setSelectedId(item.id)}>
-                        View Detail
+                        Chi tiết
                       </button>
                     </div>
                   </div>
                 ))}
                 {filteredItems.length === 0 && (
                   <p className="admin-empty">
-                    Không có lesson phù hợp với bộ lọc hiện tại.
+                    Không có lesson/podcast phù hợp với bộ lọc hiện tại.
                   </p>
                 )}
               </div>
@@ -364,6 +367,78 @@ function StatusBadge({ status }: { status: ReviewStatus }) {
   );
 }
 
+function formatDuration(seconds: number) {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+}
+
+function PodcastPreview({
+  podcastDetails,
+  title,
+}: {
+  podcastDetails: any;
+  title: string;
+}) {
+  return (
+    <div className="teacher-preview">
+      <div className="teacher-preview-header">
+        <h3>Tài nguyên Podcast</h3>
+        <span>File âm thanh & ảnh đại diện</span>
+      </div>
+
+      <div className="teacher-section">
+        <h3>Ảnh giao diện</h3>
+        <div className="teacher-podcast-thumb-wrapper" style={{ position: "relative", width: "100%", aspectRatio: "16/9", overflow: "hidden", borderRadius: "8px", border: "1px solid #d1c2a5" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={podcastDetails.thumbnail}
+            alt={title}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        </div>
+      </div>
+
+      <div className="teacher-section">
+        <h3>Trình phát Audio</h3>
+        <audio
+          src={podcastDetails.audioUrl}
+          controls
+          style={{ width: "100%" }}
+        />
+        <div className="mt-2 text-xs text-amber-800 font-medium">
+          Thời lượng: {formatDuration(podcastDetails.duration)}
+        </div>
+      </div>
+
+      <div className="teacher-section teacher-section--tight">
+        <h3>Thông tin chi tiết</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "14px", marginTop: "4px" }}>
+          <div>
+            <span style={{ color: "#92400e", display: "block", fontSize: "12px", fontWeight: "600" }}>Chủ đề:</span>
+            <span style={{ fontWeight: "500" }}>{podcastDetails.category}</span>
+          </div>
+          <div>
+            <span style={{ color: "#92400e", display: "block", fontSize: "12px", fontWeight: "600" }}>Trình độ:</span>
+            <span style={{ fontWeight: "500" }}>{podcastDetails.level}</span>
+          </div>
+        </div>
+      </div>
+
+      {podcastDetails.lessonId && (
+        <div className="teacher-section teacher-section--tight">
+          <h3>Bài học liên kết</h3>
+          <p style={{ fontWeight: "600", color: "#451a03" }}>
+            {typeof podcastDetails.lessonId === "object"
+              ? podcastDetails.lessonId.title
+              : "Đã liên kết với Bài học"}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ContentDetailModal({
   item,
   saving,
@@ -384,7 +459,7 @@ function ContentDetailModal({
       <div className="teacher-modal teacher-detail-modal">
         <div className="teacher-modal-header">
           <div>
-            <p className="admin-kicker">Chi tiết lesson</p>
+            <p className="admin-kicker">Chi tiết {item.type === "Lesson" ? "lesson" : "podcast"}</p>
             <h2>{item.title}</h2>
           </div>
           <button type="button" onClick={onClose} className="teacher-close-button">
@@ -394,7 +469,7 @@ function ContentDetailModal({
 
         <div className="teacher-detail-grid">
           <div className="teacher-detail-main">
-            <InfoRow label="Loại nội dung" value="Lesson" />
+            <InfoRow label="Loại nội dung" value={item.type} />
             <InfoRow label="Người tạo" value={item.createdBy} />
             <InfoRow label="Ngày gửi duyệt" value={formatDate(item.submittedAt)} />
             <div className="teacher-info-row">
@@ -403,8 +478,8 @@ function ContentDetailModal({
             </div>
 
             <div className="teacher-section">
-              <h3>Nội dung lesson</h3>
-              <p>{item.summary}</p>
+              <h3>Nội dung tóm tắt</h3>
+              <p style={{ whiteSpace: "pre-wrap" }}>{item.summary}</p>
             </div>
 
             {item.reviewFeedback && (
@@ -416,7 +491,15 @@ function ContentDetailModal({
           </div>
 
           <div className="teacher-preview-column">
-            <LessonGamePreview game={item.game} lessonTitle={item.title} />
+            {item.type === "Lesson" && item.game ? (
+              <LessonGamePreview game={item.game} lessonTitle={item.title} />
+            ) : item.type === "Podcast" && item.podcastDetails ? (
+              <PodcastPreview podcastDetails={item.podcastDetails} title={item.title} />
+            ) : (
+              <div className="teacher-preview">
+                <p className="admin-note">Không có xem trước cho mục này.</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -442,7 +525,7 @@ function ContentDetailModal({
             </>
           ) : (
             <span className="admin-note">
-              Lesson đã {item.status === "Published" ? "được duyệt" : "bị từ chối"},
+              Mục này đã {item.status === "Published" ? "được duyệt" : "bị từ chối"},
               Teacher chỉ có quyền xem lại.
             </span>
           )}
@@ -565,7 +648,7 @@ function RejectModal({
       <form className="teacher-modal teacher-reject-modal" onSubmit={onSubmit}>
         <div className="teacher-modal-header">
           <div>
-            <p className="admin-kicker">Reject lesson</p>
+            <p className="admin-kicker">Reject {item.type === "Lesson" ? "lesson" : "podcast"}</p>
             <h2>{item.title}</h2>
           </div>
           <button type="button" onClick={onClose} className="teacher-close-button">
@@ -579,7 +662,7 @@ function RejectModal({
             value={feedback}
             onChange={(event) => onFeedbackChange(event.target.value)}
             rows={5}
-            placeholder="Nhập feedback cụ thể để Staff chỉnh sửa lesson..."
+            placeholder={`Nhập feedback cụ thể để Staff chỉnh sửa ${item.type === "Lesson" ? "lesson" : "podcast"}...`}
           />
         </label>
         {feedbackError && <p className="teacher-field-error">{feedbackError}</p>}

@@ -552,7 +552,7 @@ export default function GsapHomePage() {
             alt="Phù điêu hành trình lịch sử Việt"
             fill
             priority
-            className="object-cover object-[93%_center]"
+            className="object-cover object-[right_center]"
           />
         </div>
 

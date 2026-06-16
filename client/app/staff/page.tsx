@@ -21,6 +21,8 @@ type Lesson = {
   _id: string;
   title: string;
   content: string;
+  status?: "Pending_Review" | "Published" | "Rejected";
+  reviewFeedback?: string;
   game: LessonGame;
   createdAt: string;
   updatedAt: string;
@@ -61,8 +63,10 @@ type Podcast = {
   audioUrl: string;
   level: string;
   category: string;
-  status: boolean;
+  status: "Draft" | "Pending_Review" | "Published" | "Rejected";
+  reviewFeedback?: string;
   viewCount: number;
+  lessonId?: string | Lesson | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -73,7 +77,7 @@ type PodcastFormState = {
   content: string;
   level: string;
   category: string;
-  status: boolean;
+  lessonId: string;
   thumbnailFile: File | null;
   audioFile: File | null;
 };
@@ -84,7 +88,7 @@ const emptyPodcastForm: PodcastFormState = {
   content: "",
   level: "Medium",
   category: "",
-  status: true,
+  lessonId: "",
   thumbnailFile: null,
   audioFile: null,
 };
@@ -138,6 +142,42 @@ function CustomFileInput({
   );
 }
 
+function renderStaffStatusBadge(status?: string | boolean) {
+  if (status === true || status === "Published") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+        Đã duyệt
+      </span>
+    );
+  }
+  if (status === "Pending_Review") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200 animate-pulse">
+        Chờ duyệt
+      </span>
+    );
+  }
+  if (status === "Rejected") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+        Từ chối
+      </span>
+    );
+  }
+  if (status === false || status === "Draft") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-800 border border-gray-200">
+        Nháp
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+      Chờ duyệt
+    </span>
+  );
+}
+
 export default function StaffPage() {
   const { user, isLoading: authLoading, refreshUser } = useAuth();
   const [isHydrating, setIsHydrating] = useState(true);
@@ -171,6 +211,9 @@ export default function StaffPage() {
     });
     return Array.from(set);
   }, [podcasts]);
+
+  const selectedLesson = lessons.find((l) => l._id === selectedId);
+  const selectedPodcast = podcasts.find((p) => p._id === selectedPodcastId);
 
   const setPodcastFormField = <K extends keyof PodcastFormState>(
     field: K,
@@ -218,7 +261,9 @@ export default function StaffPage() {
       content: podcast.content || "",
       level: podcast.level || "Medium",
       category: podcast.category || "",
-      status: podcast.status,
+      lessonId: typeof podcast.lessonId === "object" && podcast.lessonId !== null
+        ? (podcast.lessonId as any)._id || ""
+        : (podcast.lessonId as string) || "",
       thumbnailFile: null,
       audioFile: null,
     });
@@ -232,7 +277,7 @@ export default function StaffPage() {
     }
     if (podcastFormMode === "create") {
       if (!podcastForm.thumbnailFile) {
-        setMessage({ type: "error", text: "Vui lòng tải lên ảnh thumbnail." });
+        setMessage({ type: "error", text: "Vui lòng tải lên ảnh giao diện." });
         return;
       }
       if (!podcastForm.audioFile) {
@@ -250,7 +295,9 @@ export default function StaffPage() {
       formData.append("content", podcastForm.content.trim());
       formData.append("level", podcastForm.level.trim());
       formData.append("category", podcastForm.category.trim());
-      formData.append("status", String(podcastForm.status));
+      if (podcastForm.lessonId) {
+        formData.append("lessonId", podcastForm.lessonId);
+      }
 
       if (podcastForm.thumbnailFile) {
         formData.append("thumbnail", podcastForm.thumbnailFile);
@@ -652,9 +699,12 @@ export default function StaffPage() {
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-amber-900">{lesson.title}</p>
-                        <p className="mt-1 text-xs text-amber-600 line-clamp-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-amber-900 truncate">{lesson.title}</p>
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                          {renderStaffStatusBadge(lesson.status)}
+                        </div>
+                        <p className="mt-2 text-xs text-amber-600 line-clamp-2">
                           {lesson.content}
                         </p>
                       </div>
@@ -685,6 +735,18 @@ export default function StaffPage() {
             </div>
 
             <div className="space-y-5 p-5">
+              {formMode === "edit" && selectedLesson?.status === "Rejected" && selectedLesson?.reviewFeedback && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+                  <h3 className="font-semibold text-rose-950 mb-1 flex items-center gap-1.5">
+                    <svg className="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Bài học bị từ chối duyệt
+                  </h3>
+                  <p className="font-medium text-rose-700">{selectedLesson.reviewFeedback}</p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
                   Tiêu đề
@@ -721,6 +783,11 @@ export default function StaffPage() {
                   fileCount={form.tilemapFile ? 1 : 0}
                   singleFileName={form.tilemapFile?.name}
                 />
+                {formMode === "edit" && selectedLesson?.game?.tilemapJsonUrl && (
+                  <p className="mt-1 text-xs text-amber-600 font-medium">
+                    Tệp hiện tại: <a href={selectedLesson.game.tilemapJsonUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-800 break-all">{selectedLesson.game.tilemapJsonUrl.split('/').pop()}</a>
+                  </p>
+                )}
               </div>
 
               <div>
@@ -742,6 +809,19 @@ export default function StaffPage() {
                   }}
                   fileCount={form.tilesetFiles.length}
                 />
+                {formMode === "edit" && selectedLesson?.game?.tilesets && selectedLesson.game.tilesets.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-amber-600 font-semibold mb-1">Các tileset hiện tại:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedLesson.game.tilesets.map((ts, idx) => (
+                        <div key={idx} className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg text-xs text-amber-800 font-medium">
+                          <img src={ts.imageUrl} alt={ts.name} className="w-6 h-6 object-contain rounded bg-white border border-amber-100" />
+                          <span>{ts.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <details className="group border border-amber-200 bg-amber-50/20 rounded-xl overflow-hidden">
@@ -766,6 +846,23 @@ export default function StaffPage() {
                         }
                         fileCount={form.idleSprites.length}
                       />
+                      {formMode === "edit" && (() => {
+                        const idleKey = Object.keys(selectedLesson?.game?.character?.animations || {}).find(k => k.toLowerCase().includes("idle"));
+                        const idleFrames = idleKey ? selectedLesson?.game?.character?.animations[idleKey] : null;
+                        if (idleFrames && idleFrames.length > 0) {
+                          return (
+                            <div className="mt-2">
+                              <p className="text-[11px] text-amber-600 font-semibold mb-1">Idle sprites hiện tại ({idleFrames.length} frames):</p>
+                              <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1 bg-amber-50/50 rounded-lg border border-amber-100">
+                                {idleFrames.map((f, idx) => (
+                                  <img key={idx} src={f.imageUrl} alt={f.key} className="w-8 h-8 object-contain rounded bg-white border border-amber-200" title={f.key} />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-amber-800">
@@ -782,6 +879,23 @@ export default function StaffPage() {
                         }
                         fileCount={form.runSprites.length}
                       />
+                      {formMode === "edit" && (() => {
+                        const runKey = Object.keys(selectedLesson?.game?.character?.animations || {}).find(k => k.toLowerCase().includes("run"));
+                        const runFrames = runKey ? selectedLesson?.game?.character?.animations[runKey] : null;
+                        if (runFrames && runFrames.length > 0) {
+                          return (
+                            <div className="mt-2">
+                              <p className="text-[11px] text-amber-600 font-semibold mb-1">Run sprites hiện tại ({runFrames.length} frames):</p>
+                              <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1 bg-amber-50/50 rounded-lg border border-amber-100">
+                                {runFrames.map((f, idx) => (
+                                  <img key={idx} src={f.imageUrl} alt={f.key} className="w-8 h-8 object-contain rounded bg-white border border-amber-200" title={f.key} />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
                   <div className="rounded-lg border border-amber-100 bg-amber-50/30 px-3 py-2 text-xs text-amber-700">
@@ -851,10 +965,13 @@ export default function StaffPage() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-amber-900 truncate">{podcast.title}</p>
-                      <p className="text-xs text-amber-500 mt-0.5">
-                        Trình độ: {podcast.level} • {podcast.status ? "Hiển thị" : "Ẩn"}
-                      </p>
-                      <p className="mt-1 text-xs text-amber-655 line-clamp-2">
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 font-semibold">
+                          {podcast.level}
+                        </span>
+                        {renderStaffStatusBadge(podcast.status)}
+                      </div>
+                      <p className="mt-2 text-xs text-amber-655 line-clamp-2">
                         {podcast.description}
                       </p>
                     </div>
@@ -875,12 +992,24 @@ export default function StaffPage() {
               </h2>
               <p className="text-xs text-amber-600 mt-1">
                 {podcastFormMode === "create"
-                  ? "Điền đầy đủ thông tin và tải lên audio/thumbnail."
+                  ? "Điền đầy đủ thông tin và tải lên tệp âm thanh/ảnh giao diện."
                   : "Có thể cập nhật thông tin hoặc upload file mới để thay thế."}
               </p>
             </div>
 
             <div className="space-y-5 p-5">
+              {podcastFormMode === "edit" && selectedPodcast?.status === "Rejected" && selectedPodcast?.reviewFeedback && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+                  <h3 className="font-semibold text-rose-950 mb-1 flex items-center gap-1.5">
+                    <svg className="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Podcast bị từ chối duyệt
+                  </h3>
+                  <p className="font-medium text-rose-700">{selectedPodcast.reviewFeedback}</p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
                   Tiêu đề
@@ -979,22 +1108,27 @@ export default function StaffPage() {
                 </select>
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="podcast-status"
-                  checked={podcastForm.status}
-                  onChange={(e) => setPodcastFormField("status", e.target.checked)}
-                  className="rounded border-amber-300 text-amber-600 focus:ring-amber-500 h-4 w-4"
-                />
-                <label htmlFor="podcast-status" className="text-sm font-medium text-amber-800 cursor-pointer select-none">
-                  Cho phép hiển thị (Active)
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                  Bài học liên kết (Chứa Game 2D)
                 </label>
+                <select
+                  value={podcastForm.lessonId}
+                  onChange={(e) => setPodcastFormField("lessonId", e.target.value)}
+                  className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                >
+                  <option value="">Không liên kết game</option>
+                  {lessons.map((lesson) => (
+                    <option key={lesson._id} value={lesson._id}>
+                      {lesson.title}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                  Ảnh Thumbnail {podcastFormMode === "create" && "(bắt buộc)"}
+                  Ảnh giao diện {podcastFormMode === "create" && "(bắt buộc)"}
                 </label>
                 <CustomFileInput
                   accept="image/*"
@@ -1002,6 +1136,26 @@ export default function StaffPage() {
                   fileCount={podcastForm.thumbnailFile ? 1 : 0}
                   singleFileName={podcastForm.thumbnailFile?.name}
                 />
+                {podcastFormMode === "edit" && selectedPodcast?.thumbnail && (
+                  <div className="mt-2 space-y-1.5">
+                    <p className="text-[11px] text-amber-600 font-semibold">Ảnh giao diện hiện tại:</p>
+                    <div className="flex items-center gap-3 p-3 bg-amber-50/50 rounded-xl border border-amber-200">
+                      <img
+                        src={selectedPodcast.thumbnail}
+                        alt="Ảnh giao diện hiện tại"
+                        className="w-16 h-16 object-cover rounded-lg border border-amber-200 bg-white"
+                      />
+                      <a
+                        href={selectedPodcast.thumbnail}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-amber-800 underline hover:text-amber-900 break-all truncate block"
+                      >
+                        {selectedPodcast.thumbnail.split("/").pop()}
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1014,6 +1168,22 @@ export default function StaffPage() {
                   fileCount={podcastForm.audioFile ? 1 : 0}
                   singleFileName={podcastForm.audioFile?.name}
                 />
+                {podcastFormMode === "edit" && selectedPodcast?.audioUrl && (
+                  <div className="mt-2 space-y-1.5">
+                    <p className="text-[11px] text-amber-600 font-semibold">Tệp âm thanh hiện tại:</p>
+                    <div className="flex flex-col gap-2 p-3 bg-amber-50/50 rounded-xl border border-amber-200">
+                      <audio src={selectedPodcast.audioUrl} controls className="w-full h-8 max-w-md" />
+                      <a
+                        href={selectedPodcast.audioUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-amber-800 underline hover:text-amber-900 break-all truncate block"
+                      >
+                        {selectedPodcast.audioUrl.split("/").pop()}
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-3">
@@ -1072,7 +1242,7 @@ export default function StaffPage() {
                 ? "Đang lưu thông tin vào cơ sở dữ liệu, vui lòng đợi..." 
                 : activeTab === "lessons"
                   ? "Đang tải tệp bản đồ và hình ảnh nhân vật lên máy chủ..."
-                  : "Đang tải ảnh thumbnail và tệp âm thanh lên máy chủ..."}
+                  : "Đang tải ảnh giao diện và tệp âm thanh lên máy chủ..."}
             </p>
           </div>
         </div>

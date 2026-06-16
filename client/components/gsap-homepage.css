@@ -27,7 +27,7 @@
 
 .gsap-hero-bg img {
   object-fit: cover;
-  object-position: 93% center;
+  object-position: right center;
   width: 100% !important;
   height: 100% !important;
 }

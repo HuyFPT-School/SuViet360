@@ -1,4 +1,4 @@
-﻿@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Merriweather:wght@300;400;700&family=Playfair+Display:wght@400;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Merriweather:wght@300;400;700&family=Playfair+Display:wght@400;600;700&display=swap");
 @import "tailwindcss";
 
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -3280,6 +3280,12 @@ img.avatar-circle {
   border: 1px solid rgba(140, 106, 52, 0.28);
   background: rgba(244, 231, 201, 0.5);
   color: #6b4f14;
+}
+
+.teacher-type-badge--podcast {
+  border: 1px solid rgba(13, 148, 136, 0.28);
+  background: rgba(204, 251, 241, 0.5);
+  color: #0f766e;
 }
 
 .teacher-status {

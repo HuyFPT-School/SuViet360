@@ -26,10 +26,35 @@ const MoreVerticalIcon = () => (
 const HeadphonesIcon = () => (
    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg>
 );
+const CalendarIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+);
+const BarChartIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+);
+const ThemeBookIcon = () => (
+  <div className="w-12 h-12 rounded-full border-2 border-[#e8d5b5] bg-[#fdf9f1] flex items-center justify-center text-[#c9a15a] flex-shrink-0 shadow-inner">
+     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+     </svg>
+  </div>
+);
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return date.toLocaleDateString("vi-VN", { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+const formatDuration = (seconds: number) => {
+  if (!seconds || isNaN(seconds)) return "00:00";
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
 export default function PodcastListingPage() {
@@ -37,7 +62,6 @@ export default function PodcastListingPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
-  const [era, setEra] = useState("");
   const [sort, setSort] = useState("");
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
   
@@ -45,7 +69,7 @@ export default function PodcastListingPage() {
 
   useEffect(() => {
     fetchPodcasts();
-  }, [category, era, sort]);
+  }, [category, sort]);
 
   const fetchPodcasts = async () => {
     setLoading(true);
@@ -56,63 +80,32 @@ export default function PodcastListingPage() {
       if (category) url += `&category=${category}`;
       if (sort) url += `&sort=${sort}`;
 
-      const mockData = [
-        {
-          _id: "mock-bai-1",
-          title: "Bài 1: Liên hợp quốc",
-          description: "Tìm hiểu về sự ra đời, mục tiêu và nguyên tắc hoạt động của Liên hợp quốc.",
-          content: "Nội dung chi tiết bài học Liên hợp quốc...",
-          category: "Chủ đề 1. THẾ GIỚI TRONG VÀ SAU CHIẾN TRANH LẠNH",
-          level: "Trung cấp",
-          createdAt: new Date().toISOString(),
-          viewCount: 1250,
-          thumbnail: "/images/HeroSection.png",
-          audioUrl: "/audios/Bai_01.m4a",
-          duration: 1125 // 18:45 in seconds
-        }
-      ];
-
       const res = await api.get(url);
       const apiData = res.data?.data || [];
-      const finalData = apiData.length > 0 ? apiData : mockData;
-      setPodcasts(finalData);
+      setPodcasts(apiData);
       
       const cats: Record<string, number> = {};
       const lvls: Record<string, number> = {};
-      finalData.forEach((p: { category: string; level: string }) => {
+      apiData.forEach((p: { category: string; level: string }) => {
         cats[p.category] = (cats[p.category] || 0) + 1;
         lvls[p.level] = (lvls[p.level] || 0) + 1;
       });
       setStats({ categories: cats, levels: lvls });
       
-      if (finalData.length > 0) {
-         const groups = Array.from(new Set(finalData.map((p: { category: string }) => p.category))) as string[];
+      if (apiData.length > 0) {
+         const groups = Array.from(new Set(apiData.map((p: { category: string }) => p.category))) as string[];
          if (groups[0]) {
-             setExpandedChapters({ [groups[0]]: true });
+             setExpandedChapters((prev) => ({
+                [groups[0]]: true,
+                ...prev,
+             }));
          }
       }
       
     } catch (err) {
       console.error("Error fetching podcasts:", err);
-      const mockData = [{
-          _id: "mock-bai-1",
-          title: "Bài 1: Liên hợp quốc",
-          description: "Tìm hiểu về sự ra đời, mục tiêu và nguyên tắc hoạt động của Liên hợp quốc.",
-          content: "Nội dung chi tiết bài học Liên hợp quốc...",
-          category: "Chủ đề 1. THẾ GIỚI TRONG VÀ SAU CHIẾN TRANH LẠNH",
-          level: "Trung cấp",
-          createdAt: new Date().toISOString(),
-          viewCount: 1250,
-          thumbnail: "/images/HeroSection.png",
-          audioUrl: "/audios/Bai_01.m4a",
-          duration: 1125 // 18:45 in seconds
-      }];
-      setPodcasts(mockData);
-      setStats({ 
-        categories: { [mockData[0].category]: 1 }, 
-        levels: { [mockData[0].level]: 1 } 
-      });
-      setExpandedChapters({ [mockData[0].category]: true });
+      setPodcasts([]);
+      setStats({ categories: {}, levels: {} });
     } finally {
       setLoading(false);
     }
@@ -126,7 +119,6 @@ export default function PodcastListingPage() {
   const handleReset = () => {
     setSearch("");
     setCategory("");
-    setEra("");
     setSort("");
     setTimeout(() => fetchPodcasts(), 0);
   };
@@ -197,18 +189,6 @@ export default function PodcastListingPage() {
              
              <select 
                 className="bg-white border border-[#e8d5b5] rounded-lg px-4 py-2 text-sm text-[#3a2312] outline-none flex-1 appearance-none cursor-pointer"
-                value={era}
-                onChange={e => setEra(e.target.value)}
-             >
-                <option value="">Thời kỳ</option>
-                <option value="Cổ đại">Cổ đại</option>
-                <option value="Trung đại">Trung đại</option>
-                <option value="Cận đại">Cận đại</option>
-                <option value="Hiện đại">Hiện đại</option>
-             </select>
-             
-             <select 
-                className="bg-white border border-[#e8d5b5] rounded-lg px-4 py-2 text-sm text-[#3a2312] outline-none flex-1 appearance-none cursor-pointer"
                 value={sort}
                 onChange={e => setSort(e.target.value)}
              >
@@ -238,8 +218,6 @@ export default function PodcastListingPage() {
                   const isExpanded = expandedChapters[cat];
                   const chapterLabel = cat.toUpperCase().includes("CHƯƠNG") ? cat.toUpperCase() : `CHỦ ĐỀ: ${cat.toUpperCase()}`;
                   
-                  const thumbnail = epList[0]?.thumbnail || "/images/HeroSection.png";
-
                   return (
                     <div key={cat} className="bg-[#fcf8ef] border border-[#e8d5b5] rounded-xl overflow-hidden shadow-sm transition-all">
                       <div 
@@ -247,9 +225,7 @@ export default function PodcastListingPage() {
                         onClick={() => toggleChapter(cat)}
                       >
                          <div className="flex items-center gap-4">
-                            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#e8d5b5] flex-shrink-0">
-                               <img src={thumbnail} alt={cat} className="w-full h-full object-cover" />
-                            </div>
+                            <ThemeBookIcon />
                             <div>
                                <div className="text-[#a84d28] font-bold text-xs uppercase tracking-wider mb-1">{chapterLabel}</div>
                                <h3 className="text-[#3a2312] font-bold text-lg font-display">{cat}</h3>
@@ -265,28 +241,50 @@ export default function PodcastListingPage() {
                         <div className="p-4 pt-0 border-t border-[#e8d5b5]/50 bg-[#f9f4e8]/50">
                            <div className="flex flex-col gap-3 mt-4">
                              {epList.map((ep, i) => (
-                               <div key={ep._id} className="bg-white border border-[#e8d5b5] rounded-lg p-3 flex items-center hover:border-[#c9a15a] transition-colors group">
-                                  <div className="w-8 text-center text-[#c9a15a] font-bold font-display text-lg opacity-60 mr-2">
-                                     {(i+1).toString().padStart(2, '0')}
-                                  </div>
-                                  
-                                  <div className="flex-1 ml-2">
-                                     <h4 className="text-[#3a2312] font-bold text-[15px] group-hover:text-[#a84d28] transition-colors line-clamp-1">{ep.title}</h4>
-                                     <div className="flex items-center gap-4 text-xs text-[#8c6a34] mt-1">
-                                        <span className="flex items-center gap-1">📅 {formatDate(ep.createdAt)}</span>
-                                        <span className="flex items-center gap-1">📊 {ep.level}</span>
-                                     </div>
-                                  </div>
-                                  
-                                  <div className="flex items-center gap-2">
-                                     <Link href={`/podcasts/${ep._id}`} className="w-10 h-10 rounded-full border border-[#e8d5b5] flex items-center justify-center text-[#a84d28] hover:bg-[#a84d28] hover:text-white transition-colors bg-[#fdf9f1]">
-                                        <PlayIcon />
-                                     </Link>
-                                     <button className="w-8 h-8 flex items-center justify-center text-[#8c6a34] hover:bg-[#e8d5b5]/50 rounded-full transition-colors cursor-pointer">
-                                        <MoreVerticalIcon />
-                                     </button>
-                                  </div>
-                               </div>
+                                <div key={ep._id} className="bg-white border border-[#e8d5b5] rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:border-[#c9a15a] transition-all shadow-sm group">
+                                   {/* Serial Number */}
+                                   <div className="w-8 text-center text-[#c9a15a] font-bold font-display text-lg opacity-60 flex-shrink-0 self-center">
+                                      {(i+1).toString().padStart(2, '0')}
+                                   </div>
+                                   
+                                   {/* Thumbnail Image */}
+                                   <div className="relative w-full sm:w-48 aspect-[16/9] rounded-lg overflow-hidden border border-[#e8d5b5]/60 flex-shrink-0 bg-amber-50">
+                                      <img 
+                                         src={ep.thumbnail || "/images/HeroSection.png"} 
+                                         alt={ep.title} 
+                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                      />
+                                      {ep.duration > 0 && (
+                                         <span className="absolute bottom-2 right-2 bg-black/75 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded backdrop-blur-[2px]">
+                                            {formatDuration(ep.duration)}
+                                         </span>
+                                      )}
+                                   </div>
+                                   
+                                   {/* Content */}
+                                   <div className="flex-1 min-w-0">
+                                      <h4 className="text-[#3a2312] font-bold text-[15px] group-hover:text-[#a84d28] transition-colors line-clamp-2 leading-snug">{ep.title}</h4>
+                                      <div className="flex items-center gap-4 text-xs text-[#8c6a34] mt-1.5">
+                                         <span className="flex items-center gap-1"><CalendarIcon /> {formatDate(ep.createdAt)}</span>
+                                         <span className="flex items-center gap-1"><BarChartIcon /> {ep.level}</span>
+                                      </div>
+                                      {ep.description && (
+                                         <p className="text-[#5c4a3d] text-xs mt-2 line-clamp-2 leading-relaxed">
+                                            {ep.description}
+                                         </p>
+                                      )}
+                                   </div>
+                                   
+                                   {/* Actions */}
+                                   <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
+                                      <Link href={`/podcasts/${ep._id}`} className="w-10 h-10 rounded-full border border-[#e8d5b5] flex items-center justify-center text-[#a84d28] hover:bg-[#a84d28] hover:text-white transition-colors bg-[#fdf9f1]">
+                                         <PlayIcon />
+                                      </Link>
+                                      <button className="w-8 h-8 flex items-center justify-center text-[#8c6a34] hover:bg-[#e8d5b5]/50 rounded-full transition-colors cursor-pointer">
+                                         <MoreVerticalIcon />
+                                      </button>
+                                   </div>
+                                </div>
                              ))}
                            </div>
                         </div>

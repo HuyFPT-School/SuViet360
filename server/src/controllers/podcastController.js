@@ -13,7 +13,7 @@ const {
 
 // Create Podcast
 const createPodcast = asyncHandler(async (req, res) => {
-  const { title, description, content, level, category } = req.body;
+  const { title, description, content, level, category, lessonId } = req.body;
 
   if (!title) {
     throw new AppError("Title is required", 400);
@@ -32,17 +32,28 @@ const createPodcast = asyncHandler(async (req, res) => {
   // Upload audio
   const audioResult = await uploadPodcastAudio(audioFile.buffer);
 
+  const cleanLessonId = (id) => {
+    if (!id || id === "null" || id === "undefined" || id.trim() === "") {
+      return null;
+    }
+    return id;
+  };
+
   const podcast = await Podcast.create({
     title,
     description,
     content,
     level,
     category: category || "Chủ đề chung",
+    lessonId: cleanLessonId(lessonId),
     thumbnail: thumbResult.secure_url,
     thumbnailPublicId: thumbResult.public_id,
     audioUrl: audioResult.secure_url,
     audioPublicId: audioResult.public_id,
+    duration: audioResult.duration || 0,
     createdBy: req.user.id,
+    status: "Pending_Review",
+    reviewFeedback: "",
   });
 
   res.status(201).json({
@@ -59,14 +70,23 @@ const updatePodcast = asyncHandler(async (req, res) => {
     throw new AppError("Podcast not found", 404);
   }
 
-  const { title, description, content, level, status, category } = req.body;
+  const { title, description, content, level, category, lessonId } = req.body;
+
+  const cleanLessonId = (id) => {
+    if (!id || id === "null" || id === "undefined" || id.trim() === "") {
+      return null;
+    }
+    return id;
+  };
 
   if (title !== undefined) podcast.title = title;
   if (description !== undefined) podcast.description = description;
   if (content !== undefined) podcast.content = content;
   if (level !== undefined) podcast.level = level;
   if (category !== undefined) podcast.category = category;
-  if (status !== undefined) podcast.status = status === "true" || status === true;
+  podcast.status = "Pending_Review";
+  podcast.reviewFeedback = "";
+  if (lessonId !== undefined) podcast.lessonId = cleanLessonId(lessonId);
 
   // Check if new thumbnail file is provided
   if (req.files && req.files.thumbnail) {
@@ -96,6 +116,7 @@ const updatePodcast = asyncHandler(async (req, res) => {
     const audioResult = await uploadPodcastAudio(audioFile.buffer);
     podcast.audioUrl = audioResult.secure_url;
     podcast.audioPublicId = audioResult.public_id;
+    podcast.duration = audioResult.duration || 0;
   }
 
   await podcast.save();
@@ -137,7 +158,7 @@ const deletePodcast = asyncHandler(async (req, res) => {
 
 // Get all podcasts for management (Staff)
 const getStaffPodcasts = asyncHandler(async (req, res) => {
-  const podcasts = await Podcast.find().sort({ createdAt: -1 });
+  const podcasts = await Podcast.find().populate("lessonId").sort({ createdAt: -1 });
 
   res.status(200).json({
     success: true,
@@ -148,7 +169,7 @@ const getStaffPodcasts = asyncHandler(async (req, res) => {
 
 // Get single podcast for management (Staff)
 const getStaffPodcastById = asyncHandler(async (req, res) => {
-  const podcast = await Podcast.findById(req.params.id);
+  const podcast = await Podcast.findById(req.params.id).populate("lessonId");
 
   if (!podcast) {
     throw new AppError("Podcast not found", 404);
@@ -194,7 +215,7 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
   const limit = Number(req.query.limit) || 12;
   const skip = (page - 1) * limit;
 
-  const queryObj = { status: true };
+  const queryObj = { status: { $in: ["Published", true] } };
 
   if (req.query.level) {
     queryObj.level = req.query.level;
@@ -238,10 +259,10 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
 // Get single podcast by ID (Public)
 const getPodcastById = asyncHandler(async (req, res) => {
   const podcast = await Podcast.findOneAndUpdate(
-    { _id: req.params.id, status: true },
+    { _id: req.params.id, status: { $in: ["Published", true] } },
     { $inc: { viewCount: 1 } },
     { new: true }
-  );
+  ).populate("lessonId");
 
   if (!podcast) {
     throw new AppError("Podcast not found", 404);
@@ -436,6 +457,48 @@ const updateComment = asyncHandler(async (req, res) => {
   });
 });
 
+// Approve Podcast (Teacher/Admin)
+const approvePodcast = asyncHandler(async (req, res) => {
+  const podcast = await Podcast.findById(req.params.id);
+
+  if (!podcast) {
+    throw new AppError("Podcast not found", 404);
+  }
+
+  podcast.status = "Published";
+  podcast.reviewFeedback = "";
+  await podcast.save();
+
+  res.status(200).json({
+    success: true,
+    data: podcast,
+  });
+});
+
+// Reject Podcast (Teacher/Admin)
+const rejectPodcast = asyncHandler(async (req, res) => {
+  const { feedback } = req.body;
+
+  if (!feedback) {
+    throw new AppError("Feedback is required to reject a podcast", 400);
+  }
+
+  const podcast = await Podcast.findById(req.params.id);
+
+  if (!podcast) {
+    throw new AppError("Podcast not found", 404);
+  }
+
+  podcast.status = "Rejected";
+  podcast.reviewFeedback = feedback;
+  await podcast.save();
+
+  res.status(200).json({
+    success: true,
+    data: podcast,
+  });
+});
+
 module.exports = {
   createPodcast,
   updatePodcast,
@@ -454,4 +517,6 @@ module.exports = {
   createComment,
   deleteComment,
   updateComment,
+  approvePodcast,
+  rejectPodcast,
 };

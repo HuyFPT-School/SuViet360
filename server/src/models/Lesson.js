@@ -107,6 +107,15 @@ const lessonSchema = new mongoose.Schema(
         },
       },
     },
+    status: {
+      type: String,
+      enum: ["Draft", "Pending_Review", "Published", "Rejected"],
+      default: "Pending_Review",
+    },
+    reviewFeedback: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,
