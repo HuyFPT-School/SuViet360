@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Providers from "@/components/providers";
 import UserMenu from "@/components/user-menu";
+import ChatNavBadge from "@/components/chat/ChatNavBadge";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -46,6 +47,7 @@ export default function RootLayout({
                 </Link>
               </div>
 
+              <ChatNavBadge />
               <UserMenu />
             </nav>
           </header>

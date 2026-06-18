@@ -8,6 +8,7 @@ const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const lessonRoutes = require("./routes/lessonRoutes");
 const podcastRoutes = require("./routes/podcastRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 const errorHandler = require("./middleware/errorHandler");
 const { setCsrfToken, requireCsrfToken } = require("./middleware/csrf");
 
@@ -50,6 +51,7 @@ app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/lessons", lessonRoutes);
 app.use("/api", podcastRoutes);
+app.use("/api/chat", chatRoutes);
 app.use(errorHandler);
 
 module.exports = app;
