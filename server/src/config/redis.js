@@ -10,12 +10,19 @@ if (env.redisUrl) {
 
   redisClient.on("error", (error) => {
     // eslint-disable-next-line no-console
-    console.error("Redis Client Error", error);
+    console.error("[Redis] Client Error:", error.message);
+  });
+
+  redisClient.on("connect", () => {
+    // eslint-disable-next-line no-console
+    console.log("[Redis] Connected successfully");
   });
 }
 
 const connectRedis = async () => {
   if (!redisClient) {
+    // eslint-disable-next-line no-console
+    console.log("[Redis] Skipped – no REDIS_URL configured");
     return;
   }
 
@@ -24,7 +31,11 @@ const connectRedis = async () => {
   }
 };
 
+/** Tiện ích kiểm tra nhanh Redis đã sẵn sàng chưa */
+const isRedisReady = () => redisClient && redisClient.isOpen;
+
 module.exports = {
   redisClient,
   connectRedis,
+  isRedisReady,
 };

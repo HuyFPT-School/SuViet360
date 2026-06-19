@@ -8,6 +8,56 @@ const {
   uploadPodcastAudio,
   deleteCloudinaryResource,
 } = require("../services/cloudinaryService");
+const {
+  getCachePayload,
+  setCachePayload,
+  getCacheETag,
+  setCacheETag,
+  deleteCache,
+  deleteCacheByPattern,
+  LIST_TTL,
+  DETAIL_TTL,
+} = require("../utils/cache");
+
+// ─── Cache Key Helpers ────────────────────────────────────────────
+
+/**
+ * So sánh ETag an toàn (xử lý cả trường hợp có/không dấu "", W/ prefix)
+ */
+const etagMatch = (clientETag, storedETag) => {
+  if (!clientETag) return false;
+  const a = clientETag.replace(/^W\//, "").replace(/^"|"$/g, "");
+  const b = storedETag.replace(/^"|"$/g, "");
+  return a === b;
+};
+
+const podcastListKey = (query = {}) => {
+  const parts = ["podcasts:list"];
+  if (query.page) parts.push(`p:${query.page}`);
+  if (query.limit) parts.push(`l:${query.limit}`);
+  if (query.level) parts.push(`lv:${query.level}`);
+  if (query.category) parts.push(`cat:${query.category}`);
+  if (query.keyword) parts.push(`kw:${query.keyword}`);
+  if (query.sort) parts.push(`sort:${query.sort}`);
+  return parts.join(":");
+};
+
+const podcastDetailKey = (id) => `podcast:${id}`;
+
+/**
+ * Invalidate tất cả cache liên quan đến Podcast khi có thay đổi.
+ */
+const invalidatePodcastCache = async (podcastId = null) => {
+  // Xoá toàn bộ cache list (mọi filter/page) + etag keys
+  await deleteCacheByPattern("podcasts:list*");
+  // Xoá cache detail của podcast cụ thể (nếu có) + etag key
+  if (podcastId) {
+    await Promise.all([
+      deleteCache(podcastDetailKey(podcastId)),
+      deleteCache(`${podcastDetailKey(podcastId)}:etag`),
+    ]);
+  }
+};
 
 // ─── Staff Podcast CRUD ──────────────────────────────────────────────
 
@@ -55,6 +105,9 @@ const createPodcast = asyncHandler(async (req, res) => {
     status: "Pending_Review",
     reviewFeedback: "",
   });
+
+  // Invalidate list cache vì có podcast mới
+  await invalidatePodcastCache();
 
   res.status(201).json({
     success: true,
@@ -121,6 +174,9 @@ const updatePodcast = asyncHandler(async (req, res) => {
 
   await podcast.save();
 
+  // Invalidate cache của podcast này + list
+  await invalidatePodcastCache(req.params.id);
+
   res.status(200).json({
     success: true,
     data: podcast,
@@ -149,6 +205,9 @@ const deletePodcast = asyncHandler(async (req, res) => {
   // Also delete associated notes and comments
   await PodcastNote.deleteMany({ podcastId: req.params.id });
   await PodcastComment.deleteMany({ podcastId: req.params.id });
+
+  // Invalidate cache
+  await invalidatePodcastCache(req.params.id);
 
   res.status(200).json({
     success: true,
@@ -236,6 +295,40 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
     sortObj = { createdAt: 1 };
   }
 
+  // ── Redis Cache (2-step: ETag check nhỏ → body chỉ khi cần) ─
+  const cacheKey = podcastListKey(req.query);
+
+  // Bước 1: Chỉ đọc ETag (~50 bytes, cực nhanh)
+  let cachedETag = await getCacheETag(cacheKey);
+  if (cachedETag && etagMatch(req.headers["if-none-match"], cachedETag)) {
+    return res
+      .set("Cache-Control", "public, max-age=3600")
+      .status(304)
+      .end();
+  }
+
+  // Bước 2: ETag key chưa có hoặc không khớp → đọc full body
+  const payload = await getCachePayload(cacheKey);
+  if (payload) {
+    if (!cachedETag) {
+      await setCacheETag(cacheKey, payload.etag);
+    }
+    if (etagMatch(req.headers["if-none-match"], payload.etag)) {
+      return res
+        .set("Cache-Control", "public, max-age=3600")
+        .status(304)
+        .end();
+    }
+    return res
+      .status(200)
+      .set("Cache-Control", "public, max-age=3600")
+      .set("ETag", payload.etag)
+      .type("json")
+      .send(payload.body);
+  }
+
+  // ────────────────────────────────────────────────────────────
+
   const podcasts = await Podcast.find(queryObj)
     .sort(sortObj)
     .skip(skip)
@@ -243,7 +336,7 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
 
   const total = await Podcast.countDocuments(queryObj);
 
-  res.status(200).json({
+  const responseData = {
     success: true,
     count: podcasts.length,
     pagination: {
@@ -253,11 +346,51 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
       pages: Math.ceil(total / limit),
     },
     data: podcasts,
-  });
+  };
+
+  // Lưu cache kèm ETag (không await để không block response)
+  setCachePayload(cacheKey, responseData);
+
+  res
+    .set("Cache-Control", "public, max-age=3600")
+    .status(200)
+    .json(responseData);
 });
 
 // Get single podcast by ID (Public)
 const getPodcastById = asyncHandler(async (req, res) => {
+  const cacheKey = podcastDetailKey(req.params.id);
+
+  // ── Redis Cache (2-step: ETag check nhỏ → body chỉ khi cần) ─
+  let cachedETag = await getCacheETag(cacheKey);
+  if (cachedETag && etagMatch(req.headers["if-none-match"], cachedETag)) {
+    // Vẫn tăng viewCount ngầm
+    Podcast.findByIdAndUpdate(req.params.id, { $inc: { viewCount: 1 } }).catch(() => {});
+    return res
+      .set("Cache-Control", "public, max-age=600")
+      .status(304)
+      .end();
+  }
+
+  const payload = await getCachePayload(cacheKey);
+  if (payload) {
+    Podcast.findByIdAndUpdate(req.params.id, { $inc: { viewCount: 1 } }).catch(() => {});
+    if (!cachedETag) await setCacheETag(cacheKey, payload.etag);
+    if (etagMatch(req.headers["if-none-match"], payload.etag)) {
+      return res
+        .set("Cache-Control", "public, max-age=600")
+        .status(304)
+        .end();
+    }
+    return res
+      .status(200)
+      .set("Cache-Control", "public, max-age=600")
+      .set("ETag", payload.etag)
+      .type("json")
+      .send(payload.body);
+  }
+  // ────────────────────────────────────────────────────────────
+
   const podcast = await Podcast.findOneAndUpdate(
     { _id: req.params.id, status: { $in: ["Published", true] } },
     { $inc: { viewCount: 1 } },
@@ -268,10 +401,18 @@ const getPodcastById = asyncHandler(async (req, res) => {
     throw new AppError("Podcast not found", 404);
   }
 
-  res.status(200).json({
+  const responseData = {
     success: true,
     data: podcast,
-  });
+  };
+
+  // Lưu cache kèm ETag (TTL ngắn hơn vì có viewCount)
+  setCachePayload(cacheKey, responseData, DETAIL_TTL);
+
+  res
+    .set("Cache-Control", "public, max-age=600")
+    .status(200)
+    .json(responseData);
 });
 
 
@@ -469,6 +610,9 @@ const approvePodcast = asyncHandler(async (req, res) => {
   podcast.reviewFeedback = "";
   await podcast.save();
 
+  // Status thay đổi → invalidate cả list lẫn detail
+  await invalidatePodcastCache(req.params.id);
+
   res.status(200).json({
     success: true,
     data: podcast,
@@ -492,6 +636,9 @@ const rejectPodcast = asyncHandler(async (req, res) => {
   podcast.status = "Rejected";
   podcast.reviewFeedback = feedback;
   await podcast.save();
+
+  // Status thay đổi → invalidate cả list lẫn detail
+  await invalidatePodcastCache(req.params.id);
 
   res.status(200).json({
     success: true,
