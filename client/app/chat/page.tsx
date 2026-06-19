@@ -10,6 +10,7 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import type { ChatParticipant } from "@/types/chat";
 import "./chat.css";
 
+
 const MESSAGES_PER_PAGE = 30;
 
 export default function ChatPage() {
