@@ -146,7 +146,8 @@ export const useChat = () => {
     async (conversationId: string, before?: string) => {
       dispatch(setLoadingMessages(true));
       try {
-        const messages = await chatApi.getMessages(conversationId, before);
+        const response = await chatApi.getMessages(conversationId, before);
+        const { messages } = response;
         if (before) {
           dispatch(prependMessages({ conversationId, messages }));
         } else {
