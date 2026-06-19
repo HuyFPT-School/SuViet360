@@ -48,37 +48,41 @@ export default function ChatSidebar({
   user,
 }: ChatSidebarProps) {
   const [search, setSearch] = useState("");
+  const [allParticipants, setAllParticipants] = useState<ChatParticipant[]>([]);
   const [searchResults, setSearchResults] = useState<ChatParticipant[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Search for teachers or users when query changes
+  // Load available participants on mount
   useEffect(() => {
-    if (!search.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
-    const timeout = setTimeout(async () => {
+    const loadParticipants = async () => {
       setIsSearching(true);
       try {
         const results =
           user.role === "user"
             ? await chatApi.getTeachers()
             : await chatApi.getChatUsers();
-
-        const filtered = results.filter((p) =>
-          p.name.toLowerCase().includes(search.toLowerCase())
-        );
-        setSearchResults(filtered);
+        setAllParticipants(results);
       } catch {
-        setSearchResults([]);
+        setAllParticipants([]);
       } finally {
         setIsSearching(false);
       }
-    }, 300);
+    };
+    loadParticipants();
+  }, [user.role]);
 
-    return () => clearTimeout(timeout);
-  }, [search, user.role]);
+  // Filter participants when search query changes
+  useEffect(() => {
+    if (!search.trim()) {
+      setSearchResults(allParticipants);
+      return;
+    }
+
+    const filtered = allParticipants.filter((p) =>
+      p.name.toLowerCase().includes(search.toLowerCase())
+    );
+    setSearchResults(filtered);
+  }, [search, allParticipants]);
 
   const filteredConversations = useMemo(() => {
     if (!search.trim()) return conversations;
@@ -146,20 +150,19 @@ export default function ChatSidebar({
         </div>
       </div>
 
-      {/* Search results - new conversations */}
-      {search.trim() && searchResults.length > 0 && (
-        <div className="px-3 pb-2">
-          <p className="text-xs text-[#a37636] px-2 pb-2 font-medium uppercase tracking-wider">
-            Bắt đầu cuộc trò chuyện mới
-          </p>
-          {searchResults.map((participant) => {
-            // Skip if conversation already exists
-            const exists = conversations.some((c) =>
-              c.participants.some((p) => p._id === participant._id)
-            );
-            if (exists) return null;
-
-            return (
+      {/* Available participants - show when searching OR when no conversations exist */}
+      {(() => {
+        const newParticipants = searchResults.filter(
+          (p) => !conversations.some((c) => c.participants.some((cp) => cp._id === p._id))
+        );
+        const shouldShow = newParticipants.length > 0 && (search.trim() || conversations.length === 0);
+        if (!shouldShow) return null;
+        return (
+          <div className="px-3 pb-2">
+            <p className="text-xs text-[#a37636] px-2 pb-2 font-medium uppercase tracking-wider">
+              {user.role === "user" ? "Giáo viên" : "Học viên"} có thể trò chuyện
+            </p>
+            {newParticipants.map((participant) => (
               <button
                 key={participant._id}
                 onClick={() => {
@@ -206,10 +209,10 @@ export default function ChatSidebar({
                   />
                 </svg>
               </button>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        );
+      })()}
 
       {isSearching && (
         <div className="px-4 py-3 text-center">
@@ -240,7 +243,7 @@ export default function ChatSidebar({
 
       {/* Conversations list */}
       <div className="chat-sidebar-list">
-        {filteredConversations.length === 0 && !search.trim() && (
+        {filteredConversations.length === 0 && !search.trim() && allParticipants.length === 0 && (
           <div className="px-4 py-8 text-center">
             <svg
               className="w-12 h-12 mx-auto mb-3 text-[#a37636]/30"
@@ -256,11 +259,7 @@ export default function ChatSidebar({
               />
             </svg>
             <p className="text-sm text-[#a37636]/60">
-              Chưa có cuộc trò chuyện nào
-            </p>
-            <p className="text-xs text-[#a37636]/40 mt-1">
-              Tìm kiếm {user.role === "user" ? "giáo viên" : "học viên"} để bắt
-              đầu
+              Chưa có {user.role === "user" ? "giáo viên" : "học viên"} nào
             </p>
           </div>
         )}
