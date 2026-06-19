@@ -5,6 +5,44 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const env = require("../config/env");
 const { getCookie } = require("../utils/cookies");
+const {
+  getCachePayload,
+  setCachePayload,
+  getCacheETag,
+  setCacheETag,
+  deleteCache,
+  deleteCacheByPattern,
+  LIST_TTL,
+} = require("../utils/cache");
+
+// ─── Cache Keys ──────────────────────────────────────────────────
+
+/**
+ * So sánh ETag an toàn (xử lý cả trường hợp có/không dấu "", W/ prefix)
+ */
+const etagMatch = (clientETag, storedETag) => {
+  if (!clientETag) return false;
+  const a = clientETag.replace(/^W\//, "").replace(/^"|"$/g, "");
+  const b = storedETag.replace(/^"|"$/g, "");
+  return a === b;
+};
+
+const LESSONS_LIST_KEY = "lessons:list:published";
+const LESSONS_LIST_ALL_KEY = "lessons:list:all";
+const lessonDetailKey = (id) => `lesson:${id}`;
+
+/**
+ * Invalidate tất cả cache liên quan đến Lesson khi có thay đổi.
+ */
+const invalidateLessonCache = async (lessonId = null) => {
+  await deleteCacheByPattern("lessons:list*");
+  if (lessonId) {
+    await Promise.all([
+      deleteCache(lessonDetailKey(lessonId)),
+      deleteCache(`${lessonDetailKey(lessonId)}:etag`),
+    ]);
+  }
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
@@ -73,6 +111,9 @@ const createLesson = asyncHandler(async (req, res) => {
     spawnY,
   });
 
+  // Invalidate list cache
+  await invalidateLessonCache();
+
   res.status(201).json({
     success: true,
     lesson: formatLessonResponse(lesson),
@@ -96,17 +137,91 @@ const getAllLessons = asyncHandler(async (req, res) => {
   }
 
   const filter = showAll ? {} : { status: "Published" };
+
+  // ── Redis Cache (2-step: ETag check nhỏ → body chỉ khi cần) ─
+  if (!showAll) {
+    // Bước 1: Chỉ đọc ETag (~50 bytes)
+    let cachedETag = await getCacheETag(LESSONS_LIST_KEY);
+    if (cachedETag && etagMatch(req.headers["if-none-match"], cachedETag)) {
+      return res
+        .set("Cache-Control", "public, max-age=3600")
+        .status(304)
+        .end();
+    }
+
+    // Bước 2: Đọc full body
+    const payload = await getCachePayload(LESSONS_LIST_KEY);
+    if (payload) {
+      if (!cachedETag) await setCacheETag(LESSONS_LIST_KEY, payload.etag);
+      if (etagMatch(req.headers["if-none-match"], payload.etag)) {
+        return res
+          .set("Cache-Control", "public, max-age=3600")
+          .status(304)
+          .end();
+      }
+      return res
+        .status(200)
+        .set("Cache-Control", "public, max-age=3600")
+        .set("ETag", payload.etag)
+        .type("json")
+        .send(payload.body);
+    }
+  }
+  // ──────────────────────────────────────────────────────────────
+
   const lessons = await lessonService.getAllLessons(filter);
 
-  res.status(200).json({
+  const responseData = {
     success: true,
     count: lessons.length,
     lessons: lessons.map(formatLessonResponse),
-  });
+  };
+
+  // Lưu cache kèm ETag nếu là danh sách public
+  if (!showAll) {
+    setCachePayload(LESSONS_LIST_KEY, responseData);
+  }
+
+  // Admin/staff xem tất cả → không cache browser, tránh lộ unpublished
+  res
+    .set("Cache-Control", showAll ? "no-store" : "public, max-age=3600")
+    .status(200)
+    .json(responseData);
 });
 
 // ─── GET /api/lessons/:id ─────────────────────────────────────────────
 const getLessonById = asyncHandler(async (req, res) => {
+  const cacheKey = lessonDetailKey(req.params.id);
+
+  // ── Redis Cache (2-step: ETag check nhỏ → body chỉ khi cần) ─
+  // Bước 1: Chỉ đọc ETag (~50 bytes)
+  let cachedETag = await getCacheETag(cacheKey);
+  if (cachedETag && etagMatch(req.headers["if-none-match"], cachedETag)) {
+    return res
+      .set("Cache-Control", "public, max-age=3600")
+      .status(304)
+      .end();
+  }
+
+  // Bước 2: Đọc full body
+  const payload = await getCachePayload(cacheKey);
+  if (payload) {
+    if (!cachedETag) await setCacheETag(cacheKey, payload.etag);
+    if (etagMatch(req.headers["if-none-match"], payload.etag)) {
+      return res
+        .set("Cache-Control", "public, max-age=3600")
+        .status(304)
+        .end();
+    }
+    return res
+      .status(200)
+      .set("Cache-Control", "public, max-age=3600")
+      .set("ETag", payload.etag)
+      .type("json")
+      .send(payload.body);
+  }
+  // ──────────────────────────────────────────────────────────────
+
   const lesson = await lessonService.getLessonById(req.params.id);
   if (lesson.status !== "Published") {
     let authorized = false;
@@ -127,10 +242,21 @@ const getLessonById = asyncHandler(async (req, res) => {
     }
   }
 
-  res.status(200).json({
+  const responseData = {
     success: true,
     lesson: formatLessonResponse(lesson),
-  });
+  };
+
+  // Chỉ cache lesson đã Published
+  if (lesson.status === "Published") {
+    setCachePayload(cacheKey, responseData);
+  }
+
+  // Lesson không Published → không cho browser cache (chỉ admin xem được)
+  res
+    .set("Cache-Control", lesson.status === "Published" ? "public, max-age=3600" : "no-store")
+    .status(200)
+    .json(responseData);
 });
 
 // ─── PUT /api/lessons/:id ─────────────────────────────────────────────
@@ -189,6 +315,9 @@ const updateLesson = asyncHandler(async (req, res) => {
 
   const lesson = await lessonService.updateLesson(req.params.id, updates);
 
+  // Invalidate cache
+  await invalidateLessonCache(req.params.id);
+
   res.status(200).json({
     success: true,
     lesson: formatLessonResponse(lesson),
@@ -198,6 +327,9 @@ const updateLesson = asyncHandler(async (req, res) => {
 // ─── DELETE /api/lessons/:id ──────────────────────────────────────────
 const deleteLesson = asyncHandler(async (req, res) => {
   await lessonService.deleteLesson(req.params.id);
+
+  // Invalidate cache
+  await invalidateLessonCache(req.params.id);
 
   res.status(200).json({
     success: true,
@@ -251,6 +383,9 @@ const approveLesson = asyncHandler(async (req, res) => {
     reviewFeedback: "",
   });
 
+  // Status thay đổi → invalidate cache
+  await invalidateLessonCache(req.params.id);
+
   res.status(200).json({
     success: true,
     lesson: formatLessonResponse(lesson),
@@ -267,6 +402,9 @@ const rejectLesson = asyncHandler(async (req, res) => {
     status: "Rejected",
     reviewFeedback: feedback,
   });
+
+  // Status thay đổi → invalidate cache
+  await invalidateLessonCache(req.params.id);
 
   res.status(200).json({
     success: true,
