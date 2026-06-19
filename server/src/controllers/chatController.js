@@ -173,10 +173,74 @@ const getChatUsers = asyncHandler(async (req, res) => {
   });
 });
 
+/* ─── POST /api/chat/conversations/:conversationId/messages ─── */
+const sendMessage = asyncHandler(async (req, res) => {
+  const { conversationId } = req.params;
+  const { content } = req.body;
+  const userId = req.user._id.toString();
+
+  if (!content || typeof content !== "string" || !content.trim()) {
+    throw new AppError("Message content is required", 400);
+  }
+  if (content.length > 2000) {
+    throw new AppError("Message cannot exceed 2000 characters", 400);
+  }
+
+  // Verify conversation exists and user is a participant
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation) {
+    throw new AppError("Conversation not found", 404);
+  }
+
+  const isParticipant = conversation.participants.some(
+    (p) => p.toString() === userId
+  );
+  if (!isParticipant) {
+    throw new AppError("Not a participant of this conversation", 403);
+  }
+
+  // Create message
+  const message = await Message.create({
+    conversation: conversationId,
+    sender: userId,
+    content: content.trim(),
+  });
+
+  // Update conversation lastMessage and unreadCount
+  const otherUserId = conversation.participants
+    .find((p) => p.toString() !== userId)
+    ?.toString();
+
+  conversation.lastMessage = {
+    content: message.content,
+    sender: message.sender,
+    createdAt: message.createdAt,
+  };
+
+  if (otherUserId) {
+    const currentUnread = conversation.unreadCount.get(otherUserId) || 0;
+    conversation.unreadCount.set(otherUserId, currentUnread + 1);
+  }
+
+  await conversation.save();
+
+  // Populate sender info for the response
+  const populated = await Message.findById(message._id).populate(
+    "sender",
+    "name avatar"
+  );
+
+  res.status(201).json({
+    status: "success",
+    data: { message: populated },
+  });
+});
+
 module.exports = {
   getConversations,
   getMessages,
   createConversation,
+  sendMessage,
   getTeachers,
   getChatUsers,
 };

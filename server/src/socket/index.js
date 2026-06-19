@@ -183,6 +183,55 @@ const setupSocketHandlers = (io) => {
       }
     });
 
+    /* ─── Event: notify_new_message ─── */
+    socket.on("notify_new_message", async (payload) => {
+      try {
+        const { conversationId, messageId } = payload || {};
+        if (!conversationId || !messageId) return;
+
+        // Fetch message from DB
+        const message = await Message.findById(messageId);
+        if (!message) return;
+
+        const conversation = await Conversation.findById(conversationId);
+        if (!conversation) return;
+
+        // Verify sender is a participant
+        const isParticipant = conversation.participants.some(
+          (p) => p.toString() === userId
+        );
+        if (!isParticipant) return;
+
+        const otherUserId = getOtherParticipant(conversation, userId);
+        const sender = await User.findById(message.sender).select("name avatar");
+
+        const messageData = {
+          _id: message._id,
+          conversation: message.conversation,
+          sender: {
+            _id: sender._id,
+            name: sender.name,
+            avatar: sender.avatar,
+          },
+          content: message.content,
+          readAt: message.readAt,
+          createdAt: message.createdAt,
+          updatedAt: message.updatedAt,
+        };
+
+        // Emit to other participant
+        if (otherUserId) {
+          io.to(`user:${otherUserId}`).emit("new_message", messageData);
+        }
+
+        // Emit back to sender for multi-tab sync
+        io.to(`user:${userId}`).emit("new_message", messageData);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("notify_new_message error:", err.message);
+      }
+    });
+
     /* ─── Event: typing ─── */
     socket.on("typing", async (payload) => {
       try {

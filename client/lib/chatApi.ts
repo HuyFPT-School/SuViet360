@@ -48,5 +48,19 @@ export const chatApi = {
     const res = await api.get<ApiResponse<{ users: ChatParticipant[] }>>("/chat/users");
     return res.data.data.users;
   },
+
+  async sendMessage(conversationId: string, content: string): Promise<Message> {
+    const csrfRes = await api.get<{ data: { csrfToken: string } }>(
+      "/csrf-token"
+    );
+    const csrfToken = csrfRes.data.data.csrfToken;
+
+    const res = await api.post<ApiResponse<{ message: Message }>>(
+      `/chat/conversations/${conversationId}/messages`,
+      { content },
+      { headers: { "x-csrf-token": csrfToken } }
+    );
+    return res.data.data.message;
+  },
 };
 

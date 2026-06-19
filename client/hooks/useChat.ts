@@ -165,17 +165,12 @@ export const useChat = () => {
   );
 
   const sendMessage = useCallback(
-    (conversationId: string, content: string) => {
-      const socket = getSocket();
-      if (!socket || !content.trim()) return;
-
-      socket.emit("send_message", {
-        conversationId,
-        content: content.trim(),
-      });
+    async (conversationId: string, content: string) => {
+      if (!content.trim() || !user) return;
 
       // Stop typing when sending
-      if (isTypingRef.current) {
+      const socket = getSocket();
+      if (isTypingRef.current && socket) {
         socket.emit("stop_typing", { conversationId });
         isTypingRef.current = false;
         if (typingTimeoutRef.current) {
@@ -183,8 +178,33 @@ export const useChat = () => {
           typingTimeoutRef.current = null;
         }
       }
+
+      try {
+        // Send via REST API (works on Vercel same-origin)
+        const message = await chatApi.sendMessage(conversationId, content.trim());
+
+        // Add message to local state immediately
+        dispatch(addMessage({ conversationId, message }));
+        dispatch(
+          updateConversationLastMessage({
+            conversationId,
+            message,
+            currentUserId: user.id,
+          })
+        );
+
+        // Also emit via socket for real-time delivery to the other party
+        if (socket?.connected) {
+          socket.emit("notify_new_message", {
+            conversationId,
+            messageId: message._id,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to send message:", err);
+      }
     },
-    []
+    [dispatch, user]
   );
 
   const startTyping = useCallback((conversationId: string) => {
