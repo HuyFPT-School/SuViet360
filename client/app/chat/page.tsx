@@ -10,7 +10,6 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import type { ChatParticipant } from "@/types/chat";
 import "./chat.css";
 
-
 const MESSAGES_PER_PAGE = 30;
 
 export default function ChatPage() {
@@ -21,7 +20,11 @@ export default function ChatPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
-  const [isHydrating, setIsHydrating] = useState(true);
+
+  // Fetch current user on mount (same as dashboard/profile pages)
+  useEffect(() => {
+    refreshUser().catch(() => {});
+  }, [refreshUser]);
 
   // Responsive detection
   useEffect(() => {
@@ -31,17 +34,12 @@ export default function ChatPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Fetch current user on mount
+  // Redirect if not authenticated
   useEffect(() => {
-    refreshUser().finally(() => setIsHydrating(false));
-  }, [refreshUser]);
-
-  // Redirect if not authenticated (only after hydration check completes)
-  useEffect(() => {
-    if (!isHydrating && !user) {
+    if (!authLoading && !user) {
       router.push("/login");
     }
-  }, [user, isHydrating, router]);
+  }, [user, authLoading, router]);
 
   // Load conversations on mount
   useEffect(() => {
@@ -135,7 +133,7 @@ export default function ChatPage() {
     : false;
 
   // Loading state
-  if (isHydrating || authLoading) {
+  if (authLoading) {
     return (
       <div className="chat-page">
         <div className="flex items-center justify-center w-full">
