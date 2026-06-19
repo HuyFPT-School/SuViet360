@@ -603,650 +603,702 @@ export default function StaffPage() {
   return (
     <div className="w-full min-h-screen" style={{ backgroundImage: "linear-gradient(rgba(247, 243, 233, 0.45), rgba(247, 243, 233, 0.45)), url('/textures/paper.jpg')", backgroundSize: "cover", backgroundAttachment: "fixed" }}>
       <section className="mx-auto w-full max-w-6xl px-6 py-10 space-y-8">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-amber-600">Staff workspace</p>
-          <h1 className="text-3xl font-display font-semibold text-amber-950">
-            Bảng điều phối bài học
-          </h1>
-        </div>
-        <div className="flex items-center gap-3 text-sm">
-          <div className="rounded-xl border border-amber-200 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-sm">
-            <p className="text-amber-500 text-xs uppercase tracking-widest">
-              {activeTab === "lessons" ? "Tổng bài học" : "Tổng podcast"}
-            </p>
-            <p className="text-amber-900 text-lg font-semibold">
-              {activeTab === "lessons" ? stats.total : podcasts.length}
-            </p>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-amber-600">Staff workspace</p>
+            <h1 className="text-3xl font-display font-semibold text-amber-950">
+              Bảng điều phối bài học
+            </h1>
           </div>
-          <div className="rounded-xl border border-amber-200 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-sm">
-            <p className="text-amber-500 text-xs uppercase tracking-widest">Cập nhật gần nhất</p>
-            <p className="text-amber-900 text-sm font-semibold">
-              {activeTab === "lessons"
-                ? stats.latest ? new Date(stats.latest).toLocaleDateString("vi-VN") : "-"
-                : podcasts[0]?.updatedAt || podcasts[0]?.createdAt
-                  ? new Date(podcasts[0]?.updatedAt || podcasts[0]?.createdAt).toLocaleDateString("vi-VN")
-                  : "-"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex border-b border-amber-200">
-        <button
-          onClick={() => { setActiveTab("lessons"); setMessage(null); }}
-          className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${
-            activeTab === "lessons"
-              ? "border-amber-700 text-amber-950 font-bold"
-              : "border-transparent text-amber-650 hover:text-amber-800"
-          }`}
-        >
-          Quản lý bài học
-        </button>
-        <button
-          onClick={() => { setActiveTab("podcasts"); setMessage(null); }}
-          className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${
-            activeTab === "podcasts"
-              ? "border-amber-700 text-amber-950 font-bold"
-              : "border-transparent text-amber-650 hover:text-amber-800"
-          }`}
-        >
-          Quản lý podcast
-        </button>
-      </div>
-
-      {message && (
-        <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
-            message.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-red-200 bg-red-50 text-red-700"
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
-
-      {activeTab === "lessons" ? (
-        <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
-          <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
-            <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
-              <h2 className="font-display text-lg font-semibold text-amber-900">
-                Danh sách bài học
-              </h2>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-700 hover:bg-amber-50"
-              >
-                Tạo mới
-              </button>
-            </div>
-
-            {lessonsLoading ? (
-              <div className="p-6 text-center text-amber-600">Đang tải...</div>
-            ) : (
-              <div className="divide-y divide-amber-100">
-                {lessons.map((lesson) => (
-                  <button
-                    key={lesson._id}
-                    type="button"
-                    onClick={() => handleSelectLesson(lesson)}
-                    className={`w-full text-left px-5 py-4 transition ${
-                      selectedId === lesson._id
-                        ? "bg-amber-50"
-                        : "hover:bg-amber-50/60"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-amber-900 truncate">{lesson.title}</p>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          {renderStaffStatusBadge(lesson.status)}
-                        </div>
-                        <p className="mt-2 text-xs text-amber-600 line-clamp-2">
-                          {lesson.content}
-                        </p>
-                      </div>
-                      <span className="text-xs text-amber-500 whitespace-nowrap">
-                        {new Date(lesson.updatedAt).toLocaleDateString("vi-VN")}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-
-                {lessons.length === 0 && (
-                  <div className="p-6 text-center text-amber-600">Chưa có bài học nào.</div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
-            <div className="border-b border-amber-100 px-5 py-4">
-              <h2 className="font-display text-lg font-semibold text-amber-900">
-                {formMode === "create" ? "Tạo bài học" : "Chỉnh sửa bài học"}
-              </h2>
-              <p className="text-xs text-amber-600 mt-1">
-                {formMode === "create"
-                  ? "Điền đủ thông tin và upload assets để tạo bài học."
-                  : "Có thể cập nhật nội dung và thay thế file khi cần."}
+          <div className="flex items-center gap-3 text-sm">
+            <div className="rounded-xl border border-amber-200 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-sm">
+              <p className="text-amber-500 text-xs uppercase tracking-widest">
+                {activeTab === "lessons" ? "Tổng bài học" : "Tổng podcast"}
+              </p>
+              <p className="text-amber-900 text-lg font-semibold">
+                {activeTab === "lessons" ? stats.total : podcasts.length}
               </p>
             </div>
+            <div className="rounded-xl border border-amber-200 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-sm">
+              <p className="text-amber-500 text-xs uppercase tracking-widest">Cập nhật gần nhất</p>
+              <p className="text-amber-900 text-sm font-semibold">
+                {activeTab === "lessons"
+                  ? stats.latest ? new Date(stats.latest).toLocaleDateString("vi-VN") : "-"
+                  : podcasts[0]?.updatedAt || podcasts[0]?.createdAt
+                    ? new Date(podcasts[0]?.updatedAt || podcasts[0]?.createdAt).toLocaleDateString("vi-VN")
+                    : "-"}
+              </p>
+            </div>
+          </div>
+        </div>
 
-            <div className="space-y-5 p-5">
-              {formMode === "edit" && selectedLesson?.status === "Rejected" && selectedLesson?.reviewFeedback && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-                  <h3 className="font-semibold text-rose-950 mb-1 flex items-center gap-1.5">
-                    <svg className="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    Bài học bị từ chối duyệt
-                  </h3>
-                  <p className="font-medium text-rose-700">{selectedLesson.reviewFeedback}</p>
+        <div className="flex border-b border-amber-200">
+          <button
+            onClick={() => { setActiveTab("lessons"); setMessage(null); }}
+            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "lessons"
+                ? "border-amber-700 text-amber-950 font-bold"
+                : "border-transparent text-amber-650 hover:text-amber-800"
+              }`}
+          >
+            Quản lý bài học
+          </button>
+          <button
+            onClick={() => { setActiveTab("podcasts"); setMessage(null); }}
+            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "podcasts"
+                ? "border-amber-700 text-amber-950 font-bold"
+                : "border-transparent text-amber-650 hover:text-amber-800"
+              }`}
+          >
+            Quản lý podcast
+          </button>
+        </div>
+
+        {message && (
+          <div
+            className={`rounded-xl border px-4 py-3 text-sm ${message.type === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-red-200 bg-red-50 text-red-700"
+              }`}
+          >
+            {message.text}
+          </div>
+        )}
+
+        {activeTab === "lessons" ? (
+          <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
+            <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
+              <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
+                <h2 className="font-display text-lg font-semibold text-amber-900">
+                  Danh sách bài học
+                </h2>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-700 hover:bg-amber-50"
+                >
+                  Tạo mới
+                </button>
+              </div>
+
+              {lessonsLoading ? (
+                <div className="p-6 text-center text-amber-600">Đang tải...</div>
+              ) : (
+                <div className="divide-y divide-amber-100">
+                  {lessons.map((lesson) => (
+                    <button
+                      key={lesson._id}
+                      type="button"
+                      onClick={() => handleSelectLesson(lesson)}
+                      className={`w-full text-left px-5 py-4 transition ${selectedId === lesson._id
+                          ? "bg-amber-50"
+                          : "hover:bg-amber-50/60"
+                        }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-amber-900 truncate">{lesson.title}</p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            {renderStaffStatusBadge(lesson.status)}
+                          </div>
+                          <p className="mt-2 text-xs text-amber-600 line-clamp-2">
+                            {lesson.content}
+                          </p>
+                        </div>
+                        <span className="text-xs text-amber-500 whitespace-nowrap">
+                          {new Date(lesson.updatedAt).toLocaleDateString("vi-VN")}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+
+                  {lessons.length === 0 && (
+                    <div className="p-6 text-center text-amber-600">Chưa có bài học nào.</div>
+                  )}
                 </div>
               )}
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                  Tiêu đề
-                </label>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => setFormField("title", e.target.value)}
-                  className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  placeholder="Nhập tiêu đề bài học"
-                />
+            <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
+              <div className="border-b border-amber-100 px-5 py-4">
+                <h2 className="font-display text-lg font-semibold text-amber-900">
+                  {formMode === "create" ? "Tạo bài học" : "Chỉnh sửa bài học"}
+                </h2>
+                <p className="text-xs text-amber-600 mt-1">
+                  {formMode === "create"
+                    ? "Điền đủ thông tin và upload assets để tạo bài học."
+                    : "Có thể cập nhật nội dung và thay thế file khi cần."}
+                </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                  Nội dung
-                </label>
-                <textarea
-                  value={form.content}
-                  onChange={(e) => setFormField("content", e.target.value)}
-                  rows={4}
-                  className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  placeholder="Mô tả nội dung bài học"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                  Tilemap JSON {formMode === "create" && "(bắt buộc)"}
-                </label>
-                <CustomFileInput
-                  accept="application/json"
-                  onChange={(e) => setFormField("tilemapFile", e.target.files?.[0] || null)}
-                  fileCount={form.tilemapFile ? 1 : 0}
-                  singleFileName={form.tilemapFile?.name}
-                />
-                {formMode === "edit" && selectedLesson?.game?.tilemapJsonUrl && (
-                  <p className="mt-1 text-xs text-amber-600 font-medium">
-                    Tệp hiện tại: <a href={selectedLesson.game.tilemapJsonUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-800 break-all">{selectedLesson.game.tilemapJsonUrl.split('/').pop()}</a>
-                  </p>
+              <div className="space-y-5 p-5">
+                {formMode === "edit" && selectedLesson?.status === "Rejected" && selectedLesson?.reviewFeedback && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+                    <h3 className="font-semibold text-rose-950 mb-1 flex items-center gap-1.5">
+                      <svg className="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      Bài học bị từ chối duyệt
+                    </h3>
+                    <p className="font-medium text-rose-700">{selectedLesson.reviewFeedback}</p>
+                  </div>
                 )}
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                  Tileset images {formMode === "create" && "(bắt buộc)"}
-                </label>
-                <CustomFileInput
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  multiple
-                  onChange={(e) => {
-                    const files = e.target.files ? Array.from(e.target.files) : [];
-                    setFormField("tilesetFiles", files);
-                    const names = files.map((file) => {
-                      const parts = file.name.split(".");
-                      parts.pop();
-                      return parts.join(".");
-                    });
-                    setFormField("tilesetNames", names);
-                  }}
-                  fileCount={form.tilesetFiles.length}
-                />
-                {formMode === "edit" && selectedLesson?.game?.tilesets && selectedLesson.game.tilesets.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-xs text-amber-600 font-semibold mb-1">Các tileset hiện tại:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedLesson.game.tilesets.map((ts, idx) => (
-                        <div key={idx} className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg text-xs text-amber-800 font-medium">
-                          <img src={ts.imageUrl} alt={ts.name} className="w-6 h-6 object-contain rounded bg-white border border-amber-100" />
-                          <span>{ts.name}</span>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                    Tiêu đề
+                  </label>
+                  <input
+                    type="text"
+                    value={form.title}
+                    onChange={(e) => setFormField("title", e.target.value)}
+                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    placeholder="Nhập tiêu đề bài học"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                    Nội dung
+                  </label>
+                  <textarea
+                    value={form.content}
+                    onChange={(e) => setFormField("content", e.target.value)}
+                    rows={4}
+                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    placeholder="Mô tả nội dung bài học"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                    Tilemap JSON {formMode === "create" && "(bắt buộc)"}
+                  </label>
+                  <CustomFileInput
+                    accept="application/json"
+                    onChange={(e) => setFormField("tilemapFile", e.target.files?.[0] || null)}
+                    fileCount={form.tilemapFile ? 1 : 0}
+                    singleFileName={form.tilemapFile?.name}
+                  />
+                  {formMode === "edit" && selectedLesson?.game?.tilemapJsonUrl && (
+                    <p className="mt-1 text-xs text-amber-600 font-medium">
+                      Tệp hiện tại: <a href={selectedLesson.game.tilemapJsonUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-800 break-all">{selectedLesson.game.tilemapJsonUrl.split('/').pop()}</a>
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                    Tileset images {formMode === "create" && "(bắt buộc)"}
+                  </label>
+
+                  {/* Danh sách tileset đã thêm — cho phép sửa tên và xóa từng cái */}
+                  {form.tilesetFiles.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      {form.tilesetFiles.map((file, idx) => (
+                        <div key={idx} className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/50 px-3 py-2">
+                          <span className="text-xs text-amber-600 font-medium shrink-0 truncate max-w-[120px]" title={file.name}>
+                            {file.name}
+                          </span>
+                          <span className="text-amber-400 shrink-0">→</span>
+                          <input
+                            type="text"
+                            value={form.tilesetNames[idx] ?? ""}
+                            onChange={(e) => {
+                              const updated = [...form.tilesetNames];
+                              updated[idx] = e.target.value;
+                              setFormField("tilesetNames", updated);
+                            }}
+                            className="flex-1 min-w-0 rounded border border-amber-300 bg-white px-2 py-1 text-xs text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-400 font-mono"
+                            placeholder="Tên tileset trong Tiled (vd: socauhoi)"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormField("tilesetFiles", form.tilesetFiles.filter((_, i) => i !== idx));
+                              setFormField("tilesetNames", form.tilesetNames.filter((_, i) => i !== idx));
+                            }}
+                            className="shrink-0 text-red-400 hover:text-red-600 text-sm font-bold leading-none"
+                            title="Xóa tileset này"
+                          >
+                            ✕
+                          </button>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
 
-              <details className="group border border-amber-200 bg-amber-50/20 rounded-xl overflow-hidden">
-                <summary className="flex items-center justify-between cursor-pointer px-4 py-3 bg-amber-50/50 text-xs font-semibold uppercase tracking-wider text-amber-700 select-none">
-                  <span>Thay đổi nhân vật (Tuỳ chọn)</span>
-                  <span className="transition-transform duration-200 group-open:rotate-180 text-amber-600">▼</span>
-                </summary>
-                <div className="p-4 space-y-4 border-t border-amber-100 bg-white/95">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="block text-xs font-medium text-amber-800">
-                        Idle sprites
-                      </label>
-                      <CustomFileInput
-                        multiple
+                  {/* Nút thêm tệp tileset mới (accumulate, không replace) */}
+                  <div className="mt-2 flex items-center gap-3">
+                    <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer transition-colors duration-150 select-none">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      <span>Thêm tileset</span>
+                      <input
+                        type="file"
                         accept="image/png,image/jpeg,image/jpg,image/webp"
-                        onChange={(e) =>
-                          setFormField(
-                            "idleSprites",
-                            e.target.files ? Array.from(e.target.files) : []
-                          )
-                        }
-                        fileCount={form.idleSprites.length}
-                      />
-                      {formMode === "edit" && (() => {
-                        const idleKey = Object.keys(selectedLesson?.game?.character?.animations || {}).find(k => k.toLowerCase().includes("idle"));
-                        const idleFrames = idleKey ? selectedLesson?.game?.character?.animations[idleKey] : null;
-                        if (idleFrames && idleFrames.length > 0) {
-                          return (
-                            <div className="mt-2">
-                              <p className="text-[11px] text-amber-600 font-semibold mb-1">Idle sprites hiện tại ({idleFrames.length} frames):</p>
-                              <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1 bg-amber-50/50 rounded-lg border border-amber-100">
-                                {idleFrames.map((f, idx) => (
-                                  <img key={idx} src={f.imageUrl} alt={f.key} className="w-8 h-8 object-contain rounded bg-white border border-amber-200" title={f.key} />
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-amber-800">
-                        Run sprites
-                      </label>
-                      <CustomFileInput
                         multiple
-                        accept="image/png,image/jpeg,image/jpg,image/webp"
-                        onChange={(e) =>
-                          setFormField(
-                            "runSprites",
-                            e.target.files ? Array.from(e.target.files) : []
-                          )
-                        }
-                        fileCount={form.runSprites.length}
+                        className="hidden"
+                        onChange={(e) => {
+                          const newFiles = e.target.files ? Array.from(e.target.files) : [];
+                          if (newFiles.length === 0) return;
+                          // Tên mặc định = tên file (bỏ đuôi), người dùng có thể sửa sau
+                          const newNames = newFiles.map((f) => {
+                            const parts = f.name.split(".");
+                            parts.pop();
+                            return parts.join(".");
+                          });
+                          setFormField("tilesetFiles", [...form.tilesetFiles, ...newFiles]);
+                          setFormField("tilesetNames", [...form.tilesetNames, ...newNames]);
+                          // Reset input để có thể chọn lại cùng file
+                          e.target.value = "";
+                        }}
                       />
-                      {formMode === "edit" && (() => {
-                        const runKey = Object.keys(selectedLesson?.game?.character?.animations || {}).find(k => k.toLowerCase().includes("run"));
-                        const runFrames = runKey ? selectedLesson?.game?.character?.animations[runKey] : null;
-                        if (runFrames && runFrames.length > 0) {
-                          return (
-                            <div className="mt-2">
-                              <p className="text-[11px] text-amber-600 font-semibold mb-1">Run sprites hiện tại ({runFrames.length} frames):</p>
-                              <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1 bg-amber-50/50 rounded-lg border border-amber-100">
-                                {runFrames.map((f, idx) => (
-                                  <img key={idx} src={f.imageUrl} alt={f.key} className="w-8 h-8 object-contain rounded bg-white border border-amber-200" title={f.key} />
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
+                    </label>
+                    <span className="text-xs text-amber-700 font-medium">
+                      {form.tilesetFiles.length > 0
+                        ? `${form.tilesetFiles.length} tileset — nhấn để thêm nữa`
+                        : "Chưa có tileset nào"}
+                    </span>
+                  </div>
+
+                  {formMode === "edit" && selectedLesson?.game?.tilesets && selectedLesson.game.tilesets.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs text-amber-600 font-semibold mb-1">Các tileset hiện tại (sẽ bị thay thế nếu upload mới):</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedLesson.game.tilesets.map((ts, idx) => (
+                          <div key={idx} className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg text-xs text-amber-800 font-medium">
+                            <img src={ts.imageUrl} alt={ts.name} className="w-6 h-6 object-contain rounded bg-white border border-amber-100" />
+                            <span className="font-mono">{ts.name}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <div className="rounded-lg border border-amber-100 bg-amber-50/30 px-3 py-2 text-xs text-amber-700">
-                    Khi upload sprite mới, hệ thống sẽ thay toàn bộ animation hiện tại.
-                  </div>
+                  )}
                 </div>
-              </details>
 
-              <div className="flex flex-wrap gap-3">
+                <details className="group border border-amber-200 bg-amber-50/20 rounded-xl overflow-hidden">
+                  <summary className="flex items-center justify-between cursor-pointer px-4 py-3 bg-amber-50/50 text-xs font-semibold uppercase tracking-wider text-amber-700 select-none">
+                    <span>Thay đổi nhân vật (Tuỳ chọn)</span>
+                    <span className="transition-transform duration-200 group-open:rotate-180 text-amber-600">▼</span>
+                  </summary>
+                  <div className="p-4 space-y-4 border-t border-amber-100 bg-white/95">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-medium text-amber-800">
+                          Idle sprites
+                        </label>
+                        <CustomFileInput
+                          multiple
+                          accept="image/png,image/jpeg,image/jpg,image/webp"
+                          onChange={(e) =>
+                            setFormField(
+                              "idleSprites",
+                              e.target.files ? Array.from(e.target.files) : []
+                            )
+                          }
+                          fileCount={form.idleSprites.length}
+                        />
+                        {formMode === "edit" && (() => {
+                          const idleKey = Object.keys(selectedLesson?.game?.character?.animations || {}).find(k => k.toLowerCase().includes("idle"));
+                          const idleFrames = idleKey ? selectedLesson?.game?.character?.animations[idleKey] : null;
+                          if (idleFrames && idleFrames.length > 0) {
+                            return (
+                              <div className="mt-2">
+                                <p className="text-[11px] text-amber-600 font-semibold mb-1">Idle sprites hiện tại ({idleFrames.length} frames):</p>
+                                <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1 bg-amber-50/50 rounded-lg border border-amber-100">
+                                  {idleFrames.map((f, idx) => (
+                                    <img key={idx} src={f.imageUrl} alt={f.key} className="w-8 h-8 object-contain rounded bg-white border border-amber-200" title={f.key} />
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-amber-800">
+                          Run sprites
+                        </label>
+                        <CustomFileInput
+                          multiple
+                          accept="image/png,image/jpeg,image/jpg,image/webp"
+                          onChange={(e) =>
+                            setFormField(
+                              "runSprites",
+                              e.target.files ? Array.from(e.target.files) : []
+                            )
+                          }
+                          fileCount={form.runSprites.length}
+                        />
+                        {formMode === "edit" && (() => {
+                          const runKey = Object.keys(selectedLesson?.game?.character?.animations || {}).find(k => k.toLowerCase().includes("run"));
+                          const runFrames = runKey ? selectedLesson?.game?.character?.animations[runKey] : null;
+                          if (runFrames && runFrames.length > 0) {
+                            return (
+                              <div className="mt-2">
+                                <p className="text-[11px] text-amber-600 font-semibold mb-1">Run sprites hiện tại ({runFrames.length} frames):</p>
+                                <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1 bg-amber-50/50 rounded-lg border border-amber-100">
+                                  {runFrames.map((f, idx) => (
+                                    <img key={idx} src={f.imageUrl} alt={f.key} className="w-8 h-8 object-contain rounded bg-white border border-amber-200" title={f.key} />
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-amber-100 bg-amber-50/30 px-3 py-2 text-xs text-amber-700">
+                      Khi upload sprite mới, hệ thống sẽ thay toàn bộ animation hiện tại.
+                    </div>
+                  </div>
+                </details>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
+                  >
+                    {formMode === "create" ? "Tạo bài học" : "Lưu cập nhật"}
+                  </button>
+                  {formMode === "edit" && (
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
+                    >
+                      Xóa bài học
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
+            <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
+              <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
+                <h2 className="font-display text-lg font-semibold text-amber-900">
+                  Danh sách podcast
+                </h2>
                 <button
                   type="button"
-                  onClick={handleSubmit}
-                  className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
+                  onClick={resetPodcastForm}
+                  className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-700 hover:bg-amber-50"
                 >
-                  {formMode === "create" ? "Tạo bài học" : "Lưu cập nhật"}
+                  Tạo mới
                 </button>
-                {formMode === "edit" && (
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
-                  >
-                    Xóa bài học
-                  </button>
-                )}
               </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
-          <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
-            <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
-              <h2 className="font-display text-lg font-semibold text-amber-900">
-                Danh sách podcast
-              </h2>
-              <button
-                type="button"
-                onClick={resetPodcastForm}
-                className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-700 hover:bg-amber-50"
-              >
-                Tạo mới
-              </button>
-            </div>
 
-            {podcastsLoading ? (
-              <div className="p-6 text-center text-amber-600">Đang tải...</div>
-            ) : (
-              <div className="divide-y divide-amber-100">
-                {podcasts.map((podcast) => (
-                  <button
-                    key={podcast._id}
-                    type="button"
-                    onClick={() => handleSelectPodcast(podcast)}
-                    className={`w-full text-left px-5 py-4 transition flex gap-4 items-start ${
-                      selectedPodcastId === podcast._id
-                        ? "bg-amber-50"
-                        : "hover:bg-amber-50/60"
-                    }`}
-                  >
-                    {podcast.thumbnail && (
-                      <img
-                        src={podcast.thumbnail}
-                        alt={podcast.title}
-                        className="w-16 h-16 object-cover rounded-lg border border-amber-200 flex-shrink-0"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-amber-900 truncate">{podcast.title}</p>
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 font-semibold">
-                          {podcast.level}
-                        </span>
-                        {renderStaffStatusBadge(podcast.status)}
+              {podcastsLoading ? (
+                <div className="p-6 text-center text-amber-600">Đang tải...</div>
+              ) : (
+                <div className="divide-y divide-amber-100">
+                  {podcasts.map((podcast) => (
+                    <button
+                      key={podcast._id}
+                      type="button"
+                      onClick={() => handleSelectPodcast(podcast)}
+                      className={`w-full text-left px-5 py-4 transition flex gap-4 items-start ${selectedPodcastId === podcast._id
+                          ? "bg-amber-50"
+                          : "hover:bg-amber-50/60"
+                        }`}
+                    >
+                      {podcast.thumbnail && (
+                        <img
+                          src={podcast.thumbnail}
+                          alt={podcast.title}
+                          className="w-16 h-16 object-cover rounded-lg border border-amber-200 flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-amber-900 truncate">{podcast.title}</p>
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                          <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 font-semibold">
+                            {podcast.level}
+                          </span>
+                          {renderStaffStatusBadge(podcast.status)}
+                        </div>
+                        <p className="mt-2 text-xs text-amber-655 line-clamp-2">
+                          {podcast.description}
+                        </p>
                       </div>
-                      <p className="mt-2 text-xs text-amber-655 line-clamp-2">
-                        {podcast.description}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  ))}
 
-                {podcasts.length === 0 && (
-                  <div className="p-6 text-center text-amber-655">Chưa có podcast nào.</div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
-            <div className="border-b border-amber-100 px-5 py-4">
-              <h2 className="font-display text-lg font-semibold text-amber-900">
-                {podcastFormMode === "create" ? "Tạo podcast" : "Chỉnh sửa podcast"}
-              </h2>
-              <p className="text-xs text-amber-600 mt-1">
-                {podcastFormMode === "create"
-                  ? "Điền đầy đủ thông tin và tải lên tệp âm thanh/ảnh giao diện."
-                  : "Có thể cập nhật thông tin hoặc upload file mới để thay thế."}
-              </p>
-            </div>
-
-            <div className="space-y-5 p-5">
-              {podcastFormMode === "edit" && selectedPodcast?.status === "Rejected" && selectedPodcast?.reviewFeedback && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-                  <h3 className="font-semibold text-rose-950 mb-1 flex items-center gap-1.5">
-                    <svg className="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    Podcast bị từ chối duyệt
-                  </h3>
-                  <p className="font-medium text-rose-700">{selectedPodcast.reviewFeedback}</p>
+                  {podcasts.length === 0 && (
+                    <div className="p-6 text-center text-amber-655">Chưa có podcast nào.</div>
+                  )}
                 </div>
               )}
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                  Tiêu đề
-                </label>
-                <input
-                  type="text"
-                  value={podcastForm.title}
-                  onChange={(e) => setPodcastFormField("title", e.target.value)}
-                  className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  placeholder="Nhập tiêu đề podcast"
-                />
+            <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
+              <div className="border-b border-amber-100 px-5 py-4">
+                <h2 className="font-display text-lg font-semibold text-amber-900">
+                  {podcastFormMode === "create" ? "Tạo podcast" : "Chỉnh sửa podcast"}
+                </h2>
+                <p className="text-xs text-amber-600 mt-1">
+                  {podcastFormMode === "create"
+                    ? "Điền đầy đủ thông tin và tải lên tệp âm thanh/ảnh giao diện."
+                    : "Có thể cập nhật thông tin hoặc upload file mới để thay thế."}
+                </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                  Mô tả ngắn
-                </label>
-                <textarea
-                  value={podcastForm.description}
-                  onChange={(e) => setPodcastFormField("description", e.target.value)}
-                  rows={2}
-                  className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  placeholder="Tóm tắt ngắn về podcast này"
-                />
-              </div>
+              <div className="space-y-5 p-5">
+                {podcastFormMode === "edit" && selectedPodcast?.status === "Rejected" && selectedPodcast?.reviewFeedback && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+                    <h3 className="font-semibold text-rose-950 mb-1 flex items-center gap-1.5">
+                      <svg className="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      Podcast bị từ chối duyệt
+                    </h3>
+                    <p className="font-medium text-rose-700">{selectedPodcast.reviewFeedback}</p>
+                  </div>
+                )}
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                  Nội dung chi tiết / Ghi chú
-                </label>
-                <textarea
-                  value={podcastForm.content}
-                  onChange={(e) => setPodcastFormField("content", e.target.value)}
-                  rows={4}
-                  className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  placeholder="Nội dung chính hoặc transcript của podcast"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mt-1">
+                <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                    Chủ đề (Category)
+                    Tiêu đề
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAddingNewCategory(!isAddingNewCategory);
-                      setNewCategoryName("");
-                      setPodcastFormField("category", "");
-                    }}
-                    className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline"
-                  >
-                    {isAddingNewCategory ? "Hủy" : "Tạo mới"}
-                  </button>
-                </div>
-                {isAddingNewCategory ? (
                   <input
                     type="text"
-                    value={newCategoryName}
-                    onChange={(e) => {
-                      setNewCategoryName(e.target.value);
-                      setPodcastFormField("category", e.target.value);
-                    }}
+                    value={podcastForm.title}
+                    onChange={(e) => setPodcastFormField("title", e.target.value)}
                     className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    placeholder="Nhập tên chủ đề mới (ví dụ: liên hợp quốc...)"
+                    placeholder="Nhập tiêu đề podcast"
                   />
-                ) : (
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                    Mô tả ngắn
+                  </label>
+                  <textarea
+                    value={podcastForm.description}
+                    onChange={(e) => setPodcastFormField("description", e.target.value)}
+                    rows={2}
+                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    placeholder="Tóm tắt ngắn về podcast này"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                    Nội dung chi tiết / Ghi chú
+                  </label>
+                  <textarea
+                    value={podcastForm.content}
+                    onChange={(e) => setPodcastFormField("content", e.target.value)}
+                    rows={4}
+                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    placeholder="Nội dung chính hoặc transcript của podcast"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mt-1">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                      Chủ đề (Category)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingNewCategory(!isAddingNewCategory);
+                        setNewCategoryName("");
+                        setPodcastFormField("category", "");
+                      }}
+                      className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline"
+                    >
+                      {isAddingNewCategory ? "Hủy" : "Tạo mới"}
+                    </button>
+                  </div>
+                  {isAddingNewCategory ? (
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={(e) => {
+                        setNewCategoryName(e.target.value);
+                        setPodcastFormField("category", e.target.value);
+                      }}
+                      className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      placeholder="Nhập tên chủ đề mới (ví dụ: liên hợp quốc...)"
+                    />
+                  ) : (
+                    <select
+                      value={podcastForm.category}
+                      onChange={(e) => setPodcastFormField("category", e.target.value)}
+                      className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    >
+                      <option value="">Chọn chủ đề (Bắt buộc)</option>
+                      {categoriesList.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                    Trình độ (Level)
+                  </label>
                   <select
-                    value={podcastForm.category}
-                    onChange={(e) => setPodcastFormField("category", e.target.value)}
+                    value={podcastForm.level}
+                    onChange={(e) => setPodcastFormField("level", e.target.value)}
                     className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
                   >
-                    <option value="">Chọn chủ đề (Bắt buộc)</option>
-                    {categoriesList.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
+                    <option value="Easy">Dễ (Easy)</option>
+                    <option value="Medium">Trung bình (Medium)</option>
+                    <option value="Hard">Khó (Hard)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                    Bài học liên kết (Chứa Game 2D)
+                  </label>
+                  <select
+                    value={podcastForm.lessonId}
+                    onChange={(e) => setPodcastFormField("lessonId", e.target.value)}
+                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  >
+                    <option value="">Không liên kết game</option>
+                    {lessons.map((lesson) => (
+                      <option key={lesson._id} value={lesson._id}>
+                        {lesson.title}
                       </option>
                     ))}
                   </select>
-                )}
-              </div>
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                  Trình độ (Level)
-                </label>
-                <select
-                  value={podcastForm.level}
-                  onChange={(e) => setPodcastFormField("level", e.target.value)}
-                  className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                >
-                  <option value="Easy">Dễ (Easy)</option>
-                  <option value="Medium">Trung bình (Medium)</option>
-                  <option value="Hard">Khó (Hard)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                  Bài học liên kết (Chứa Game 2D)
-                </label>
-                <select
-                  value={podcastForm.lessonId}
-                  onChange={(e) => setPodcastFormField("lessonId", e.target.value)}
-                  className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                >
-                  <option value="">Không liên kết game</option>
-                  {lessons.map((lesson) => (
-                    <option key={lesson._id} value={lesson._id}>
-                      {lesson.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                  Ảnh giao diện {podcastFormMode === "create" && "(bắt buộc)"}
-                </label>
-                <CustomFileInput
-                  accept="image/*"
-                  onChange={(e) => setPodcastFormField("thumbnailFile", e.target.files?.[0] || null)}
-                  fileCount={podcastForm.thumbnailFile ? 1 : 0}
-                  singleFileName={podcastForm.thumbnailFile?.name}
-                />
-                {podcastFormMode === "edit" && selectedPodcast?.thumbnail && (
-                  <div className="mt-2 space-y-1.5">
-                    <p className="text-[11px] text-amber-600 font-semibold">Ảnh giao diện hiện tại:</p>
-                    <div className="flex items-center gap-3 p-3 bg-amber-50/50 rounded-xl border border-amber-200">
-                      <img
-                        src={selectedPodcast.thumbnail}
-                        alt="Ảnh giao diện hiện tại"
-                        className="w-16 h-16 object-cover rounded-lg border border-amber-200 bg-white"
-                      />
-                      <a
-                        href={selectedPodcast.thumbnail}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-amber-800 underline hover:text-amber-900 break-all truncate block"
-                      >
-                        {selectedPodcast.thumbnail.split("/").pop()}
-                      </a>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                    Ảnh giao diện {podcastFormMode === "create" && "(bắt buộc)"}
+                  </label>
+                  <CustomFileInput
+                    accept="image/*"
+                    onChange={(e) => setPodcastFormField("thumbnailFile", e.target.files?.[0] || null)}
+                    fileCount={podcastForm.thumbnailFile ? 1 : 0}
+                    singleFileName={podcastForm.thumbnailFile?.name}
+                  />
+                  {podcastFormMode === "edit" && selectedPodcast?.thumbnail && (
+                    <div className="mt-2 space-y-1.5">
+                      <p className="text-[11px] text-amber-600 font-semibold">Ảnh giao diện hiện tại:</p>
+                      <div className="flex items-center gap-3 p-3 bg-amber-50/50 rounded-xl border border-amber-200">
+                        <img
+                          src={selectedPodcast.thumbnail}
+                          alt="Ảnh giao diện hiện tại"
+                          className="w-16 h-16 object-cover rounded-lg border border-amber-200 bg-white"
+                        />
+                        <a
+                          href={selectedPodcast.thumbnail}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-amber-800 underline hover:text-amber-900 break-all truncate block"
+                        >
+                          {selectedPodcast.thumbnail.split("/").pop()}
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                  File âm thanh {podcastFormMode === "create" && "(bắt buộc)"}
-                </label>
-                <CustomFileInput
-                  accept="audio/*"
-                  onChange={(e) => setPodcastFormField("audioFile", e.target.files?.[0] || null)}
-                  fileCount={podcastForm.audioFile ? 1 : 0}
-                  singleFileName={podcastForm.audioFile?.name}
-                />
-                {podcastFormMode === "edit" && selectedPodcast?.audioUrl && (
-                  <div className="mt-2 space-y-1.5">
-                    <p className="text-[11px] text-amber-600 font-semibold">Tệp âm thanh hiện tại:</p>
-                    <div className="flex flex-col gap-2 p-3 bg-amber-50/50 rounded-xl border border-amber-200">
-                      <audio src={selectedPodcast.audioUrl} controls className="w-full h-8 max-w-md" />
-                      <a
-                        href={selectedPodcast.audioUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-amber-800 underline hover:text-amber-900 break-all truncate block"
-                      >
-                        {selectedPodcast.audioUrl.split("/").pop()}
-                      </a>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                    File âm thanh {podcastFormMode === "create" && "(bắt buộc)"}
+                  </label>
+                  <CustomFileInput
+                    accept="audio/*"
+                    onChange={(e) => setPodcastFormField("audioFile", e.target.files?.[0] || null)}
+                    fileCount={podcastForm.audioFile ? 1 : 0}
+                    singleFileName={podcastForm.audioFile?.name}
+                  />
+                  {podcastFormMode === "edit" && selectedPodcast?.audioUrl && (
+                    <div className="mt-2 space-y-1.5">
+                      <p className="text-[11px] text-amber-600 font-semibold">Tệp âm thanh hiện tại:</p>
+                      <div className="flex flex-col gap-2 p-3 bg-amber-50/50 rounded-xl border border-amber-200">
+                        <audio src={selectedPodcast.audioUrl} controls className="w-full h-8 max-w-md" />
+                        <a
+                          href={selectedPodcast.audioUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-amber-800 underline hover:text-amber-900 break-all truncate block"
+                        >
+                          {selectedPodcast.audioUrl.split("/").pop()}
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
 
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={handlePodcastSubmit}
-                  className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
-                >
-                  {podcastFormMode === "create" ? "Tạo podcast" : "Lưu cập nhật"}
-                </button>
-                {podcastFormMode === "edit" && (
+                <div className="flex flex-wrap gap-3">
                   <button
                     type="button"
-                    onClick={handlePodcastDelete}
-                    className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
+                    onClick={handlePodcastSubmit}
+                    className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
                   >
-                    Xóa podcast
+                    {podcastFormMode === "create" ? "Tạo podcast" : "Lưu cập nhật"}
                   </button>
-                )}
+                  {podcastFormMode === "edit" && (
+                    <button
+                      type="button"
+                      onClick={handlePodcastDelete}
+                      className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
+                    >
+                      Xóa podcast
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {saving && uploadProgress !== null && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0, 0, 0, 0.6)",
-          backdropFilter: "blur(4px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 9999,
-        }}>
-          <div className="bg-[#FFFBF2] border-2 border-amber-700 rounded-xl p-6 w-[90%] max-w-[400px] shadow-2xl text-center">
-            <h3 className="font-semibold text-lg text-amber-900 mb-4 tracking-wider uppercase" style={{ fontFamily: "Cinzel, serif" }}>
-              {uploadProgress === 100 
-                ? "ĐANG XỬ LÝ DỮ LIỆU..." 
-                : activeTab === "lessons" 
-                  ? "ĐANG TẢI BÀI HỌC LÊN..." 
-                  : "ĐANG TẢI PODCAST LÊN..."}
-            </h3>
-            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
-              <div 
-                className="h-full bg-amber-600 rounded-full transition-all duration-200" 
-                style={{ width: `${uploadProgress}%` }}
-              />
+        {saving && uploadProgress !== null && (
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}>
+            <div className="bg-[#FFFBF2] border-2 border-amber-700 rounded-xl p-6 w-[90%] max-w-[400px] shadow-2xl text-center">
+              <h3 className="font-semibold text-lg text-amber-900 mb-4 tracking-wider uppercase" style={{ fontFamily: "Cinzel, serif" }}>
+                {uploadProgress === 100
+                  ? "ĐANG XỬ LÝ DỮ LIỆU..."
+                  : activeTab === "lessons"
+                    ? "ĐANG TẢI BÀI HỌC LÊN..."
+                    : "ĐANG TẢI PODCAST LÊN..."}
+              </h3>
+              <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
+                <div
+                  className="h-full bg-amber-600 rounded-full transition-all duration-200"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <div className="text-xl font-bold text-amber-900 mb-2">
+                {uploadProgress}%
+              </div>
+              <p className="text-xs text-amber-800/80">
+                {uploadProgress === 100
+                  ? "Đang lưu thông tin vào cơ sở dữ liệu, vui lòng đợi..."
+                  : activeTab === "lessons"
+                    ? "Đang tải tệp bản đồ và hình ảnh nhân vật lên máy chủ..."
+                    : "Đang tải ảnh giao diện và tệp âm thanh lên máy chủ..."}
+              </p>
             </div>
-            <div className="text-xl font-bold text-amber-900 mb-2">
-              {uploadProgress}%
-            </div>
-            <p className="text-xs text-amber-800/80">
-              {uploadProgress === 100 
-                ? "Đang lưu thông tin vào cơ sở dữ liệu, vui lòng đợi..." 
-                : activeTab === "lessons"
-                  ? "Đang tải tệp bản đồ và hình ảnh nhân vật lên máy chủ..."
-                  : "Đang tải ảnh giao diện và tệp âm thanh lên máy chủ..."}
-            </p>
           </div>
-        </div>
-      )}
+        )}
       </section>
     </div>
   );

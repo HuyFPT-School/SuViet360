@@ -13,7 +13,26 @@ export type LessonGameData = {
   spawnPoint: { x: number; y: number };
 };
 
-type InteractPoint = { cx: number; cy: number; title: string; content: string };
+// ── Định nghĩa lại 2 kiểu dữ liệu rõ ràng theo mong muốn nhập chữ trực tiếp ──
+type QuestionPointData = {
+  cx: number;
+  cy: number;
+  title: string;
+  cauHoi: string;
+  dapAnA: string;
+  dapAnB: string;
+  dapAnC: string;
+  dapAnD: string;
+  dapAnDung: string;
+  sprite?: Phaser.Physics.Matter.Sprite; // Quản lý hình ảnh dấu hỏi xoay
+};
+
+type HintPointData = {
+  cx: number;
+  cy: number;
+  title: string;
+  goiY: string;
+};
 
 const INTERACT_DISTANCE = 80;
 
@@ -52,12 +71,21 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
     const runFrames: SpriteFrame[] = animationsMap.run || [];
     const allFrames = [...idleFrames, ...runFrames];
 
+    // Map từ name → imageUrl để dùng trong preload
+    const tilesetMap: Record<string, string> = {};
+    (tilesets ?? []).forEach((ts) => {
+      if (ts.name && ts.imageUrl) tilesetMap[ts.name] = ts.imageUrl;
+    });
     const bgTileset = tilesets?.[0];
 
     class DynamicLessonScene extends Phaser.Scene {
       private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
       private player!: Phaser.Physics.Matter.Sprite;
-      private interactPoints: InteractPoint[] = [];
+
+      // Tách biệt quản lý 2 mảng dữ liệu riêng biệt không dùng ID chung
+      private questionPoints: QuestionPointData[] = [];
+      private hintPoints: HintPointData[] = [];
+
       private popupEl: HTMLDivElement | null = null;
       private currentPopup: string | null = null;
       private mapWidth = 1440;
@@ -67,20 +95,30 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
       private isAnswering = false;
 
       preload() {
-        if (bgTileset) {
-          this.load.image("bg-tileset", bgTileset.imageUrl);
-        }
+        // Load tilemap JSON trước
         this.load.tilemapTiledJSON("lesson-map", tilemapJsonUrl);
+
+        // Load TẤT CẢ tileset images với key = tên tileset (phải khớp tên trong JSON Tiled)
+        Object.entries(tilesetMap).forEach(([name, url]) => {
+          this.load.image(name, url);
+        });
+
+        // Load sprite frames nhân vật
         allFrames.forEach((f) => {
           this.load.image(f.key, f.imageUrl);
+        });
+
+        // Sprite sheet dấu hỏi xoay: ảnh 1920x1920, lưới 3x3, mỗi ô 640x640
+        // 7 ô đầu (index 0-6) là 7 góc xoay, 2 ô cuối bỏ trống
+        this.load.spritesheet("question-mark-sheet", "/question_mask/socauhoi.png", {
+          frameWidth: 640,
+          frameHeight: 640
         });
       }
 
       create() {
         const map = this.make.tilemap({ key: "lesson-map" });
-        const mapData = this.cache.tilemap.get("lesson-map")?.data as
-          | { layers?: Array<{ type?: string; objects?: unknown[] }> }
-          | undefined;
+        const mapData = this.cache.tilemap.get("lesson-map")?.data as any;
 
         const mapW = (map as any).widthInPixels;
         const mapH = (map as any).heightInPixels;
@@ -89,99 +127,205 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
           this.mapHeight = mapH;
         }
 
+        // BƯỚC 1: Luôn vẽ ảnh nền (tileset đầu tiên) phủ toàn bộ map ở lớp sâu nhất
         if (bgTileset) {
           this.add
-            .image(0, 0, "bg-tileset")
+            .image(0, 0, bgTileset.name)
             .setOrigin(0, 0)
-            .setDisplaySize(this.mapWidth, this.mapHeight);
+            .setDisplaySize(this.mapWidth, this.mapHeight)
+            .setDepth(-1);
         }
 
+        // BƯỚC 2: Gắn TẤT CẢ tilesets vào tilemap để Phaser có thể render tile layers
+        const phaserTilesets: Phaser.Tilemaps.Tileset[] = [];
+        Object.keys(tilesetMap).forEach((name) => {
+          const ts = map.addTilesetImage(name, name);
+          if (ts) phaserTilesets.push(ts);
+        });
+
+        // BƯỚC 3: Render tất cả tile layers từ JSON Tiled lên trên ảnh nền
+        const tileLayers = (mapData?.layers ?? []).filter(
+          (l: any) => l.type === "tilelayer"
+        );
+        if (tileLayers.length > 0 && phaserTilesets.length > 0) {
+          tileLayers.forEach((layerData: any, idx: number) => {
+            try {
+              const layer = map.createLayer(layerData.name, phaserTilesets, 0, 0);
+              // depth 1, 2, 3... — trên nền nhưng dưới nhân vật (depth 100)
+              if (layer) layer.setDepth(1 + idx);
+            } catch {
+              // Bỏ qua layer lỗi để không crash toàn bộ game
+            }
+          });
+        }
+
+        // Tạo hiệu ứng chuyển động xoay tròn liên tục từ sprite sheet dấu chấm hỏi
+        this.anims.create({
+          key: "rotate-question",
+          frames: this.anims.generateFrameNumbers("question-mark-sheet", { start: 0, end: 6 }),
+          frameRate: 8,
+          repeat: -1
+        });
+
         const objectLayers = (mapData?.layers ?? []).filter(
-          (layer): layer is { type?: string; objects?: any[] } =>
+          (layer: any): layer is { name: string; type: string; objects: any[] } =>
             layer.type === "objectgroup" && Array.isArray(layer.objects)
         );
 
+        // Duyệt danh sách các layer đối tượng từ file Tiled để sinh nội dung tự động
         for (const objectLayer of objectLayers) {
           for (const obj of objectLayer.objects ?? []) {
-            type ObjWithProps = { properties?: { name: string; value: string }[] };
-            const props = (obj as unknown as ObjWithProps).properties;
-            const propValue = props?.[0]?.value ?? null;
-            const objName = obj.name ?? "";
 
-            const saveInteract = (cx: number, cy: number) => {
-              if (propValue && objName) {
-                this.interactPoints.push({
-                  cx,
-                  cy,
-                  title: objName.replace(/_/g, " "),
-                  content: propValue,
-                });
-              }
-            };
-
-            if (obj.polygon && obj.polygon.length > 0) {
-              const pts = obj.polygon as { x: number; y: number }[];
-              let cx = 0, cy = 0;
-              let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-              pts.forEach((p) => {
-                cx += p.x; cy += p.y;
-                minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
-                minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+            // Chuyển mảng properties của Tiled thành Object key-value để đọc trực tiếp bằng chữ
+            const props: Record<string, string> = {};
+            if (Array.isArray(obj.properties)) {
+              obj.properties.forEach((p: any) => {
+                if (p.name) props[p.name] = String(p.value);
               });
-              cx /= pts.length; cy /= pts.length;
-
-              const vertices = pts.map((p) => ({ x: p.x - cx, y: p.y - cy }));
-              const worldX = (obj.x ?? 0) + cx;
-              const worldY = (obj.y ?? 0) + cy;
-
-              try {
-                this.matter.add.fromVertices(worldX, worldY, vertices, {
-                  isStatic: true, friction: 0, frictionStatic: 0, restitution: 0,
-                }, true);
-              } catch {
-                const w = maxX - minX, h = maxY - minY;
-                if (w > 4 && h > 4) {
-                  this.matter.add.rectangle(
-                    (obj.x ?? 0) + minX + w / 2,
-                    (obj.y ?? 0) + minY + h / 2,
-                    w, h, { isStatic: true }
-                  );
-                }
-              }
-
-              saveInteract(
-                (obj.x ?? 0) + (minX + maxX) / 2,
-                (obj.y ?? 0) + (minY + maxY) / 2
-              );
-              continue;
             }
 
-            if (!obj.width || !obj.height) continue;
-            const rx = (obj.x ?? 0) + obj.width / 2;
-            const ry = (obj.y ?? 0) + obj.height / 2;
-            this.matter.add.rectangle(rx, ry, obj.width, obj.height, {
-              isStatic: true, friction: 0, frictionStatic: 0, restitution: 0,
-            });
-            saveInteract(rx, ry);
+            // Tính toán tọa độ trung tâm của Object hình học
+            let cx = obj.x ?? 0;
+            let cy = obj.y ?? 0;
+            if (obj.width && obj.height) {
+              cx += obj.width / 2;
+              cy += obj.height / 2;
+            }
+
+            // Tạo vật thể cứng chắn đường (Colliders) của Matter Physics
+            if (obj.polygon && obj.polygon.length > 0) {
+              const pts = obj.polygon as { x: number; y: number }[];
+              let polyCx = 0, polyCy = 0;
+              pts.forEach((p) => { polyCx += p.x; polyCy += p.y; });
+              polyCx /= pts.length; polyCy /= pts.length;
+              const vertices = pts.map((p) => ({ x: p.x - polyCx, y: p.y - polyCy }));
+              try {
+                this.matter.add.fromVertices((obj.x ?? 0) + polyCx, (obj.y ?? 0) + polyCy, vertices, { isStatic: true, friction: 0, frictionStatic: 0, restitution: 0 }, true);
+              } catch { }
+              cx = (obj.x ?? 0) + polyCx;
+              cy = (obj.y ?? 0) + polyCy;
+            } else if (obj.width && obj.height) {
+              this.matter.add.rectangle(cx, cy, obj.width, obj.height, { isStatic: true, friction: 0, frictionStatic: 0, restitution: 0 });
+            }
+
+            const objTitle = (obj.name ?? "").replace(/_/g, " ");
+
+            // ── PHÂN LOẠI XỬ LÝ THEO TÊN LAYER BẠN ĐÃ ĐẶT TRONG TILED ──
+            if (objectLayer.name === "Layer_CauHoi") {
+              // Tự động spawn ra dấu hỏi chấm xoay vòng tại tọa độ của object này
+              const qSprite = this.matter.add.sprite(cx, cy, "question-mark-sheet", 0, { isStatic: true });
+              qSprite.play("rotate-question");
+              qSprite.setDepth(90);
+              qSprite.setScale(0.12); // ảnh gốc 640x640 -> hiển thị ~77x77px trên map
+              qSprite.setTintFill(0xc6eb34); // đổi màu dấu hỏi sang vàng gold, đổi hex tùy ý
+
+              let cauHoi = props["cau_hoi"];
+              let dapAnA = props["dap_an_A"];
+              let dapAnB = props["dap_an_B"];
+              let dapAnC = props["dap_an_C"];
+              let dapAnD = props["dap_an_D"];
+              let dapAnDung = props["dap_an_dung"];
+              let questionTitle = objTitle || "Câu Hỏi Bản Đồ";
+
+              if (Array.isArray(obj.properties)) {
+                obj.properties.forEach((p: any) => {
+                  const nameLower = (p.name || "").toLowerCase().replace(/_/g, " ").trim();
+                  const valStr = String(p.value || "").trim();
+
+                  if (nameLower.includes("cau hoi") || nameLower.includes("câu hỏi")) {
+                    questionTitle = p.name; // Dùng tên thân thiện như "Câu hỏi 1", "Câu hỏi 2"
+                    if (valStr.includes("|")) {
+                      const parts = valStr.split("|").map((x) => x.trim());
+                      if (parts.length >= 6) {
+                        cauHoi = parts[0];
+                        dapAnA = parts[1];
+                        dapAnB = parts[2];
+                        dapAnC = parts[3];
+                        dapAnD = parts[4];
+                        dapAnDung = parts[5];
+                      } else {
+                        cauHoi = valStr;
+                      }
+                    } else {
+                      cauHoi = valStr;
+                    }
+                  } else if (nameLower.includes("dap an a") || nameLower.includes("đáp án a")) {
+                    dapAnA = valStr;
+                  } else if (nameLower.includes("dap an b") || nameLower.includes("đáp án b")) {
+                    dapAnB = valStr;
+                  } else if (nameLower.includes("dap an c") || nameLower.includes("đáp án c")) {
+                    dapAnC = valStr;
+                  } else if (nameLower.includes("dap an d") || nameLower.includes("đáp án d")) {
+                    dapAnD = valStr;
+                    // Hỗ trợ trường hợp đáp án đúng được lưu dưới dạng đáp án D
+                  } else if (nameLower.includes("dap an dung") || nameLower.includes("đáp án đúng")) {
+                    dapAnDung = valStr;
+                  }
+                });
+              }
+
+              this.questionPoints.push({
+                cx, cy,
+                title: questionTitle,
+                cauHoi: cauHoi || "Nội dung câu hỏi chưa nhập",
+                dapAnA: dapAnA || "",
+                dapAnB: dapAnB || "",
+                dapAnC: dapAnC || "",
+                dapAnD: dapAnD || "",
+                dapAnDung: dapAnDung || "",
+                sprite: qSprite
+              });
+            } else if (objectLayer.name === "Layer_GoiY") {
+              let goiYVal = props["goi_y"];
+              let hintTitle = objTitle || "Thông Tin Gợi Ý";
+
+              if (Array.isArray(obj.properties)) {
+                obj.properties.forEach((p: any) => {
+                  const nameLower = (p.name || "").toLowerCase().replace(/_/g, " ").trim();
+                  const valStr = String(p.value || "").trim();
+
+                  if (nameLower.includes("goi y") || nameLower.includes("gợi ý")) {
+                    hintTitle = p.name; // Dùng tên thân thiện như "Gợi ý 1"
+                    goiYVal = valStr;
+                  }
+                });
+              }
+
+              // Tuyệt đối fallback: nếu không tìm thấy thuộc tính nào khớp tên gợi ý,
+              // dùng giá trị thuộc tính đầu tiên có trong object
+              if (!goiYVal && obj.properties && obj.properties.length > 0) {
+                goiYVal = String(obj.properties[0].value || "");
+              }
+
+              this.hintPoints.push({
+                cx, cy,
+                title: hintTitle,
+                goiY: goiYVal || "Thông tin đang được cập nhật",
+              });
+            }
           }
         }
 
-        const startFrame = idleFrames[0]?.key || allFrames[0]?.key || "bg-tileset";
+        // Dùng frame nhân vật hợp lệ; nếu không có sprite nào thì tạo placeholder
+        const startFrame = idleFrames[0]?.key || allFrames[0]?.key || null;
 
+        // Chỉ spawn nhân vật khi có frame hợp lệ
+        if (!startFrame) {
+          console.warn("[PhaserGame] Không có sprite nhân vật — bỏ qua spawn player.");
+        }
         this.player = this.matter.add.sprite(
           spawnPoint.x || this.mapWidth / 2,
           spawnPoint.y || this.mapHeight / 2,
-          startFrame
+          startFrame ?? "__DEFAULT"
         );
 
         if (this.player) {
           this.player.setDepth(100);
+          this.player.setBody({ type: "rectangle", width: 20, height: 20 });
+          this.player.setFixedRotation();
+          this.player.setFriction(0);
+          this.player.setFrictionAir(0.3);
         }
-
-        this.player.setBody({ type: "rectangle", width: 20, height: 20 });
-        this.player.setFixedRotation();
-        this.player.setFriction(0);
-        this.player.setFrictionAir(0.3);
 
         if (idleFrames.length > 0) {
           this.anims.create({
@@ -190,6 +334,7 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
             frameRate: 6,
             repeat: -1,
           });
+          this.player.play("idle");
         }
         if (runFrames.length > 0) {
           this.anims.create({
@@ -198,9 +343,6 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
             frameRate: 10,
             repeat: -1,
           });
-        }
-        if (idleFrames.length > 0) {
-          this.player.play("idle");
         }
 
         this.matter.world.setBounds(0, 0, this.mapWidth, this.mapHeight);
@@ -220,13 +362,13 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
             font-family:'Times New Roman',serif; font-size:15px;
             line-height:1.5; color:#3b2000;
             box-shadow:0 6px 25px rgba(0,0,0,0.5); z-index:100;
-            pointer-events: auto; /* Cho phép nhận tương tác chuột để click chọn */
+            pointer-events: auto;
           `;
           parent.appendChild(popup);
           this.popupEl = popup;
         }
 
-        this.add.text(this.mapWidth / 2, 20, "Đi gần vật thể để xem câu hỏi trắc nghiệm", {
+        this.add.text(this.mapWidth / 2, 20, "Di chuyển đến gần các vị trí để khám phá kiến thức", {
           fontSize: "13px", color: "#ffffff",
           backgroundColor: "#00000066",
           padding: { x: 10, y: 4 },
@@ -235,50 +377,61 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
         this.cursors = this.input.keyboard!.createCursorKeys();
       }
 
-      // Hàm xử lý logic chấm điểm và hiển thị kết quả trực quan
-      handleAnswerClick(btn: HTMLButtonElement, index: number, correctIdx: number) {
+      // Hàm xử lý kiểm tra chuỗi chữ đáp án đúng/sai trực tiếp
+      handleAnswerClick(btn: HTMLButtonElement, selectedAnswer: string, correctAnswer: string, qPoint: QuestionPointData) {
         if (this.isAnswering) return;
         this.isAnswering = true;
 
-        // Vô hiệu hóa trạng thái tương tác của toàn bộ các nút đáp án trong danh sách
         const buttons = this.popupEl?.querySelectorAll(".quiz-opt-btn");
         buttons?.forEach((b) => {
           (b as HTMLButtonElement).disabled = true;
           (b as HTMLButtonElement).style.cursor = "not-allowed";
         });
 
-        if (index === correctIdx) {
-          // Trả lời CHÍNH XÁC: Chuyển nút sang màu xanh lá cổ điển
+        // Chuẩn hóa và so khớp chữ trực tiếp
+        if (selectedAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()) {
+          // Đúng -> Đổi nút sang màu xanh lá
           btn.style.backgroundColor = "#2e7d32";
           btn.style.color = "#ffffff";
           btn.style.borderColor = "#1b5e20";
           btn.innerHTML = `✓ ${btn.innerHTML}`;
+
+          // Trả lời đúng -> Xóa bỏ dấu chấm hỏi xoay tròn trên bản đồ
+          if (qPoint.sprite) {
+            qPoint.sprite.destroy();
+          }
         } else {
-          // Trả lời SAI: Chuyển nút bấm hiện tại sang màu đỏ hỏa hoạn
+          // Sai -> Đổi nút sang màu đỏ hỏa hoạn
           btn.style.backgroundColor = "#c62828";
           btn.style.color = "#ffffff";
           btn.style.borderColor = "#b71c1c";
           btn.innerHTML = `✗ ${btn.innerHTML}`;
 
-          // Highlight đáp án đúng để người dùng nhận diện kiến thức
-          if (buttons && buttons[correctIdx]) {
-            const correctBtn = buttons[correctIdx] as HTMLButtonElement;
-            correctBtn.style.backgroundColor = "#2e7d32";
-            correctBtn.style.color = "#ffffff";
-            correctBtn.style.borderColor = "#1b5e20";
-          }
+          // Tự động tìm hiển thị màu xanh lá làm nổi bật đáp án đúng cho học sinh
+          buttons?.forEach((b) => {
+            const btnEl = b as HTMLButtonElement;
+            const textVal = btnEl.getAttribute("data-val") || "";
+            if (textVal.trim().toLowerCase() === correctAnswer.trim().toLowerCase()) {
+              btnEl.style.backgroundColor = "#2e7d32";
+              btnEl.style.color = "#ffffff";
+              btnEl.style.borderColor = "#1b5e20";
+            }
+          });
         }
 
-        // Tạo độ trễ ngắn cho người học kịp ghi nhận kết quả trước khi cho phép đi tiếp
+        // Tạo độ trễ ngắn 2 giây trước khi đóng popup cho người học kịp ghi nhận đáp án đúng
         this.time.delayedCall(2000, () => {
           this.isAnswering = false;
+          if (this.popupEl) {
+            this.popupEl.style.display = "none";
+            this.currentPopup = null;
+          }
         });
       }
 
       update() {
         if (!this.player || !this.cursors) return;
 
-        // Vô hiệu hóa di chuyển nhân vật khi đang đứng trả lời để tránh mất focus
         const speed = this.isAnswering ? 0 : 5;
         let vx = 0, vy = 0, moving = false;
 
@@ -290,106 +443,103 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
         if (vx !== 0 && vy !== 0) { vx *= 0.707; vy *= 0.707; }
         this.player.setVelocity(vx, vy);
 
-        if (moving && this.anims.exists("run")) {
-          this.player.play("run", true);
-        } else if (!moving && this.anims.exists("idle")) {
-          this.player.play("idle", true);
-        }
+        if (moving && this.anims.exists("run")) this.player.play("run", true);
+        else if (!moving && this.anims.exists("idle")) this.player.play("idle", true);
 
         const px = this.player.x;
         const py = this.player.y;
-        let nearest: InteractPoint | null = null;
+
+        let nearestQuestion: QuestionPointData | null = null;
+        let nearestHint: HintPointData | null = null;
         let nearestDist = Infinity;
 
-        for (const pt of this.interactPoints) {
+        // 1. Quét tìm vị trí thuộc Layer_CauHoi gần nhất chưa được giải đáp
+        for (const pt of this.questionPoints) {
+          if (pt.sprite && !pt.sprite.active) continue; // Bỏ qua nếu dấu hỏi đã bị xóa
+
           const dist = Phaser.Math.Distance.Between(px, py, pt.cx, pt.cy);
           if (dist < INTERACT_DISTANCE && dist < nearestDist) {
-            nearest = pt;
+            nearestQuestion = pt;
+            nearestHint = null;
+            nearestDist = dist;
+          }
+        }
+
+        // 2. Quét tìm vị trí thuộc Layer_GoiY gần nhất
+        for (const pt of this.hintPoints) {
+          const dist = Phaser.Math.Distance.Between(px, py, pt.cx, pt.cy);
+          if (dist < INTERACT_DISTANCE && dist < nearestDist) {
+            nearestHint = pt;
+            nearestQuestion = null;
             nearestDist = dist;
           }
         }
 
         if (this.popupEl) {
-          if (nearest !== null) {
-            const n = nearest;
-            if (this.currentPopup !== n.title) {
-              this.currentPopup = n.title;
-              const displayTitle = n.title
-                .split(" ")
-                .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                .join(" ");
+          // THẮP SÁNG BẢNG POPUP CÂU HỎI TRẮC NGHIỆM CHỮ
+          if (nearestQuestion !== null) {
+            const q = nearestQuestion;
+            if (this.currentPopup !== q.title) {
+              this.currentPopup = q.title;
 
-              // Cấu trúc phân tách dữ liệu mẫu từ Tiled: "Nội dung câu hỏi | Đáp án A | Đáp án B | C | D | Chỉ số đáp án đúng (0-3)"
-              // Nếu chuỗi không chứa ký tự '|', hệ thống sẽ hiển thị ở chế độ Text thông tin thông thường.
-              const tokens = n.content.split("|").map((t) => t.trim());
+              // Thu gom các đáp án chữ hợp lệ đã gõ từ Tiled
+              const rawOptions = [q.dapAnA, q.dapAnB, q.dapAnC, q.dapAnD].filter(o => o !== "");
+              let optionsHtml = `<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">`;
 
-              if (tokens.length >= 6) {
-                const questionText = tokens[0];
-                const options = [tokens[1], tokens[2], tokens[3], tokens[4]];
-                const correctIdx = parseInt(tokens[5], 10) || 0;
-
-                let optionsHtml = `<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">`;
-                options.forEach((opt, idx) => {
-                  const prefix = String.fromCharCode(65 + idx); // Sinh tự động nhãn A, B, C, D
-                  optionsHtml += `
-                    <button class="quiz-opt-btn" data-idx="${idx}" style="
-                      background: #fff; border: 1.5px solid #bba476; border-radius: 6px;
-                      padding: 8px 12px; text-align: left; font-family: inherit; font-size: 14px;
-                      color: #4a3211; cursor: pointer; transition: all 0.2s ease;
-                      outline: none; font-weight: 500;
-                    ">${prefix}. ${opt}</button>
-                  `;
-                });
-                optionsHtml += `</div>`;
-
-                this.popupEl.innerHTML = `
-                  <div style="font-weight:bold;font-size:15px;margin-bottom:8px;color:#5c3300;border-bottom:1px solid #c8a04a;padding-bottom:6px;">
-                    ❓ ${displayTitle}
-                  </div>
-                  <div style="font-weight: 600; color: #2b1a04;">${questionText}</div>
-                  ${optionsHtml}
+              rawOptions.forEach((opt, idx) => {
+                const prefix = String.fromCharCode(65 + idx); // Tạo nhãn A, B, C, D tự động
+                optionsHtml += `
+                  <button class="quiz-opt-btn" data-val="${opt}" style="
+                    background: #fff; border: 1.5px solid #bba476; border-radius: 6px;
+                    padding: 8px 12px; text-align: left; font-family: inherit; font-size: 14px;
+                    color: #4a3211; cursor: pointer; transition: all 0.2s ease; outline: none;
+                    font-weight: 500;
+                  ">${prefix}. ${opt}</button>
                 `;
+              });
+              optionsHtml += `</div>`;
 
-                // Đăng ký sự kiện click chuột trực tiếp cho các nút bấm vừa được render sinh ra
-                const btns = this.popupEl.querySelectorAll(".quiz-opt-btn");
-                btns.forEach((b) => {
-                  const btnElement = b as HTMLButtonElement;
+              this.popupEl.innerHTML = `
+                <div style="font-weight:bold;font-size:15px;margin-bottom:8px;color:#5c3300;border-bottom:1px solid #c8a04a;padding-bottom:6px;">❓ ${q.title}</div>
+                <div style="font-weight: 600; color: #2b1a04;">${q.cauHoi}</div>
+                ${optionsHtml}
+              `;
 
-                  // Hiệu ứng rê chuột (Hover style) bằng JS
-                  btnElement.onmouseenter = () => {
-                    if (!this.isAnswering) {
-                      btnElement.style.background = "#f4ebd0";
-                      btnElement.style.borderColor = "#8b6914";
-                    }
-                  };
-                  btnElement.onmouseleave = () => {
-                    if (!this.isAnswering) {
-                      btnElement.style.background = "#all";
-                      btnElement.style.backgroundColor = "#fff";
-                      btnElement.style.borderColor = "#bba476";
-                    }
-                  };
+              // Đăng ký tương tác click chọn cho các đáp án trắc nghiệm chữ
+              const btns = this.popupEl.querySelectorAll(".quiz-opt-btn");
+              btns.forEach((b) => {
+                const btnElement = b as HTMLButtonElement;
 
-                  btnElement.onclick = (e) => {
-                    e.preventDefault();
-                    const idx = parseInt(btnElement.getAttribute("data-idx") || "0", 10);
-                    this.handleAnswerClick(btnElement, idx, correctIdx);
-                  };
-                });
+                btnElement.onmouseenter = () => {
+                  if (!this.isAnswering) btnElement.style.background = "#f4ebd0";
+                };
+                btnElement.onmouseleave = () => {
+                  if (!this.isAnswering) btnElement.style.background = "#fff";
+                };
 
-              } else {
-                // Chế độ tương thích ngược: Hiện text thuần túy nếu dữ liệu không phải cấu trúc trắc nghiệm
-                this.popupEl.innerHTML = `
-                  <div style="font-weight:bold;font-size:15px;margin-bottom:8px;color:#5c3300;border-bottom:1px solid #c8a04a;padding-bottom:6px;">
-                    📜 ${displayTitle}
-                  </div>
-                  <div>${n.content}</div>
-                `;
-              }
+                btnElement.onclick = (e) => {
+                  e.preventDefault();
+                  const val = btnElement.getAttribute("data-val") || "";
+                  this.handleAnswerClick(btnElement, val, q.dapAnDung, q);
+                };
+              });
               this.popupEl.style.display = "block";
             }
-          } else if (this.currentPopup !== null && !this.isAnswering) {
-            // Chỉ ẩn hộp thoại khi nhân vật di chuyển xa khỏi Object và không ở trong trạng thái chờ kết quả
+          }
+          // THẮP SÁNG BẢNG HIỂN THỊ GỢI Ý THUẦN CHỮ TIẾNG VIỆT
+          else if (nearestHint !== null) {
+            const h = nearestHint;
+            if (this.currentPopup !== h.title) {
+              this.currentPopup = h.title;
+              this.popupEl.innerHTML = `
+                <div style="font-weight:bold;font-size:15px;margin-bottom:8px;color:#0d47a1;border-bottom:1px solid #90caf9;padding-bottom:6px;">💡 Thông Tin Gợi Ý: ${h.title}</div>
+                <div style="color: #0c3370; font-weight: 500;">${h.goiY}</div>
+              `;
+              this.popupEl.style.display = "block";
+            }
+          }
+          // ẨN POPUP KHI DI CHUYỂN RA XA VÙNG INTERACT
+          else if (this.currentPopup !== null && !this.isAnswering) {
             this.currentPopup = null;
             this.popupEl.style.display = "none";
           }
