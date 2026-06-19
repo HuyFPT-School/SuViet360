@@ -50,8 +50,8 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/lessons", lessonRoutes);
-app.use("/api", podcastRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api", podcastRoutes);
 app.use(errorHandler);
 
 module.exports = app;

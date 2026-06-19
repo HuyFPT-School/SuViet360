@@ -2,9 +2,6 @@ const app = require("./app");
 const connectDB = require("./config/db");
 const env = require("./config/env");
 const { connectRedis } = require("./config/redis");
-const { createServer } = require("http");
-const { Server } = require("socket.io");
-const { setupSocketHandlers } = require("./socket");
 
 // Cache the connection promise to reuse across serverless invocations
 let connectionPromise = null;
@@ -25,25 +22,16 @@ const handler = async (req, res) => {
   return app(req, res);
 };
 
-// For local development: start the server with http + Socket.IO
+// For local development: start the REST API server
+// Socket.IO is handled by the separate socket-server microservice
 if (process.env.VERCEL !== "1") {
   const startServer = async () => {
     try {
       await ensureConnections();
 
-      const httpServer = createServer(app);
-      const io = new Server(httpServer, {
-        cors: {
-          origin: env.clientUrl,
-          credentials: true,
-        },
-      });
-
-      setupSocketHandlers(io);
-
-      httpServer.listen(env.port, () => {
+      app.listen(env.port, () => {
         // eslint-disable-next-line no-console
-        console.log(`Server running on port ${env.port}`);
+        console.log(`REST API server running on port ${env.port}`);
       });
     } catch (error) {
       // eslint-disable-next-line no-console

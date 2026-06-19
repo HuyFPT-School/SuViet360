@@ -7,10 +7,10 @@ interface ApiResponse<T> {
 
 export const chatApi = {
   async getConversations(): Promise<Conversation[]> {
-    const res = await api.get<ApiResponse<Conversation[]>>(
+    const res = await api.get<ApiResponse<{ conversations: Conversation[] }>>(
       "/chat/conversations"
     );
-    return res.data.data;
+    return res.data.data.conversations;
   },
 
   async createConversation(participantId: string): Promise<Conversation> {
@@ -19,20 +19,20 @@ export const chatApi = {
     );
     const csrfToken = csrfRes.data.data.csrfToken;
 
-    const res = await api.post<ApiResponse<Conversation>>(
+    const res = await api.post<ApiResponse<{ conversation: Conversation }>>(
       "/chat/conversations",
       { participantId },
       { headers: { "x-csrf-token": csrfToken } }
     );
-    return res.data.data;
+    return res.data.data.conversation;
   },
 
   async getMessages(
     conversationId: string,
     before?: string
-  ): Promise<Message[]> {
+  ): Promise<{ messages: Message[]; hasMore: boolean; nextCursor: string | null }> {
     const params = before ? { before } : {};
-    const res = await api.get<ApiResponse<Message[]>>(
+    const res = await api.get<ApiResponse<{ messages: Message[]; hasMore: boolean; nextCursor: string | null }>>(
       `/chat/conversations/${conversationId}/messages`,
       { params }
     );
@@ -40,12 +40,13 @@ export const chatApi = {
   },
 
   async getTeachers(): Promise<ChatParticipant[]> {
-    const res = await api.get<ApiResponse<ChatParticipant[]>>("/chat/teachers");
-    return res.data.data;
+    const res = await api.get<ApiResponse<{ teachers: ChatParticipant[] }>>("/chat/teachers");
+    return res.data.data.teachers;
   },
 
   async getChatUsers(): Promise<ChatParticipant[]> {
-    const res = await api.get<ApiResponse<ChatParticipant[]>>("/chat/users");
-    return res.data.data;
+    const res = await api.get<ApiResponse<{ users: ChatParticipant[] }>>("/chat/users");
+    return res.data.data.users;
   },
 };
+
