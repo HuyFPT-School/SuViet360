@@ -4,6 +4,7 @@ const {
   getConversations,
   createConversation,
   getMessages,
+  sendMessage,
   getTeachers,
   getChatUsers,
 } = require("../controllers/chatController");
@@ -22,6 +23,9 @@ router.post("/conversations", createConversation);
 // GET /api/chat/conversations/:conversationId/messages - Get messages with pagination
 router.get("/conversations/:conversationId/messages", getMessages);
 
+// POST /api/chat/conversations/:conversationId/messages - Send a message
+router.post("/conversations/:conversationId/messages", sendMessage);
+
 // GET /api/chat/teachers - List all teachers (for users to start a chat)
 router.get("/teachers", authorize("user"), getTeachers);
 
@@ -29,3 +33,4 @@ router.get("/teachers", authorize("user"), getTeachers);
 router.get("/users", authorize("teacher", "admin"), getChatUsers);
 
 module.exports = router;
+
