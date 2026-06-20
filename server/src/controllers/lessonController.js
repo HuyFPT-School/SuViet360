@@ -41,6 +41,26 @@ const invalidateLessonCache = async (lessonId = null) => {
       deleteCache(lessonDetailKey(lessonId)),
       deleteCache(`${lessonDetailKey(lessonId)}:etag`),
     ]);
+
+    // Tìm và xoá cache của các podcast liên kết với bài học này để tránh hiển thị game cũ/bị reject
+    try {
+      const Podcast = require("../models/Podcast");
+      const linkedPodcasts = await Podcast.find({ lessonId }).select("_id");
+      if (linkedPodcasts.length > 0) {
+        // Xoá cache list podcast để cập nhật liên kết
+        await deleteCacheByPattern("podcasts:list*");
+        // Xoá cache detail của các podcast đó
+        const deletePromises = [];
+        for (const pod of linkedPodcasts) {
+          deletePromises.push(deleteCache(`podcast:${pod._id}`));
+          deletePromises.push(deleteCache(`podcast:${pod._id}:etag`));
+        }
+        await Promise.all(deletePromises);
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[Cache] Failed to invalidate linked podcast cache:", err.message);
+    }
   }
 };
 
@@ -109,6 +129,7 @@ const createLesson = asyncHandler(async (req, res) => {
     animationGroups,
     spawnX,
     spawnY,
+    createdBy: req.user.id,
   });
 
   // Invalidate list cache

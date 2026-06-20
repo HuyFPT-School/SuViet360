@@ -98,6 +98,7 @@ const createLesson = async ({
   animationGroups,
   spawnX,
   spawnY,
+  createdBy,
 }) => {
   if (!tilemapJsonFile) {
     throw new AppError("Tilemap JSON file is required", 400);
@@ -163,6 +164,7 @@ const createLesson = async ({
   const lesson = await Lesson.create({
     title,
     content,
+    createdBy,
     game: {
       tilemapJsonUrl: jsonUpload.secure_url,
       tilemapJsonPublicId: jsonUpload.public_id,
@@ -184,14 +186,14 @@ const createLesson = async ({
  * Get all lessons (sorted newest first).
  */
 const getAllLessons = async (filter = {}) => {
-  return Lesson.find(filter).sort({ createdAt: -1 });
+  return Lesson.find(filter).populate("createdBy", "name email").sort({ createdAt: -1 });
 };
 
 /**
  * Get a single lesson by ID.
  */
 const getLessonById = async (id) => {
-  const lesson = await Lesson.findById(id);
+  const lesson = await Lesson.findById(id).populate("createdBy", "name email");
   if (!lesson) {
     throw new AppError("Lesson not found", 404);
   }

@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import dynamic from "next/dynamic";
+import { notificationApi } from "@/lib/notificationApi";
 
 const PhaserGame = dynamic(() => import("@/components/PhaserGame"), {
   ssr: false,
@@ -41,6 +42,18 @@ const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return date.toLocaleDateString("vi-VN", { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
+
+const translateLevel = (level: string) => {
+  const mapping: Record<string, string> = {
+    Easy: "Dễ",
+    Medium: "Trung cấp",
+    Hard: "Nâng cao",
+    "Dễ": "Dễ",
+    "Trung cấp": "Trung cấp",
+    "Nâng cao": "Nâng cao"
+  };
+  return mapping[level] || level;
+};
 const MOCK_PODCAST = {
   _id: "mock-bai-1",
   title: "Bài 1: Liên hợp quốc",
@@ -70,6 +83,46 @@ export default function PodcastDetailPage() {
   const [notes, setNotes] = useState<Record<string, any>[]>([]);
   const [comments, setComments] = useState<Record<string, any>[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFollowingCategory, setIsFollowingCategory] = useState(false);
+  const [followingLoading, setFollowingLoading] = useState(false);
+
+  useEffect(() => {
+    const checkFollowStatus = async () => {
+      if (user && podcast?.category) {
+        try {
+          const followed = await notificationApi.getFollowedCategories();
+          setIsFollowingCategory(followed.map((c: string) => c.trim()).includes(podcast.category.trim()));
+        } catch (err) {
+          console.error("Error fetching followed categories:", err);
+        }
+      }
+    };
+    checkFollowStatus();
+  }, [user, podcast?.category]);
+
+  const handleToggleFollowCategory = async () => {
+    if (!user) {
+      alert("Vui lòng đăng nhập để theo dõi chủ đề này!");
+      return;
+    }
+    if (!podcast?.category) return;
+
+    setFollowingLoading(true);
+    try {
+      if (isFollowingCategory) {
+        await notificationApi.unfollowCategory(podcast.category);
+        setIsFollowingCategory(false);
+      } else {
+        await notificationApi.followCategory(podcast.category);
+        setIsFollowingCategory(true);
+      }
+    } catch (err) {
+      console.error("Error toggling follow category:", err);
+      alert("Có lỗi xảy ra khi thực hiện thao tác. Vui lòng thử lại!");
+    } finally {
+      setFollowingLoading(false);
+    }
+  };
 
   // Edit & Delete menu states
   const [activeNoteMenuId, setActiveNoteMenuId] = useState<string | null>(null);
@@ -388,7 +441,7 @@ export default function PodcastDetailPage() {
                     
                     <div className="flex flex-wrap items-center gap-6 text-xs text-[#8c6a34] font-medium">
                        <span className="flex items-center gap-2"><ClockIcon /> Thời lượng: {formatTime(duration)}</span>
-                       <span className="flex items-center gap-2"><BookOpenIcon /> Cấp độ: {podcast.level}</span>
+                       <span className="flex items-center gap-2"><BookOpenIcon /> Cấp độ: {translateLevel(podcast.level)}</span>
                        <span className="flex items-center gap-2"><CalendarIcon /> Ngày đăng: {formatDate(podcast.createdAt)}</span>
                     </div>
                  </div>
@@ -658,13 +711,37 @@ export default function PodcastDetailPage() {
             <div className="bg-[#fcf8ef] border border-[#e8d5b5] rounded-xl p-5 shadow-sm">
                <h3 className="text-[#3a2312] font-bold text-[15px] tracking-wider mb-4 font-display">GIỚI THIỆU BÀI HỌC</h3>
                <div className="flex flex-col gap-3 text-sm">
-                  <div className="flex">
-                     <span className="w-24 text-[#8c6a34]">Chủ đề:</span>
-                     <span className="flex-1 text-[#3a2312] font-medium">{podcast.category}</span>
+                  <div className="flex flex-col gap-1.5">
+                     <div className="flex">
+                        <span className="w-24 text-[#8c6a34] flex-shrink-0">Chủ đề:</span>
+                        <span className="flex-1 text-[#3a2312] font-medium">{podcast.category}</span>
+                     </div>
+                     {podcast.category && (
+                        <div className="pl-24">
+                           <button
+                             type="button"
+                             onClick={handleToggleFollowCategory}
+                             disabled={followingLoading}
+                             className={`px-3 py-1 rounded text-xs font-semibold flex items-center gap-1 transition-all ${
+                               isFollowingCategory
+                                 ? "bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200"
+                                 : "bg-[#a84d28] text-white hover:bg-[#8f3f1e] shadow-sm"
+                             } disabled:opacity-50 disabled:cursor-not-allowed`}
+                           >
+                             {followingLoading ? (
+                               <span className="inline-block animate-spin mr-1">⏳</span>
+                             ) : isFollowingCategory ? (
+                               <span>✓ Đang theo dõi</span>
+                             ) : (
+                               <span>+ Theo dõi chủ đề</span>
+                             )}
+                           </button>
+                        </div>
+                     )}
                   </div>
                   <div className="flex">
                      <span className="w-24 text-[#8c6a34]">Cấp độ:</span>
-                     <span className="flex-1 text-[#3a2312] font-medium">{podcast.level}</span>
+                     <span className="flex-1 text-[#3a2312] font-medium">{translateLevel(podcast.level)}</span>
                   </div>
                   <div className="flex">
                      <span className="w-24 text-[#8c6a34]">Thời lượng:</span>

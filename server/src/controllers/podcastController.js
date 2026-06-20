@@ -217,7 +217,10 @@ const deletePodcast = asyncHandler(async (req, res) => {
 
 // Get all podcasts for management (Staff)
 const getStaffPodcasts = asyncHandler(async (req, res) => {
-  const podcasts = await Podcast.find().populate("lessonId").sort({ createdAt: -1 });
+  const podcasts = await Podcast.find()
+    .populate("lessonId")
+    .populate("createdBy", "name email")
+    .sort({ createdAt: -1 });
 
   res.status(200).json({
     success: true,
@@ -228,7 +231,9 @@ const getStaffPodcasts = asyncHandler(async (req, res) => {
 
 // Get single podcast for management (Staff)
 const getStaffPodcastById = asyncHandler(async (req, res) => {
-  const podcast = await Podcast.findById(req.params.id).populate("lessonId");
+  const podcast = await Podcast.findById(req.params.id)
+    .populate("lessonId")
+    .populate("createdBy", "name email");
 
   if (!podcast) {
     throw new AppError("Podcast not found", 404);
@@ -395,7 +400,10 @@ const getPodcastById = asyncHandler(async (req, res) => {
     { _id: req.params.id, status: { $in: ["Published", true] } },
     { $inc: { viewCount: 1 } },
     { new: true }
-  ).populate("lessonId");
+  ).populate({
+    path: "lessonId",
+    match: { status: "Published" },
+  });
 
   if (!podcast) {
     throw new AppError("Podcast not found", 404);
@@ -612,6 +620,46 @@ const approvePodcast = asyncHandler(async (req, res) => {
 
   // Status thay đổi → invalidate cả list lẫn detail
   await invalidatePodcastCache(req.params.id);
+
+  // Gửi thông báo cho những người dùng theo dõi chủ đề này
+  try {
+    const User = require("../models/User");
+    const Notification = require("../models/Notification");
+    const { redisClient, isRedisReady } = require("../config/redis");
+
+    const followers = await User.find({ followedCategories: podcast.category }).select("_id");
+    
+    if (followers.length > 0) {
+      // 1. Tạo các bản ghi thông báo trong Database
+      const notificationPromises = followers.map((follower) =>
+        Notification.create({
+          recipient: follower._id,
+          type: "New_Podcast",
+          title: "Bài học âm thanh mới!",
+          message: `Chủ đề "${podcast.category}" vừa có podcast mới: "${podcast.title}"`,
+          link: `/podcasts/${podcast._id}`,
+        })
+      );
+      await Promise.all(notificationPromises);
+
+      // 2. Publish tín hiệu sang Redis Pub/Sub để Socket Server truyền tải thời gian thực
+      if (isRedisReady()) {
+        await redisClient.publish(
+          "notification:new_podcast",
+          JSON.stringify({
+            category: podcast.category,
+            title: "Bài học âm thanh mới!",
+            message: `Chủ đề "${podcast.category}" vừa có podcast mới: "${podcast.title}"`,
+            link: `/podcasts/${podcast._id}`,
+            podcastId: podcast._id,
+          })
+        );
+      }
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[Notification] Failed to create or publish notification:", err.message);
+  }
 
   res.status(200).json({
     success: true,

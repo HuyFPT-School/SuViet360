@@ -37,6 +37,18 @@ function getStatusLabel(status: ReviewStatus) {
   return "Bị từ chối";
 }
 
+function formatCreatorDisplay(createdByStr: string) {
+  if (!createdByStr) return { name: "Staff", email: "" };
+  const parts = createdByStr.split(" (");
+  if (parts.length === 2) {
+    return {
+      name: parts[0],
+      email: parts[1].replace(")", ""),
+    };
+  }
+  return { name: createdByStr, email: "" };
+}
+
 export default function TeacherPage() {
   const { user, isLoading, refreshUser } = useAuth();
   const [items, setItems] = useState<TeacherReviewItem[]>([]);
@@ -301,7 +313,16 @@ export default function TeacherPage() {
                     <span className={`teacher-type-badge ${item.type === "Podcast" ? "teacher-type-badge--podcast" : ""}`}>
                       {item.type}
                     </span>
-                    <span>{item.createdBy}</span>
+                    <span className="flex flex-col min-w-0 justify-center">
+                      <span className="font-semibold text-amber-900 truncate block text-sm" title={formatCreatorDisplay(item.createdBy).name}>
+                        {formatCreatorDisplay(item.createdBy).name}
+                      </span>
+                      {formatCreatorDisplay(item.createdBy).email && (
+                        <span className="text-[10px] text-amber-600 truncate block mt-0.5" title={formatCreatorDisplay(item.createdBy).email}>
+                          {formatCreatorDisplay(item.createdBy).email}
+                        </span>
+                      )}
+                    </span>
                     <span>{formatDate(item.submittedAt)}</span>
                     <StatusBadge status={item.status} />
                     <div className="admin-row-actions teacher-row-actions">
