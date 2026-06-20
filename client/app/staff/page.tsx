@@ -178,6 +178,19 @@ function renderStaffStatusBadge(status?: string | boolean) {
   );
 }
 
+const translateLevel = (level?: string) => {
+  if (!level) return "";
+  const mapping: Record<string, string> = {
+    Easy: "Dễ",
+    Medium: "Trung cấp",
+    Hard: "Nâng cao",
+    "Dễ": "Dễ",
+    "Trung cấp": "Trung cấp",
+    "Nâng cao": "Nâng cao"
+  };
+  return mapping[level] || level;
+};
+
 export default function StaffPage() {
   const { user, isLoading: authLoading, refreshUser } = useAuth();
   const [isHydrating, setIsHydrating] = useState(true);
@@ -1019,7 +1032,7 @@ export default function StaffPage() {
                         <p className="font-semibold text-amber-900 truncate">{podcast.title}</p>
                         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                           <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 font-semibold">
-                            {podcast.level}
+                            {translateLevel(podcast.level)}
                           </span>
                           {renderStaffStatusBadge(podcast.status)}
                         </div>

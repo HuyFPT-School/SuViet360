@@ -66,6 +66,7 @@ type LessonResponseItem = {
   reviewFeedback?: string;
   game: LessonGame;
   createdAt: string;
+  createdBy?: string | { _id: string; name: string; email: string };
 };
 
 type LessonsResponse = {
@@ -87,6 +88,20 @@ type PodcastResponseItem = {
   status: ReviewStatus;
   reviewFeedback?: string;
   createdAt: string;
+  createdBy?: string | { _id: string; name: string; email: string };
+};
+
+const formatCreator = (creator: any): string => {
+  if (creator && typeof creator === "object") {
+    if (creator.name && creator.email) {
+      return `${creator.name} (${creator.email})`;
+    }
+    return creator.name || "Staff";
+  }
+  if (typeof creator === "string") {
+    return creator;
+  }
+  return "Staff";
 };
 
 const toReviewItem = (
@@ -96,7 +111,7 @@ const toReviewItem = (
     id: lesson._id,
     title: lesson.title,
     type: "Lesson",
-    createdBy: "Staff",
+    createdBy: formatCreator(lesson.createdBy),
     submittedAt: lesson.createdAt,
     status: lesson.status || "Pending_Review",
     summary: lesson.content,
@@ -112,7 +127,7 @@ const podcastToReviewItem = (
     id: podcast._id,
     title: podcast.title,
     type: "Podcast",
-    createdBy: "Staff",
+    createdBy: formatCreator(podcast.createdBy),
     submittedAt: podcast.createdAt,
     status: podcast.status || "Pending_Review",
     summary: podcast.description || podcast.content || "",

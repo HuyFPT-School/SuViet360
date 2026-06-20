@@ -52,6 +52,55 @@ const startServer = async () => {
     // Reuse the exact same socket handler from the main server
     setupSocketHandlers(io);
 
+    // ─── Redis Pub/Sub Subscriber for real-time notifications ───
+    if (process.env.REDIS_URL) {
+      const { createClient } = require("redis");
+      const redisSubscriber = createClient({ url: process.env.REDIS_URL });
+
+      redisSubscriber.on("error", (err) => {
+        // eslint-disable-next-line no-console
+        console.error("[Socket Server] Redis Subscriber Error:", err.message);
+      });
+
+      (async () => {
+        try {
+          await redisSubscriber.connect();
+          // eslint-disable-next-line no-console
+          console.log("[Socket Server] Redis Subscriber Connected");
+
+          await redisSubscriber.subscribe("notification:new_podcast", async (messageStr) => {
+            try {
+              const { category, title, message, link } = JSON.parse(messageStr);
+              
+              // 1. Lấy danh sách những người đang follow category này
+              const User = require("../server/src/models/User");
+              const followers = await User.find({ followedCategories: category }).select("_id");
+              
+              if (followers.length > 0) {
+                // 2. Phát sóng real-time thông báo qua Socket.IO tới các user đang online
+                followers.forEach((follower) => {
+                  const userId = follower._id.toString();
+                  io.to(`user:${userId}`).emit("new_notification", {
+                    title,
+                    message,
+                    link,
+                    isRead: false,
+                    createdAt: new Date().toISOString(),
+                  });
+                });
+              }
+            } catch (err) {
+              // eslint-disable-next-line no-console
+              console.error("[Socket Server] Pub/Sub message processing error:", err.message);
+            }
+          });
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error("[Socket Server] Redis Subscriber connection failed:", err.message);
+        }
+      })();
+    }
+
     httpServer.listen(PORT, () => {
       // eslint-disable-next-line no-console
       console.log(`[Socket Server] Running on port ${PORT}`);

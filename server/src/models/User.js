@@ -81,6 +81,10 @@ const userSchema = new mongoose.Schema(
     },
     passwordResetToken: String,
     passwordResetExpires: Date,
+    followedCategories: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,
