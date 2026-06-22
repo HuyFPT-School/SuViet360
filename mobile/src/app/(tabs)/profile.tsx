@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/hooks/useAuth';
 import { profileApi, type ProfileUpdatePayload } from '@/services/profileApi';
 import { setUser } from '@/store/features/authSlice';
@@ -104,7 +105,10 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>👤 Cá Nhân</Text>
+        <View style={styles.headerTitleRow}>
+          <Ionicons name="person-outline" size={22} color={Colors.light.goldLight} />
+          <Text style={styles.headerTitle}>Cá Nhân</Text>
+        </View>
         <TouchableOpacity onPress={handleLogout}>
           <Text style={styles.logoutText}>Đăng xuất</Text>
         </TouchableOpacity>
@@ -202,6 +206,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.light.goldLight,
     letterSpacing: 1.5,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   logoutText: {
     fontSize: FontSizes.sm,

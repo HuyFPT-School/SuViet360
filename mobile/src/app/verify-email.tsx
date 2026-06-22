@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { authApi } from '@/services/authApi';
 import { setUser } from '@/store/features/authSlice';
 import { useAppDispatch } from '@/store';
@@ -47,14 +48,14 @@ export default function VerifyEmailScreen() {
         )}
         {status === 'success' && (
           <>
-            <Text style={styles.icon}>✅</Text>
+            <Ionicons name="checkmark-circle" size={56} color={Colors.light.success} />
             <Text style={styles.text}>{message}</Text>
             <Text style={styles.subtext}>Đang chuyển hướng...</Text>
           </>
         )}
         {status === 'error' && (
           <>
-            <Text style={styles.icon}>❌</Text>
+            <Ionicons name="close-circle" size={56} color={Colors.light.error} />
             <Text style={styles.text}>{message}</Text>
           </>
         )}
@@ -82,7 +83,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
   },
-  icon: { fontSize: 48 },
   text: {
     fontFamily: 'Playfair Display',
     fontSize: FontSizes.lg,

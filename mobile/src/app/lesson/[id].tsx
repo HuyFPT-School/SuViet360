@@ -32,7 +32,7 @@ export default function LessonDetailScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <HeaderBar title="Bài Học" showBack onBack={() => router.back()} />
+        <HeaderBar title="Bài Học" showBack />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.gold} />
         </View>
@@ -43,7 +43,7 @@ export default function LessonDetailScreen() {
   if (error || !lesson) {
     return (
       <View style={styles.container}>
-        <HeaderBar title="Bài Học" showBack onBack={() => router.back()} />
+        <HeaderBar title="Bài Học" showBack />
         <View style={styles.centered}>
           <Text style={styles.errorText}>Lỗi: {error || 'Không tìm thấy bài học'}</Text>
         </View>
@@ -53,7 +53,7 @@ export default function LessonDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <HeaderBar title={lesson.title} showBack onBack={() => router.back()} />
+      <HeaderBar title={lesson.title} showBack />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.contentCard}>
           <Text style={styles.title}>{lesson.title}</Text>

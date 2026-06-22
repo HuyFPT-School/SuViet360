@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AxiosError } from 'axios';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { authApi } from '@/services/authApi';
 import { setUser } from '@/store/features/authSlice';
 import { useAppDispatch } from '@/store';
@@ -101,8 +102,15 @@ export default function LoginScreen() {
                 <TouchableOpacity
                   style={styles.eyeButton}
                   onPress={() => setShowPassword(!showPassword)}
+                  hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                 >
-                  <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁'}</Text>
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={Colors.light.authLabel}
+                  />
                 </TouchableOpacity>
               </View>
             </View>
@@ -245,9 +253,6 @@ const styles = StyleSheet.create({
     right: 12,
     top: 12,
     zIndex: 1,
-  },
-  eyeText: {
-    fontSize: 18,
   },
   forgotLink: {
     alignSelf: 'flex-end',

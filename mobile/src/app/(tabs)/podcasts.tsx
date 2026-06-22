@@ -10,6 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { podcastApi } from '@/services/podcastApi';
 import type { Podcast } from '@/types/podcast';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
@@ -57,7 +58,10 @@ export default function PodcastsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>🎧 Podcast</Text>
+          <View style={styles.headerTitleRow}>
+            <Ionicons name="headset-outline" size={22} color={Colors.light.goldLight} />
+            <Text style={styles.headerTitle}>Podcast</Text>
+          </View>
         </View>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.gold} />
@@ -69,7 +73,10 @@ export default function PodcastsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🎧 Podcast</Text>
+        <View style={styles.headerTitleRow}>
+          <Ionicons name="headset-outline" size={22} color={Colors.light.goldLight} />
+          <Text style={styles.headerTitle}>Podcast</Text>
+        </View>
         <Text style={styles.headerSubtitle}>Những câu chuyện lịch sử</Text>
       </View>
 
@@ -140,7 +147,7 @@ export default function PodcastsScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.podcastThumb}>
-                <Text style={styles.podcastThumbIcon}>🎧</Text>
+                <Ionicons name="headset-outline" size={28} color={Colors.light.goldDark} />
               </View>
               <View style={styles.podcastInfo}>
                 <Text style={styles.podcastTitle} numberOfLines={1}>
@@ -186,6 +193,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.light.goldLight,
     letterSpacing: 1.5,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerSubtitle: {
     fontFamily: 'Cormorant Garamond',
@@ -281,7 +293,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  podcastThumbIcon: { fontSize: 28 },
   podcastInfo: { flex: 1, gap: 4 },
   podcastTitle: {
     fontFamily: 'Playfair Display',

@@ -1,13 +1,30 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
-import { Colors, FontSizes } from '@/constants/theme';
+import { StyleSheet } from 'react-native';
+import type { ColorValue } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Colors } from '@/constants/theme';
 import { useAppSelector } from '@/store';
-import UnreadBadge from '@/components/ui/UnreadBadge';
 
-function TabIcon({ icon, color }: { icon: string; color: any }) {
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+function TabIcon({
+  focused,
+  color,
+  activeIcon,
+  inactiveIcon,
+}: {
+  focused: boolean;
+  color: ColorValue;
+  activeIcon: IoniconName;
+  inactiveIcon: IoniconName;
+}) {
   return (
-    <Text style={[styles.tabIcon, { color }]}>{icon}</Text>
+    <Ionicons
+      name={focused ? activeIcon : inactiveIcon}
+      size={26}
+      color={String(color)}
+    />
   );
 }
 
@@ -21,35 +38,63 @@ export default function TabLayout() {
         tabBarStyle: styles.tabBar,
         tabBarActiveTintColor: Colors.light.gold,
         tabBarInactiveTintColor: Colors.light.goldMuted,
-        tabBarLabelStyle: styles.tabLabel,
+        tabBarShowLabel: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Trang Chủ',
-          tabBarIcon: ({ color }) => <TabIcon icon="🏠" color={color} />,
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              activeIcon="home"
+              inactiveIcon="home-outline"
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="lessons"
         options={{
           title: 'Học Tập',
-          tabBarIcon: ({ color }) => <TabIcon icon="📚" color={color} />,
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              activeIcon="book"
+              inactiveIcon="book-outline"
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="podcasts"
         options={{
           title: 'Khám Phá',
-          tabBarIcon: ({ color }) => <TabIcon icon="🎧" color={color} />,
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              activeIcon="headset"
+              inactiveIcon="headset-outline"
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
           title: 'Chat',
-          tabBarIcon: ({ color }) => <TabIcon icon="💬" color={color} />,
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              activeIcon="chatbubble"
+              inactiveIcon="chatbubble-outline"
+            />
+          ),
           tabBarBadge: totalUnread > 0 ? totalUnread : undefined,
           tabBarBadgeStyle: styles.tabBadge,
         }}
@@ -58,7 +103,14 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Cá Nhân',
-          tabBarIcon: ({ color }) => <TabIcon icon="👤" color={color} />,
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              activeIcon="person"
+              inactiveIcon="person-outline"
+            />
+          ),
         }}
       />
     </Tabs>
@@ -70,17 +122,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.backgroundDark,
     borderTopWidth: 2,
     borderTopColor: Colors.light.goldDark,
-    height: 64,
+    height: 60,
     paddingBottom: 8,
-    paddingTop: 4,
-  },
-  tabLabel: {
-    fontFamily: 'Cinzel',
-    fontSize: FontSizes.xs,
-    letterSpacing: 0.5,
-  },
-  tabIcon: {
-    fontSize: 22,
+    paddingTop: 8,
   },
   tabBadge: {
     backgroundColor: Colors.light.gold,

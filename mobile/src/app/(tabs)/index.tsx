@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -25,6 +26,19 @@ const STATS = [
   { value: '120+', label: 'Bảng Vàng' },
   { value: '10+', label: 'Podcast' },
   { value: '2D', label: 'Game' },
+];
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const QUICK_LINKS: Array<{
+  label: string;
+  route: '/(tabs)/lessons' | '/(tabs)/podcasts' | '/(tabs)/chat' | '/(tabs)/profile';
+  icon: IoniconName;
+}> = [
+  { label: 'Bài Học', route: '/(tabs)/lessons', icon: 'book-outline' },
+  { label: 'Podcast', route: '/(tabs)/podcasts', icon: 'headset-outline' },
+  { label: 'Hỏi Đáp', route: '/(tabs)/chat', icon: 'chatbubble-ellipses-outline' },
+  { label: 'Thành Tựu', route: '/(tabs)/profile', icon: 'trophy-outline' },
 ];
 
 export default function HomeScreen() {
@@ -98,34 +112,18 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tính Năng</Text>
           <View style={styles.quickLinks}>
-            <TouchableOpacity
-              style={styles.quickLink}
-              onPress={() => router.push('/(tabs)/lessons')}
-            >
-              <Text style={styles.quickLinkIcon}>📚</Text>
-              <Text style={styles.quickLinkText}>Bài Học</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickLink}
-              onPress={() => router.push('/(tabs)/podcasts')}
-            >
-              <Text style={styles.quickLinkIcon}>🎧</Text>
-              <Text style={styles.quickLinkText}>Podcast</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickLink}
-              onPress={() => router.push('/(tabs)/chat')}
-            >
-              <Text style={styles.quickLinkIcon}>💬</Text>
-              <Text style={styles.quickLinkText}>Hỏi Đáp</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickLink}
-              onPress={() => router.push('/(tabs)/profile')}
-            >
-              <Text style={styles.quickLinkIcon}>🏆</Text>
-              <Text style={styles.quickLinkText}>Thành Tựu</Text>
-            </TouchableOpacity>
+            {QUICK_LINKS.map((link) => (
+              <TouchableOpacity
+                key={link.route}
+                style={styles.quickLink}
+                onPress={() => router.push(link.route)}
+              >
+                <View style={styles.quickLinkIcon}>
+                  <Ionicons name={link.icon} size={32} color={Colors.light.goldDark} />
+                </View>
+                <Text style={styles.quickLinkText}>{link.label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -324,7 +322,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   quickLinkIcon: {
-    fontSize: 32,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(201, 161, 90, 0.14)',
   },
   quickLinkText: {
     fontFamily: 'Cinzel',

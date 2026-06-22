@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useChat } from '@/hooks/useChat';
 import { useAuth } from '@/hooks/useAuth';
 import { chatApi } from '@/services/chatApi';
@@ -75,7 +76,10 @@ export default function ChatScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>💬 Tin Nhắn</Text>
+        <View style={styles.headerTitleRow}>
+          <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.light.chatGoldLight} />
+          <Text style={styles.headerTitle}>Tin Nhắn</Text>
+        </View>
         <TextInput
           style={styles.searchInput}
           placeholder="Tìm kiếm người dùng..."
@@ -108,7 +112,7 @@ export default function ChatScreen() {
         onRefresh={chat.loadConversations}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>💬</Text>
+            <Ionicons name="chatbubble-ellipses-outline" size={48} color={Colors.light.goldMuted} />
             <Text style={styles.emptyTitle}>Chưa có tin nhắn</Text>
             <Text style={styles.emptyDesc}>
               Tìm kiếm giáo viên để bắt đầu trò chuyện
@@ -184,6 +188,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.light.chatGoldLight,
     letterSpacing: 1.5,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   searchInput: {
     backgroundColor: 'rgba(13, 6, 7, 0.5)',
@@ -296,7 +305,6 @@ const styles = StyleSheet.create({
     padding: 40,
     gap: 12,
   },
-  emptyIcon: { fontSize: 48 },
   emptyTitle: {
     fontFamily: 'Playfair Display',
     fontSize: FontSizes.lg,

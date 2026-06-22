@@ -9,6 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { lessonApi } from '@/services/lessonApi';
 import type { Lesson } from '@/types/lesson';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
@@ -45,7 +46,10 @@ export default function LessonsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>📚 Bài Học</Text>
+          <View style={styles.headerTitleRow}>
+            <Ionicons name="book-outline" size={22} color={Colors.light.goldLight} />
+            <Text style={styles.headerTitle}>Bài Học</Text>
+          </View>
         </View>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.gold} />
@@ -57,7 +61,10 @@ export default function LessonsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>📚 Bài Học</Text>
+        <View style={styles.headerTitleRow}>
+          <Ionicons name="book-outline" size={22} color={Colors.light.goldLight} />
+          <Text style={styles.headerTitle}>Bài Học</Text>
+        </View>
         <Text style={styles.headerSubtitle}>Khám phá lịch sử Việt Nam</Text>
       </View>
 
@@ -141,6 +148,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.light.goldLight,
     letterSpacing: 1.5,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerSubtitle: {
     fontFamily: 'Cormorant Garamond',

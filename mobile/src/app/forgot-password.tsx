@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AxiosError } from 'axios';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { authApi } from '@/services/authApi';
 import { Colors, FontSizes, BorderRadius } from '@/constants/theme';
 
@@ -106,7 +107,8 @@ export default function ForgotPasswordScreen() {
               style={styles.backButton}
               onPress={() => router.push('/login')}
             >
-              <Text style={styles.backText}>← Quay lại đăng nhập</Text>
+              <Ionicons name="chevron-back" size={16} color="#6b451d" />
+              <Text style={styles.backText}>Quay lại đăng nhập</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -246,6 +248,9 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   backText: {
     fontSize: FontSizes.sm,

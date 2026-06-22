@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { podcastApi } from '@/services/podcastApi';
 import type { Podcast, PodcastNote, PodcastComment } from '@/types/podcast';
 import { useAuth } from '@/hooks/useAuth';
@@ -105,7 +106,7 @@ export default function PodcastDetailScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <HeaderBar title="Podcast" showBack onBack={() => router.back()} />
+        <HeaderBar title="Podcast" showBack />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.gold} />
         </View>
@@ -116,7 +117,7 @@ export default function PodcastDetailScreen() {
   if (error || !podcast) {
     return (
       <View style={styles.container}>
-        <HeaderBar title="Podcast" showBack onBack={() => router.back()} />
+        <HeaderBar title="Podcast" showBack />
         <View style={styles.centered}>
           <Text style={styles.errorText}>{error || 'Không tìm thấy'}</Text>
         </View>
@@ -126,12 +127,12 @@ export default function PodcastDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <HeaderBar title={podcast.title} showBack onBack={() => router.back()} />
+      <HeaderBar title={podcast.title} showBack />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Player */}
         <View style={styles.playerCard}>
           <View style={styles.podcastIconLarge}>
-            <Text style={styles.podcastIconEmoji}>🎧</Text>
+            <Ionicons name="headset-outline" size={40} color={Colors.light.goldLight} />
           </View>
           <Text style={styles.podcastTitle}>{podcast.title}</Text>
           {podcast.description ? (
@@ -151,8 +152,13 @@ export default function PodcastDetailScreen() {
           {podcast.audioUrl ? (
             <>
               <TouchableOpacity style={styles.playButton} onPress={togglePlayPause}>
+                <Ionicons
+                  name={player.playing ? 'pause' : 'play'}
+                  size={18}
+                  color="#1a0a06"
+                />
                 <Text style={styles.playButtonText}>
-                  {player.playing ? '⏸ Tạm dừng' : '▶ Phát'}
+                  {player.playing ? 'Tạm dừng' : 'Phát'}
                 </Text>
               </TouchableOpacity>
               {status?.duration && status.duration > 0 && (
@@ -175,7 +181,10 @@ export default function PodcastDetailScreen() {
         {/* Notes */}
         {user && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📝 Ghi chú</Text>
+            <View style={styles.sectionTitleRow}>
+              <Ionicons name="create-outline" size={22} color={Colors.light.text} />
+              <Text style={styles.sectionTitle}>Ghi chú</Text>
+            </View>
             <View style={styles.noteInputRow}>
               <TextInput
                 style={styles.noteInput}
@@ -194,7 +203,10 @@ export default function PodcastDetailScreen() {
 
         {/* Comments */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💬 Bình luận</Text>
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.light.text} />
+            <Text style={styles.sectionTitle}>Bình luận</Text>
+          </View>
           {user && (
             <View style={styles.commentInputRow}>
               <TextInput
@@ -256,7 +268,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(201, 161, 90, 0.3)',
   },
-  podcastIconEmoji: { fontSize: 36 },
   podcastTitle: {
     fontFamily: 'Playfair Display',
     fontSize: FontSizes.xl,
@@ -276,6 +287,9 @@ const styles = StyleSheet.create({
   metaLevel: { fontSize: FontSizes.xs, color: Colors.light.textDim, fontStyle: 'italic' },
   metaDuration: { fontSize: FontSizes.xs, color: Colors.light.goldMuted },
   playButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingVertical: 12,
     paddingHorizontal: 32,
     borderRadius: BorderRadius.full,
@@ -316,6 +330,11 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.lg,
     fontWeight: '700',
     color: Colors.light.text,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   noteInputRow: { gap: 8 },
   noteInput: {

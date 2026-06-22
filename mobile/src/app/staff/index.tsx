@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
 import HeaderBar from '@/components/ui/HeaderBar';
@@ -18,7 +19,7 @@ export default function StaffScreen() {
   if (!user || (user.role !== 'staff' && user.role !== 'admin')) {
     return (
       <View style={styles.container}>
-        <HeaderBar title="Staff" showBack onBack={() => router.back()} />
+        <HeaderBar title="Staff" showBack />
         <View style={styles.centered}>
           <Text style={styles.deniedText}>Bạn không có quyền truy cập</Text>
         </View>
@@ -28,17 +29,17 @@ export default function StaffScreen() {
 
   return (
     <View style={styles.container}>
-      <HeaderBar title="Nhân Viên" showBack onBack={() => router.back()} />
+      <HeaderBar title="Nhân Viên" showBack />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.greeting}>Xin chào, {user.name}</Text>
 
         <View style={styles.menuGrid}>
           <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>📚</Text>
+            <Ionicons name="book-outline" size={32} color={Colors.light.goldDark} />
             <Text style={styles.menuLabel}>Tạo Lesson</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>🎧</Text>
+            <Ionicons name="headset-outline" size={32} color={Colors.light.goldDark} />
             <Text style={styles.menuLabel}>Tạo Podcast</Text>
           </TouchableOpacity>
         </View>
@@ -73,7 +74,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  menuIcon: { fontSize: 32 },
   menuLabel: {
     fontFamily: 'Cinzel',
     fontSize: FontSizes.sm,
