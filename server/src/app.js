@@ -20,9 +20,22 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const allowedOrigins = [
+  env.clientUrl,
+  "http://localhost:8081",
+  "http://localhost:3000",
+];
+
 app.use(
   cors({
-    origin: env.clientUrl,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     credentials: true,
   })
 );
