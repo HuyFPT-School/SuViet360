@@ -13,13 +13,10 @@ import {
 import { useRouter } from 'expo-router';
 import { AxiosError } from 'axios';
 import { authApi } from '@/services/authApi';
-import { setUser } from '@/store/features/authSlice';
-import { useAppDispatch } from '@/store';
 import { Colors, FontSizes, BorderRadius } from '@/constants/theme';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,8 +44,10 @@ export default function RegisterScreen() {
     setIsSubmitting(true);
     try {
       const response = await authApi.register({ name, email, password });
-      dispatch(setUser(response.data.user));
-      router.replace('/(tabs)' as any);
+      setServerSuccess(
+        response.message ||
+          'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.'
+      );
     } catch (error) {
       const message =
         error instanceof AxiosError

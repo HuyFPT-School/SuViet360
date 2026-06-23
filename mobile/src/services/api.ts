@@ -13,6 +13,9 @@ export const api = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    // Tell the server this request comes from the mobile app
+    // (affects verification email links: deep link vs web URL)
+    ...(Platform.OS !== 'web' ? { 'x-client-type': 'mobile' } : {}),
   },
 });
 
