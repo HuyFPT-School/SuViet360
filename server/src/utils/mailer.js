@@ -1,43 +1,34 @@
-const nodemailer = require("nodemailer");
 const env = require("../config/env");
 
-const createTransporter = () => {
-  if (!env.mailerUser || !env.mailerPassword) {
-    throw new Error("Mailer credentials are not configured");
-  }
-
-  if (env.mailerHost && env.mailerPort) {
-    return nodemailer.createTransport({
-      host: env.mailerHost,
-      port: env.mailerPort,
-      secure: env.mailerPort === 465,
-      auth: {
-        user: env.mailerUser,
-        pass: env.mailerPassword,
-      },
-    });
-  }
-
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: env.mailerUser,
-      pass: env.mailerPassword,
-    },
-  });
-};
-
 const sendEmail = async ({ to, subject, html, text }) => {
-  const transporter = createTransporter();
-  const from = env.mailerFrom || env.mailerUser;
+  if (!env.resendApiKey) {
+    throw new Error("Resend API key is not configured");
+  }
 
-  await transporter.sendMail({
-    from,
-    to,
-    subject,
-    text,
-    html,
+  const from = env.mailerFrom || "SuViet360 <no-reply@suviet.io.vn>";
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${env.resendApiKey}`,
+    },
+    body: JSON.stringify({
+      from,
+      to,
+      subject,
+      html,
+      text,
+    }),
   });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to send email via Resend");
+  }
+
+  const data = await response.json();
+  return data;
 };
 
 const buildEmailTemplate = ({

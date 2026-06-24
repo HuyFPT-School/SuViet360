@@ -15,29 +15,37 @@ const ERAS = [
     icon: "hung_vuong",
     name: "Hùng Vương",
     sub: "2879 TCN – 258 TCN",
-    desc: "Thời kỳ dựng nước đầu tiên, văn minh trống đồng Đông Sơn rực rỡ.",
+    desc: "Thời kỳ dựng nước đầu tiên của dân tộc Việt Nam, mở đầu kỷ nguyên văn minh sông Hồng với truyền thuyết Thánh Gióng oai hùng và nền văn minh Đông Sơn rực rỡ.",
     color: "#c9a15a",
+    img: "/images/thanh_giong_era.png",
+    badges: ["Văn hóa", "Truyền thuyết", "Dựng nước"],
   },
   {
     icon: "dinh_le_ly_tran",
     name: "Đinh · Lê · Lý · Trần",
     sub: "968 – 1400",
-    desc: "Thời đại phong kiến huy hoàng, ba lần đánh bại quân Nguyên Mông.",
+    desc: "Kỷ nguyên phong kiến độc lập tự chủ cường thịnh, ghi dấu lịch sử hào hùng với ba lần đại phá quân Nguyên Mông và chiến thắng Bạch Đằng vang dội.",
     color: "#d4543a",
+    img: "/images/bach_dang_battle.png",
+    badges: ["Hào kiệt", "Chiến dịch", "Tự chủ"],
   },
   {
     icon: "le_nguyen",
     name: "Lê · Nguyễn",
     sub: "1428 – 1945",
-    desc: "Kỷ nguyên mở mang bờ cõi, xây dựng kinh đô Huế uy nghi.",
+    desc: "Kỷ nguyên mở mang bờ cõi rộng lớn về phương Nam, phục hưng văn hiến Đại Việt thời Hậu Lê và xây dựng quần thể cố đô Huế uy nghiêm thời nhà Nguyễn.",
     color: "#6b8e6b",
+    img: "/images/hue_citadel.png",
+    badges: ["Triều đại", "Di sản", "Cố đô"],
   },
   {
     icon: "hien_dai",
     name: "Hiện Đại",
     sub: "1945 – Nay",
-    desc: "Từ Cách mạng tháng Tám đến Đổi mới và hội nhập quốc tế.",
+    desc: "Kỷ nguyên đấu tranh giành độc lập dân tộc oai hùng từ Cách mạng tháng Tám, chiến dịch Điện Biên Phủ chấn động địa cầu đến thời kỳ Đổi mới hội nhập quốc tế.",
     color: "#4a7fb5",
+    img: "/images/dien_bien_phu.png",
+    badges: ["Cách mạng", "Hội nhập", "Độc lập"],
   },
 ];
 
@@ -663,14 +671,60 @@ export default function GsapHomePage() {
             >
               <div className="gsap-timeline-dot" style={{ borderColor: era.color }} />
               <div className="gsap-timeline-card-inner" style={{ borderTopColor: era.color }}>
-                <span className="gsap-timeline-icon" style={{ color: era.color }}>
-                  {renderEraIcon(era.icon)}
-                </span>
-                <h3 className="gsap-timeline-card-title">{era.name}</h3>
-                <span className="gsap-timeline-card-date" style={{ color: era.color }}>
-                  {era.sub}
-                </span>
-                <p className="gsap-timeline-card-desc">{era.desc}</p>
+                <div className="flex items-center justify-between gap-4 mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="gsap-timeline-icon-small" style={{ color: era.color }}>
+                      {renderEraIcon(era.icon)}
+                    </span>
+                    <h3 className="gsap-timeline-card-title">{era.name}</h3>
+                  </div>
+                  <span className="gsap-timeline-card-badge-date" style={{ color: era.color, borderColor: `${era.color}40`, backgroundColor: `${era.color}10` }}>
+                    {era.sub}
+                  </span>
+                </div>
+                
+                <p className="gsap-timeline-card-desc mb-4">{era.desc}</p>
+                
+                {/* Era Image */}
+                {era.img && (
+                  <div className="relative w-full h-48 sm:h-52 rounded-lg overflow-hidden border border-[#e8d5b5]/40 mb-4 shadow-sm">
+                    <Image
+                      src={era.img}
+                      alt={era.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 450px"
+                      className="object-cover hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+                )}
+
+                {/* Badges */}
+                {era.badges && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {era.badges.map((badge, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide"
+                        style={{
+                          backgroundColor: `${era.color}15`,
+                          color: era.color,
+                          border: `1px solid ${era.color}30`
+                        }}
+                      >
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="border-t border-[#e8d5b5]/30 pt-3.5 flex justify-between items-center text-xs font-bold mt-2">
+                  <Link href="/podcasts" className="hover:underline flex items-center gap-1 transition-colors" style={{ color: era.color }}>
+                    Xem chi tiết
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </Link>
+                </div>
               </div>
             </div>
           ))}
