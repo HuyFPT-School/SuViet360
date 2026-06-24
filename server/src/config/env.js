@@ -18,6 +18,7 @@ module.exports = {
   mailerHost: process.env.MAILER_HOST || "",
   mailerPort: Number(process.env.MAILER_PORT || 0),
   mailerFrom: process.env.MAILER_FROM || "",
+  resendApiKey: process.env.RESEND_API_KEY || "",
   redisUrl: process.env.REDIS_URL || "",
   redisRefreshTtlMinutes: Number(
     process.env.REDIS_REFRESH_TTL_MINUTES || 10080

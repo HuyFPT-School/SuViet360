@@ -34,16 +34,13 @@ export default function RootLayout({
                 <Link href="/" className="sv-menu-link">
                   Trang Chủ
                 </Link>
-                <Link href="/explore" className="sv-menu-link">
-                  Bản Đồ Di Sản
-                </Link>
                 <Link href="/podcasts" className="sv-menu-link">
                   Hành Trình
                 </Link>
                 <Link href="/leaderboard" className="sv-menu-link">
                   Bảng Vàng 
                 </Link>
-                <Link href="/community" className="sv-menu-link">
+                <Link href="/game" className="sv-menu-link">
                   Kho Báu
                 </Link>
               </div>
