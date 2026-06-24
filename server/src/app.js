@@ -21,9 +21,23 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const allowedOrigins = [
+  env.clientUrl,
+  "https://suviet.io.vn",
+  "https://www.suviet.io.vn",
+  "https://su-viet360.vercel.app",
+  "http://localhost:3000"
+];
+
 app.use(
   cors({
-    origin: env.clientUrl,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
