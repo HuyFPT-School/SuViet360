@@ -399,11 +399,11 @@ export default function PodcastDetailPage() {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center text-[#8c6a34]">Đang tải...</div>;
-  if (!podcast) return <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center text-[#8c6a34]">Không tìm thấy nội dung.</div>;
+  if (loading) return <div className="min-h-screen bg-transparent flex items-center justify-center text-[#8c6a34]">Đang tải...</div>;
+  if (!podcast) return <div className="min-h-screen bg-transparent flex items-center justify-center text-[#8c6a34]">Không tìm thấy nội dung.</div>;
 
   return (
-    <div className="min-h-screen pb-16 bg-[#FDFBF7] relative" style={{ backgroundImage: 'url("/textures/paper.jpg")' }}>
+    <div className="min-h-screen pb-16 bg-transparent relative">
       
       {/* Audio Element */}
       <audio 

@@ -90,17 +90,7 @@ body {
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    BODY & LAYOUT
    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-.sv-body {
-  background-color: #f7f3e9;
-  position: relative;
-}
-
-.sv-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
+body, .sv-body {
   background-color: #f7f3e9;
   background-image:
     radial-gradient(
@@ -116,11 +106,7 @@ body {
     url("/textures/paper.jpg");
   background-size: cover;
   background-position: center;
-}
-
-.sv-body > * {
-  position: relative;
-  z-index: 1;
+  background-attachment: fixed;
 }
 
 .sv-main {
@@ -1943,7 +1929,7 @@ body {
   background:
     radial-gradient(circle at top left, rgba(201, 161, 90, 0.12), transparent 55%),
     radial-gradient(circle at 85% 20%, rgba(78, 36, 28, 0.25), transparent 60%),
-    var(--background);
+    transparent;
   color: var(--foreground);
 }
 

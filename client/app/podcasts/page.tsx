@@ -225,29 +225,32 @@ export default function PodcastListingPage() {
   });
 
   return (
-    <div className="min-h-screen pb-16 bg-[#FDFBF7]">
-      <div className="w-full bg-[#f3e9d8] relative overflow-hidden" style={{ backgroundImage: 'url("/textures/paper.jpg")' }}>
-        <div className="max-w-[1200px] mx-auto px-6 py-8 relative z-10">
-          <div className="text-sm font-medium text-[#8c6a34] mb-2 uppercase tracking-widest flex items-center gap-2">
-             <Link href="/" className="hover:underline">Trang chủ</Link>
-             <ChevronRightIcon />
-             <span>Mục lục</span>
+    <div className="min-h-screen pb-16 bg-transparent">
+      <div className="w-full bg-transparent relative overflow-hidden">
+        <div className="max-w-[1200px] mx-auto px-6 py-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex-1">
+            <div className="text-sm font-medium text-[#8c6a34] mb-2 uppercase tracking-widest flex items-center gap-2">
+               <Link href="/" className="hover:underline">Trang chủ</Link>
+               <ChevronRightIcon />
+               <span>Mục lục</span>
+            </div>
+            <h2 className="text-[#a84d28] font-bold tracking-widest text-sm mb-4 uppercase">Podcast Lịch Sử</h2>
+            <h1 className="text-4xl md:text-5xl font-bold text-[#3a2312] leading-tight font-display mb-4 max-w-2xl">
+              Khám phá lịch sử Việt Nam<br/>qua những câu chuyện
+            </h1>
+            <p className="text-[#5c4a3d] text-lg max-w-xl leading-relaxed">
+              Lắng nghe những câu chuyện lịch sử hào hùng được tái hiện sống động qua giọng kể. 
+              Mỗi tập podcast là một hành trình trở về quá khứ, giúp bạn hiểu hơn về dân tộc, đất nước 
+              và con người Việt Nam.
+            </p>
           </div>
-          <h2 className="text-[#a84d28] font-bold tracking-widest text-sm mb-4 uppercase">Podcast Lịch Sử</h2>
-          <h1 className="text-4xl md:text-5xl font-bold text-[#3a2312] leading-tight font-display mb-4 max-w-2xl">
-            Khám phá lịch sử Việt Nam<br/>qua những câu chuyện
-          </h1>
-          <p className="text-[#5c4a3d] text-lg max-w-xl leading-relaxed">
-            Lắng nghe những câu chuyện lịch sử hào hùng được tái hiện sống động qua giọng kể. 
-            Mỗi tập podcast là một hành trình trở về quá khứ, giúp bạn hiểu hơn về dân tộc, đất nước 
-            và con người Việt Nam.
-          </p>
-        </div>
-        
-        <div className="absolute right-0 top-0 h-full w-1/3 pointer-events-none opacity-80" 
-             style={{ 
-               background: 'radial-gradient(circle, rgba(201,161,90,0.2) 0%, rgba(243,233,216,0) 70%)' 
-             }}>
+          <div className="w-full md:w-[320px] shrink-0 flex justify-center">
+            <img 
+              src="/images/podcast_banner.png" 
+              alt="Minh họa lịch sử Việt Nam" 
+              className="w-[260px] h-auto object-contain rounded-xl border border-[#e8d5b5] bg-[#fffbf2]/70 p-1.5 shadow-md hover:scale-[1.02] transition-transform duration-300"
+            />
+          </div>
         </div>
       </div>
 

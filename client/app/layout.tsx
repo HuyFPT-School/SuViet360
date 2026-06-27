@@ -18,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" className="h-full antialiased" suppressHydrationWarning>
-      <body className="min-h-full sv-body">
+      <body className="min-h-full sv-body" suppressHydrationWarning>
         <Providers>
           <header className="sv-header">
             <nav className="sv-topbar">
@@ -42,6 +42,9 @@ export default function RootLayout({
                 </Link>
                 <Link href="/game" className="sv-menu-link">
                   Kho Báu
+                </Link>
+                <Link href="/blog" className="sv-menu-link">
+                  Diễn đàn
                 </Link>
               </div>
 

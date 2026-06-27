@@ -4,7 +4,7 @@
 
 .gsap-homepage {
   overflow-x: hidden;
-  background: #F7F3E9;
+  background: transparent;
 }
 
 /* ── HERO ── */
@@ -307,7 +307,7 @@
 /* ── TIMELINE SECTION ── */
 .gsap-timeline-section {
   padding: 5rem 2rem;
-  background: linear-gradient(180deg, #F7F3E9 0%, #f0e8d4 50%, #F7F3E9 100%);
+  background: linear-gradient(180deg, rgba(247, 243, 233, 0.3) 0%, rgba(240, 232, 212, 0.55) 50%, rgba(247, 243, 233, 0.3) 100%);
   position: relative;
 }
 
@@ -608,7 +608,7 @@
 /* ── RESOURCES GRID ── */
 .gsap-resources-section {
   padding: 5rem 2rem;
-  background: #F7F3E9;
+  background: transparent;
 }
 
 .gsap-resources-grid {
@@ -703,7 +703,7 @@
 /* ── CTA SECTION ── */
 .gsap-cta-section {
   padding: 5rem 2rem;
-  background: linear-gradient(180deg, #F7F3E9 0%, #ede2cc 100%);
+  background: linear-gradient(180deg, rgba(247, 243, 233, 0.3) 0%, rgba(237, 226, 204, 0.55) 100%);
 }
 
 .gsap-cta-inner {
@@ -800,7 +800,7 @@
 /* ── GAME SỬ VIỆT 2D ── */
 .gsap-game-section {
   padding: 6rem 2rem;
-  background: #F7F3E9;
+  background: transparent;
   position: relative;
 }
 
@@ -980,7 +980,7 @@
 /* ── BẢNG VÀNG DANH VỌNG ── */
 .gsap-leaderboard-section {
   padding: 6rem 2rem;
-  background: linear-gradient(to bottom, #F7F3E9 0%, #ede2cc 100%);
+  background: linear-gradient(to bottom, rgba(247, 243, 233, 0.3) 0%, rgba(237, 226, 204, 0.55) 100%);
   position: relative;
 }
 
