@@ -30,7 +30,7 @@ describe("Notification API Endpoints", () => {
       email: "notif_user@test.com",
       password: "password123",
       isEmailVerified: true,
-      role: "user",
+      role: "student",
     });
 
     // Login user to get token

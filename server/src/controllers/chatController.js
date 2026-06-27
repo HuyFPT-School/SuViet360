@@ -97,11 +97,11 @@ const createConversation = asyncHandler(async (req, res) => {
 
   // Enforce role rules
   const currentRole = req.user.role;
-  if (currentRole === "user" && participant.role !== "teacher") {
-    throw new AppError("Users can only chat with teachers", 403);
+  if (currentRole === "student" && participant.role !== "teacher") {
+    throw new AppError("Students can only chat with teachers", 403);
   }
-  if (currentRole === "teacher" && participant.role !== "user") {
-    throw new AppError("Teachers can only chat with users", 403);
+  if (currentRole === "teacher" && participant.role !== "student") {
+    throw new AppError("Teachers can only chat with students", 403);
   }
   // admin can chat with anyone — no restriction
 

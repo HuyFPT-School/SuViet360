@@ -34,6 +34,8 @@ function getRoleBadge(role: string): string {
       return "Quản trị";
     case "staff":
       return "Nhân viên";
+    case "student":
+      return "Học viên";
     default:
       return "Học viên";
   }
@@ -58,7 +60,7 @@ export default function ChatSidebar({
       setIsSearching(true);
       try {
         const results =
-          user.role === "user"
+          user.role === "student"
             ? await chatApi.getTeachers()
             : await chatApi.getChatUsers();
         setAllParticipants(results);
@@ -141,7 +143,7 @@ export default function ChatSidebar({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={
-              user.role === "user"
+              user.role === "student"
                 ? "Tìm giáo viên..."
                 : "Tìm học viên..."
             }
@@ -160,7 +162,7 @@ export default function ChatSidebar({
         return (
           <div className="px-3 pb-2">
             <p className="text-xs text-[#a37636] px-2 pb-2 font-medium uppercase tracking-wider">
-              {user.role === "user" ? "Giáo viên" : "Học viên"} có thể trò chuyện
+              {user.role === "student" ? "Giáo viên" : "Học viên"} có thể trò chuyện
             </p>
             {newParticipants.map((participant) => (
               <button
@@ -259,7 +261,7 @@ export default function ChatSidebar({
               />
             </svg>
             <p className="text-sm text-[#a37636]/60">
-              Chưa có {user.role === "user" ? "giáo viên" : "học viên"} nào
+              Chưa có {user.role === "student" ? "giáo viên" : "học viên"} nào
             </p>
           </div>
         )}

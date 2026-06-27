@@ -136,7 +136,7 @@ describe("Auth API", () => {
       expect(res.body.status).toBe("success");
       expect(res.body.data.user.email).toBe(TEST_USER.email);
       expect(res.body.data.user.name).toBe(TEST_USER.name);
-      expect(res.body.data.user.role).toBe("user");
+      expect(res.body.data.user.role).toBe("student");
       // Password should NOT be returned
       expect(res.body.data.user.password).toBeUndefined();
     });
@@ -1020,7 +1020,7 @@ describe("Auth API", () => {
       expect(res.body.status).toBe("success");
       expect(res.body.data.user.email).toBe(TEST_USER.email);
       expect(res.body.data.user.name).toBe(TEST_USER.name);
-      expect(res.body.data.user.role).toBe("user");
+      expect(res.body.data.user.role).toBe("student");
       expect(res.body.data.user.password).toBeUndefined();
     });
 
