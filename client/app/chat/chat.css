@@ -19,9 +19,30 @@
 }
 
 /* ── Chat Layout ── */
+body:has(.chat-page) {
+  height: 100vh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+body:has(.chat-page) .sv-header {
+  flex-shrink: 0 !important;
+}
+
+body:has(.chat-page) .sv-main {
+  flex: 1 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
 .chat-page {
   display: flex;
-  height: calc(100vh - 64px);
+  flex: 1 !important;
+  height: 100% !important;
+  min-height: 0 !important;
   background:
     radial-gradient(ellipse at 20% 50%, rgba(201, 161, 90, 0.04) 0%, transparent 60%),
     radial-gradient(ellipse at 80% 20%, rgba(139, 105, 20, 0.03) 0%, transparent 50%),

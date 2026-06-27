@@ -3,6 +3,7 @@ const AppError = require("../utils/AppError");
 const Podcast = require("../models/Podcast");
 const PodcastNote = require("../models/PodcastNote");
 const PodcastComment = require("../models/PodcastComment");
+const Lesson = require("../models/Lesson");
 const {
   uploadPodcastThumbnail,
   uploadPodcastAudio,
@@ -89,13 +90,24 @@ const createPodcast = asyncHandler(async (req, res) => {
     return id;
   };
 
+  const cleanedLessonId = cleanLessonId(lessonId);
+  if (cleanedLessonId) {
+    const linkedLesson = await Lesson.findById(cleanedLessonId);
+    if (!linkedLesson) {
+      throw new AppError("Linked lesson not found", 404);
+    }
+    if (linkedLesson.status !== "Published") {
+      throw new AppError("Only approved (Published) lessons can be linked to a podcast", 400);
+    }
+  }
+
   const podcast = await Podcast.create({
     title,
     description,
     content,
     level,
     category: category || "Chủ đề chung",
-    lessonId: cleanLessonId(lessonId),
+    lessonId: cleanedLessonId,
     thumbnail: thumbResult.secure_url,
     thumbnailPublicId: thumbResult.public_id,
     audioUrl: audioResult.secure_url,
@@ -139,7 +151,19 @@ const updatePodcast = asyncHandler(async (req, res) => {
   if (category !== undefined) podcast.category = category;
   podcast.status = "Pending_Review";
   podcast.reviewFeedback = "";
-  if (lessonId !== undefined) podcast.lessonId = cleanLessonId(lessonId);
+  if (lessonId !== undefined) {
+    const cleanedLessonId = cleanLessonId(lessonId);
+    if (cleanedLessonId) {
+      const linkedLesson = await Lesson.findById(cleanedLessonId);
+      if (!linkedLesson) {
+        throw new AppError("Linked lesson not found", 404);
+      }
+      if (linkedLesson.status !== "Published") {
+        throw new AppError("Only approved (Published) lessons can be linked to a podcast", 400);
+      }
+    }
+    podcast.lessonId = cleanedLessonId;
+  }
 
   // Check if new thumbnail file is provided
   if (req.files && req.files.thumbnail) {

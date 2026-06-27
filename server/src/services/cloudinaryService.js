@@ -130,11 +130,16 @@ const deleteCloudinaryResource = async (publicId, resourceType = "image") => {
   }
 };
 
+const uploadBlogImage = async (buffer) => {
+  return uploadImage(buffer, "suviet360/blog_images");
+};
+
 module.exports = {
   uploadTilemapJson,
   uploadTilesetImage,
   uploadAnimationSprite,
   uploadPodcastThumbnail,
   uploadPodcastAudio,
+  uploadBlogImage,
   deleteCloudinaryResource,
 };
