@@ -32,7 +32,7 @@ describe("Podcast API Endpoints", () => {
       email: "user@test.com",
       password: "password123",
       isEmailVerified: true,
-      role: "user",
+      role: "student",
     });
 
     // Create staff

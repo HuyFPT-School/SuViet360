@@ -135,7 +135,7 @@ const test = async () => {
       name: "Test Student",
       email: userEmail,
       password,
-      role: "user",
+      role: "student",
       isEmailVerified: true,
     });
 

@@ -42,6 +42,15 @@ const notificationSchema = new mongoose.Schema(
 // Compound index for loading unread notifications fast
 notificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 });
 
+// TTL Index: Auto-delete read notifications after 3 days (3 days * 24h * 60m * 60s = 259200 seconds)
+notificationSchema.index(
+  { updatedAt: 1 },
+  {
+    expireAfterSeconds: 259200,
+    partialFilterExpression: { isRead: true }
+  }
+);
+
 module.exports =
   mongoose.models.Notification ||
   mongoose.model("Notification", notificationSchema);
