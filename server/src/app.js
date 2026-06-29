@@ -9,6 +9,8 @@ const userRoutes = require("./routes/userRoutes");
 const lessonRoutes = require("./routes/lessonRoutes");
 const podcastRoutes = require("./routes/podcastRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const blogRoutes = require("./routes/blogRoutes");
 const errorHandler = require("./middleware/errorHandler");
 const { setCsrfToken, requireCsrfToken } = require("./middleware/csrf");
 
@@ -22,8 +24,11 @@ const authLimiter = rateLimit({
 
 const allowedOrigins = [
   env.clientUrl,
-  "http://localhost:8081",
+  "https://suviet.io.vn",
+  "https://www.suviet.io.vn",
+  "https://su-viet360.vercel.app",
   "http://localhost:3000",
+  "http://localhost:8081",
 ];
 
 app.use(
@@ -64,6 +69,8 @@ app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/lessons", lessonRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/user/notifications", notificationRoutes);
+app.use("/api/blog", blogRoutes);
 app.use("/api", podcastRoutes);
 app.use(errorHandler);
 

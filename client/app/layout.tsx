@@ -3,6 +3,7 @@ import Link from "next/link";
 import Providers from "@/components/providers";
 import UserMenu from "@/components/user-menu";
 import ChatNavBadge from "@/components/chat/ChatNavBadge";
+import NotificationBell from "@/components/notification/NotificationBell";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" className="h-full antialiased" suppressHydrationWarning>
-      <body className="min-h-full sv-body">
+      <body className="min-h-full sv-body" suppressHydrationWarning>
         <Providers>
           <header className="sv-header">
             <nav className="sv-topbar">
@@ -33,20 +34,21 @@ export default function RootLayout({
                 <Link href="/" className="sv-menu-link">
                   Trang Chủ
                 </Link>
-                <Link href="/explore" className="sv-menu-link">
-                  Bản Đồ Di Sản
-                </Link>
                 <Link href="/podcasts" className="sv-menu-link">
                   Hành Trình
                 </Link>
                 <Link href="/leaderboard" className="sv-menu-link">
                   Bảng Vàng 
                 </Link>
-                <Link href="/community" className="sv-menu-link">
+                <Link href="/game" className="sv-menu-link">
                   Kho Báu
+                </Link>
+                <Link href="/blog" className="sv-menu-link">
+                  Diễn đàn
                 </Link>
               </div>
 
+              <NotificationBell />
               <ChatNavBadge />
               <UserMenu />
             </nav>

@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
+import { notificationApi } from "@/lib/notificationApi";
 
 // SVG Icons
 const SearchIcon = () => (
@@ -57,7 +59,20 @@ const formatDuration = (seconds: number) => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
+export const translateLevel = (level: string) => {
+  const mapping: Record<string, string> = {
+    Easy: "Dễ",
+    Medium: "Trung cấp",
+    Hard: "Nâng cao",
+    "Dễ": "Dễ",
+    "Trung cấp": "Trung cấp",
+    "Nâng cao": "Nâng cao"
+  };
+  return mapping[level] || level;
+};
+
 export default function PodcastListingPage() {
+  const { user } = useAuth();
   const [podcasts, setPodcasts] = useState<Record<string, any>[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -65,8 +80,50 @@ export default function PodcastListingPage() {
   const [sort, setSort] = useState("");
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  
   const [stats, setStats] = useState({ categories: {}, levels: {} });
+
+  const [followedCategories, setFollowedCategories] = useState<string[]>([]);
+  const [followLoadingMap, setFollowLoadingMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const fetchFollowed = async () => {
+      if (user) {
+        try {
+          const followed = await notificationApi.getFollowedCategories();
+          setFollowedCategories(followed.map((c: string) => c.trim()));
+        } catch (err) {
+          console.error("Error fetching followed categories:", err);
+        }
+      } else {
+        setFollowedCategories([]);
+      }
+    };
+    fetchFollowed();
+  }, [user]);
+
+  const handleToggleFollow = async (catName: string) => {
+    if (!user) {
+      alert("Vui lòng đăng nhập để theo dõi chủ đề này!");
+      return;
+    }
+    const cleanCat = catName.trim();
+    setFollowLoadingMap((prev) => ({ ...prev, [catName]: true }));
+    try {
+      const isFollowing = followedCategories.includes(cleanCat);
+      if (isFollowing) {
+        await notificationApi.unfollowCategory(cleanCat);
+        setFollowedCategories((prev) => prev.filter((c) => c !== cleanCat));
+      } else {
+        await notificationApi.followCategory(cleanCat);
+        setFollowedCategories((prev) => [...prev, cleanCat]);
+      }
+    } catch (err) {
+      console.error("Error toggling follow category:", err);
+      alert("Có lỗi xảy ra khi thực hiện thao tác. Vui lòng thử lại!");
+    } finally {
+      setFollowLoadingMap((prev) => ({ ...prev, [catName]: false }));
+    }
+  };
 
   const handleCopyLink = (id: string) => {
     const url = `${window.location.origin}/podcasts/${id}`;
@@ -118,7 +175,8 @@ export default function PodcastListingPage() {
       const lvls: Record<string, number> = {};
       apiData.forEach((p: { category: string; level: string }) => {
         cats[p.category] = (cats[p.category] || 0) + 1;
-        lvls[p.level] = (lvls[p.level] || 0) + 1;
+        const mappedLevel = translateLevel(p.level);
+        lvls[mappedLevel] = (lvls[mappedLevel] || 0) + 1;
       });
       setStats({ categories: cats, levels: lvls });
       
@@ -167,29 +225,32 @@ export default function PodcastListingPage() {
   });
 
   return (
-    <div className="min-h-screen pb-16 bg-[#FDFBF7]">
-      <div className="w-full bg-[#f3e9d8] relative overflow-hidden" style={{ backgroundImage: 'url("/textures/paper.jpg")' }}>
-        <div className="max-w-[1200px] mx-auto px-6 py-8 relative z-10">
-          <div className="text-sm font-medium text-[#8c6a34] mb-2 uppercase tracking-widest flex items-center gap-2">
-             <Link href="/" className="hover:underline">Trang chủ</Link>
-             <ChevronRightIcon />
-             <span>Mục lục</span>
+    <div className="min-h-screen pb-16 bg-transparent">
+      <div className="w-full bg-transparent relative overflow-hidden">
+        <div className="max-w-[1200px] mx-auto px-6 py-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex-1">
+            <div className="text-sm font-medium text-[#8c6a34] mb-2 uppercase tracking-widest flex items-center gap-2">
+               <Link href="/" className="hover:underline">Trang chủ</Link>
+               <ChevronRightIcon />
+               <span>Mục lục</span>
+            </div>
+            <h2 className="text-[#a84d28] font-bold tracking-widest text-sm mb-4 uppercase">Podcast Lịch Sử</h2>
+            <h1 className="text-4xl md:text-5xl font-bold text-[#3a2312] leading-tight font-display mb-4 max-w-2xl">
+              Khám phá lịch sử Việt Nam<br/>qua những câu chuyện
+            </h1>
+            <p className="text-[#5c4a3d] text-lg max-w-xl leading-relaxed">
+              Lắng nghe những câu chuyện lịch sử hào hùng được tái hiện sống động qua giọng kể. 
+              Mỗi tập podcast là một hành trình trở về quá khứ, giúp bạn hiểu hơn về dân tộc, đất nước 
+              và con người Việt Nam.
+            </p>
           </div>
-          <h2 className="text-[#a84d28] font-bold tracking-widest text-sm mb-4 uppercase">Podcast Lịch Sử</h2>
-          <h1 className="text-4xl md:text-5xl font-bold text-[#3a2312] leading-tight font-display mb-4 max-w-2xl">
-            Khám phá lịch sử Việt Nam<br/>qua những câu chuyện
-          </h1>
-          <p className="text-[#5c4a3d] text-lg max-w-xl leading-relaxed">
-            Lắng nghe những câu chuyện lịch sử hào hùng được tái hiện sống động qua giọng kể. 
-            Mỗi tập podcast là một hành trình trở về quá khứ, giúp bạn hiểu hơn về dân tộc, đất nước 
-            và con người Việt Nam.
-          </p>
-        </div>
-        
-        <div className="absolute right-0 top-0 h-full w-1/3 pointer-events-none opacity-80" 
-             style={{ 
-               background: 'radial-gradient(circle, rgba(201,161,90,0.2) 0%, rgba(243,233,216,0) 70%)' 
-             }}>
+          <div className="w-full md:w-[320px] shrink-0 flex justify-center">
+            <img 
+              src="/images/podcast_banner.png" 
+              alt="Minh họa lịch sử Việt Nam" 
+              className="w-[260px] h-auto object-contain rounded-xl border border-[#e8d5b5] bg-[#fffbf2]/70 p-1.5 shadow-md hover:scale-[1.02] transition-transform duration-300"
+            />
+          </div>
         </div>
       </div>
 
@@ -256,11 +317,34 @@ export default function PodcastListingPage() {
                       >
                          <div className="flex items-center gap-4">
                             <ThemeBookIcon />
-                            <div>
-                               <div className="text-[#a84d28] font-bold text-xs uppercase tracking-wider mb-1">{chapterLabel}</div>
-                               <h3 className="text-[#3a2312] font-bold text-lg font-display">{cat}</h3>
-                               <p className="text-[#8c6a34] text-xs mt-1">{epList.length} bài học</p>
-                            </div>
+                             <div>
+                                <div className="text-[#a84d28] font-bold text-xs uppercase tracking-wider mb-1">{chapterLabel}</div>
+                                <h3 className="text-[#3a2312] font-bold text-lg font-display">{cat}</h3>
+                                <div className="flex items-center gap-3 mt-1">
+                                   <span className="text-[#8c6a34] text-xs">{epList.length} bài học</span>
+                                   <button
+                                     type="button"
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       handleToggleFollow(cat);
+                                     }}
+                                     disabled={followLoadingMap[cat]}
+                                     className={`px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 transition-all ${
+                                       followedCategories.includes(cat.trim())
+                                         ? "bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200"
+                                         : "bg-[#a84d28] text-white hover:bg-[#8f3f1e] shadow-sm"
+                                     } disabled:opacity-50 cursor-pointer`}
+                                   >
+                                     {followLoadingMap[cat] ? (
+                                       <span className="inline-block animate-spin mr-0.5">⏳</span>
+                                     ) : followedCategories.includes(cat.trim()) ? (
+                                       <span>✓ Đang theo dõi</span>
+                                     ) : (
+                                       <span>+ Theo dõi chủ đề</span>
+                                     )}
+                                   </button>
+                                </div>
+                             </div>
                          </div>
                          <div className="text-[#8c6a34] px-4">
                             {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
@@ -296,7 +380,7 @@ export default function PodcastListingPage() {
                                       <h4 className="text-[#3a2312] font-bold text-[15px] group-hover:text-[#a84d28] transition-colors line-clamp-2 leading-snug">{ep.title}</h4>
                                       <div className="flex items-center gap-4 text-xs text-[#8c6a34] mt-1.5">
                                          <span className="flex items-center gap-1"><CalendarIcon /> {formatDate(ep.createdAt)}</span>
-                                         <span className="flex items-center gap-1"><BarChartIcon /> {ep.level}</span>
+                                         <span className="flex items-center gap-1"><BarChartIcon /> {translateLevel(ep.level)}</span>
                                       </div>
                                       {ep.description && (
                                          <p className="text-[#5c4a3d] text-xs mt-2 line-clamp-2 leading-relaxed">

@@ -8,6 +8,10 @@ const mockRedisClient = {
     mockRedisStore.set(key, value);
     return "OK";
   }),
+  setEx: vi.fn(async (key, ttl, value) => {
+    mockRedisStore.set(key, value);
+    return "OK";
+  }),
   get: vi.fn(async (key) => mockRedisStore.get(key) || null),
   del: vi.fn(async (key) => {
     mockRedisStore.delete(key);
@@ -25,6 +29,7 @@ require.cache[redisPath] = {
   exports: {
     redisClient: mockRedisClient,
     connectRedis: vi.fn(),
+    isRedisReady: vi.fn(() => true),
   },
 };
 

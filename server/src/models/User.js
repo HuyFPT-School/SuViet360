@@ -40,8 +40,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["admin", "user", "staff", "teacher"],
-      default: "user",
+      enum: ["admin", "student", "staff", "teacher"],
+      default: "student",
     },
     isEmailVerified: {
       type: Boolean,
@@ -81,6 +81,10 @@ const userSchema = new mongoose.Schema(
     },
     passwordResetToken: String,
     passwordResetExpires: Date,
+    followedCategories: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,

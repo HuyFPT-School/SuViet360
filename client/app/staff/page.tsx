@@ -5,6 +5,8 @@ import Link from "next/link";
 import { AxiosError } from "axios";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { blogApi } from "@/lib/blogApi";
+import type { BlogPost, BlogReport } from "@/types/blog";
 
 type Tileset = { name: string; imageUrl: string };
 
@@ -178,6 +180,19 @@ function renderStaffStatusBadge(status?: string | boolean) {
   );
 }
 
+const translateLevel = (level?: string) => {
+  if (!level) return "";
+  const mapping: Record<string, string> = {
+    Easy: "Dễ",
+    Medium: "Trung cấp",
+    Hard: "Nâng cao",
+    "Dễ": "Dễ",
+    "Trung cấp": "Trung cấp",
+    "Nâng cao": "Nâng cao"
+  };
+  return mapping[level] || level;
+};
+
 export default function StaffPage() {
   const { user, isLoading: authLoading, refreshUser } = useAuth();
   const [isHydrating, setIsHydrating] = useState(true);
@@ -189,7 +204,74 @@ export default function StaffPage() {
   const [newTilesetName, setNewTilesetName] = useState("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"lessons" | "podcasts">("lessons");
+  const [activeTab, setActiveTab] = useState<"lessons" | "podcasts" | "blog">("lessons");
+
+  // Blog Moderation states
+  const [pendingPosts, setPendingPosts] = useState<BlogPost[]>([]);
+  const [pendingReports, setPendingReports] = useState<BlogReport[]>([]);
+  const [blogLoading, setBlogLoading] = useState(false);
+  const [rejectingPostId, setRejectingPostId] = useState<string | null>(null);
+  const [rejectFeedback, setRejectFeedback] = useState("");
+
+  const fetchBlogModeration = async () => {
+    setBlogLoading(true);
+    try {
+      const postsRes = await blogApi.getPendingPosts();
+      const reportsRes = await blogApi.getPendingReports();
+      if (postsRes.success) setPendingPosts(postsRes.data);
+      if (reportsRes.success) setPendingReports(reportsRes.data);
+    } catch (err) {
+      console.error("Failed to load blog moderation data:", err);
+    } finally {
+      setBlogLoading(false);
+    }
+  };
+
+  const handleApprovePost = async (id: string) => {
+    if (!confirm("Bạn có chắc chắn muốn duyệt bài viết này?")) return;
+    try {
+      const res = await blogApi.approvePost(id);
+      if (res.success) {
+        setMessage({ type: "success", text: "Đã duyệt bài viết thành công." });
+        fetchBlogModeration();
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: "error", text: "Không thể duyệt bài viết." });
+    }
+  };
+
+  const handleRejectPostSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectingPostId || !rejectFeedback.trim()) return;
+    try {
+      const res = await blogApi.rejectPost(rejectingPostId, rejectFeedback.trim());
+      if (res.success) {
+        setMessage({ type: "success", text: "Đã từ chối bài viết thành công." });
+        setRejectingPostId(null);
+        setRejectFeedback("");
+        fetchBlogModeration();
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: "error", text: "Không thể từ chối bài viết." });
+    }
+  };
+
+  const handleResolveReport = async (id: string, action: "delete" | "dismiss") => {
+    const actionText = action === "delete" ? "XÓA nội dung vi phạm" : "BỎ QUA báo cáo này";
+    if (!confirm(`Bạn có chắc chắn muốn ${actionText}?`)) return;
+    try {
+      const res = await blogApi.resolveReport(id, action);
+      if (res.success) {
+        setMessage({ type: "success", text: `Đã xử lý báo cáo thành công: ${actionText}.` });
+        fetchBlogModeration();
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: "error", text: "Không thể xử lý báo cáo." });
+    }
+  };
 
   // Podcast states
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
@@ -239,6 +321,8 @@ export default function StaffPage() {
     if (!user) return;
     if (activeTab === "podcasts") {
       loadPodcasts();
+    } else if (activeTab === "blog") {
+      fetchBlogModeration();
     }
   }, [user, activeTab]);
 
@@ -613,10 +697,18 @@ export default function StaffPage() {
           <div className="flex items-center gap-3 text-sm">
             <div className="rounded-xl border border-amber-200 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-sm">
               <p className="text-amber-500 text-xs uppercase tracking-widest">
-                {activeTab === "lessons" ? "Tổng bài học" : "Tổng podcast"}
+                {activeTab === "lessons"
+                  ? "Tổng bài học"
+                  : activeTab === "podcasts"
+                    ? "Tổng podcast"
+                    : "Chờ duyệt / Báo cáo"}
               </p>
               <p className="text-amber-900 text-lg font-semibold">
-                {activeTab === "lessons" ? stats.total : podcasts.length}
+                {activeTab === "lessons"
+                  ? stats.total
+                  : activeTab === "podcasts"
+                    ? podcasts.length
+                    : `${pendingPosts.length} / ${pendingReports.length}`}
               </p>
             </div>
             <div className="rounded-xl border border-amber-200 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-sm">
@@ -624,9 +716,13 @@ export default function StaffPage() {
               <p className="text-amber-900 text-sm font-semibold">
                 {activeTab === "lessons"
                   ? stats.latest ? new Date(stats.latest).toLocaleDateString("vi-VN") : "-"
-                  : podcasts[0]?.updatedAt || podcasts[0]?.createdAt
-                    ? new Date(podcasts[0]?.updatedAt || podcasts[0]?.createdAt).toLocaleDateString("vi-VN")
-                    : "-"}
+                  : activeTab === "podcasts"
+                    ? podcasts[0]?.updatedAt || podcasts[0]?.createdAt
+                      ? new Date(podcasts[0]?.updatedAt || podcasts[0]?.createdAt).toLocaleDateString("vi-VN")
+                      : "-"
+                    : pendingPosts[0]?.createdAt
+                      ? new Date(pendingPosts[0].createdAt).toLocaleDateString("vi-VN")
+                      : "-"}
               </p>
             </div>
           </div>
@@ -650,6 +746,15 @@ export default function StaffPage() {
               }`}
           >
             Quản lý podcast
+          </button>
+          <button
+            onClick={() => { setActiveTab("blog"); setMessage(null); }}
+            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "blog"
+                ? "border-amber-700 text-amber-950 font-bold"
+                : "border-transparent text-amber-650 hover:text-amber-800"
+              }`}
+          >
+            Kiểm duyệt diễn đàn
           </button>
         </div>
 
@@ -978,7 +1083,7 @@ export default function StaffPage() {
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeTab === "podcasts" ? (
           <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
             <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
               <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
@@ -1019,7 +1124,7 @@ export default function StaffPage() {
                         <p className="font-semibold text-amber-900 truncate">{podcast.title}</p>
                         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                           <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 font-semibold">
-                            {podcast.level}
+                            {translateLevel(podcast.level)}
                           </span>
                           {renderStaffStatusBadge(podcast.status)}
                         </div>
@@ -1170,11 +1275,17 @@ export default function StaffPage() {
                     className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
                   >
                     <option value="">Không liên kết game</option>
-                    {lessons.map((lesson) => (
-                      <option key={lesson._id} value={lesson._id}>
-                        {lesson.title}
-                      </option>
-                    ))}
+                    {lessons
+                      .filter(
+                        (lesson) =>
+                          lesson.status === "Published" ||
+                          lesson._id === podcastForm.lessonId
+                      )
+                      .map((lesson) => (
+                        <option key={lesson._id} value={lesson._id}>
+                          {lesson.title} {lesson.status !== "Published" && `(${lesson.status})`}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
@@ -1258,6 +1369,197 @@ export default function StaffPage() {
                 </div>
               </div>
             </div>
+          </div>
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-[1.15fr_1.15fr]">
+            {/* Left side: Pending Posts */}
+            <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm flex flex-col">
+              <div className="border-b border-amber-100 px-5 py-4">
+                <h2 className="font-display text-lg font-semibold text-amber-900">
+                  Bài viết chờ duyệt ({pendingPosts.length})
+                </h2>
+              </div>
+              
+              {blogLoading && pendingPosts.length === 0 ? (
+                <div className="p-8 text-center text-amber-800 font-medium">Đang tải danh sách bài viết...</div>
+              ) : pendingPosts.length === 0 ? (
+                <div className="p-8 text-center text-amber-850 italic">Không có bài viết nào đang chờ duyệt.</div>
+              ) : (
+                <div className="divide-y divide-amber-100 max-h-[700px] overflow-y-auto">
+                  {pendingPosts.map((post) => (
+                    <div key={post._id} className="p-5 hover:bg-amber-50/30 transition">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1">
+                          <span className="inline-block text-[10px] uppercase font-bold text-amber-700 bg-amber-150 px-2 py-0.5 rounded mb-2">
+                            {post.category}
+                          </span>
+                          <h3 className="font-semibold text-amber-950 mb-1">{post.title}</h3>
+                          <p className="text-[11px] text-amber-800/80 mb-2">
+                            Người đăng: <strong>{post.author.name}</strong> • Lúc {new Date(post.createdAt).toLocaleString("vi-VN")}
+                          </p>
+                          <p className="text-xs text-gray-700 line-clamp-3 mb-3 whitespace-pre-wrap">{post.content}</p>
+                          
+                          {post.images && post.images.length > 0 && (
+                            <div className="flex gap-2 mb-3">
+                              {post.images.map((img) => (
+                                <img key={img.publicId} src={img.url} className="w-14 h-14 object-cover rounded border border-amber-200" alt="thumbnail" />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <button
+                            onClick={() => handleApprovePost(post._id)}
+                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+                          >
+                            ✓ Duyệt
+                          </button>
+                          <button
+                            onClick={() => setRejectingPostId(post._id)}
+                            className="rounded-lg border border-red-250 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-650 hover:bg-red-100 transition"
+                          >
+                            ✕ Từ chối
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Right side: Flagged Reports */}
+            <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm flex flex-col">
+              <div className="border-b border-amber-100 px-5 py-4">
+                <h2 className="font-display text-lg font-semibold text-amber-900">
+                  Báo cáo vi phạm ({pendingReports.length})
+                </h2>
+              </div>
+
+              {blogLoading && pendingReports.length === 0 ? (
+                <div className="p-8 text-center text-amber-800 font-medium">Đang tải danh sách báo cáo...</div>
+              ) : pendingReports.length === 0 ? (
+                <div className="p-8 text-center text-amber-850 italic">Không có báo cáo vi phạm nào chưa xử lý.</div>
+              ) : (
+                <div className="divide-y divide-amber-100 max-h-[700px] overflow-y-auto">
+                  {pendingReports.map((report) => (
+                    <div key={report._id} className="p-5 hover:bg-amber-50/30 transition">
+                      <div className="mb-3">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-[10px] font-bold bg-rose-100 text-rose-800 px-2 py-0.5 rounded uppercase">
+                            {report.reason === "Spam" ? "Spam" :
+                             report.reason === "Offensive_Language" ? "Từ ngữ thô tục" :
+                             report.reason === "Historical_Inaccuracy" ? "Sai lệch lịch sử" :
+                             report.reason === "Harassment" ? "Quấy rối" : "Lý do khác"}
+                          </span>
+                          <span className="text-xs text-amber-850">
+                            Người báo cáo: <strong>{report.reporter.name}</strong>
+                          </span>
+                        </div>
+                        {report.description && (
+                          <p className="text-xs text-amber-800 italic bg-amber-50/50 p-2 rounded border border-amber-100">
+                            "{report.description}"
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Flagged Content Preview */}
+                      {report.target ? (
+                        <div className="border border-red-200 bg-rose-50/10 p-3 rounded-lg text-sm mb-3">
+                          <p className="text-[10px] font-bold text-red-700 uppercase mb-1">
+                            Nội dung bị báo cáo ({report.targetType === "Post" ? "Bài viết" : "Bình luận"})
+                          </p>
+                          {report.targetType === "Post" ? (
+                            <>
+                              <h4 className="font-semibold text-amber-950 mb-1">{report.target.title}</h4>
+                              <p className="text-xs text-gray-600 line-clamp-2">{report.target.content}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-gray-700 mb-1">"{report.target.content}"</p>
+                              {report.target.post && (
+                                <p className="text-[10px] text-gray-500">
+                                  Thuộc bài viết: <strong>{report.target.post.title}</strong>
+                                </p>
+                              )}
+                            </>
+                          )}
+                          <p className="text-[11px] text-amber-800/80 mt-1">
+                            Tác giả: <strong>{report.target.author?.name || "Không rõ"}</strong>
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="p-2 bg-gray-50 text-xs text-gray-500 rounded mb-3 italic">
+                          [Nội dung đã bị xóa trước đó]
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => handleResolveReport(report._id, "dismiss")}
+                          className="rounded bg-amber-100 text-amber-850 px-3 py-1.5 text-xs font-semibold hover:bg-amber-250 transition"
+                        >
+                          Bỏ qua báo cáo
+                        </button>
+                        {report.target && (
+                          <button
+                            onClick={() => handleResolveReport(report._id, "delete")}
+                            className="rounded bg-red-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-red-750 transition"
+                          >
+                            Xóa nội dung vi phạm
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {/* Rejection Feedback Modal Overlay */}
+            {rejectingPostId && (
+              <div style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0, 0, 0, 0.6)",
+                backdropFilter: "blur(4px)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 9999,
+              }}>
+                <div className="bg-[#FFFBF2] border-2 border-amber-700 rounded-xl p-6 w-[90%] max-w-[450px] shadow-2xl">
+                  <h3 className="font-semibold text-lg text-amber-900 mb-4 tracking-wider uppercase" style={{ fontFamily: "Cinzel, serif" }}>
+                    Từ chối bài viết
+                  </h3>
+                  <form onSubmit={handleRejectPostSubmit}>
+                    <textarea
+                      required
+                      placeholder="Nhập lý do từ chối bài viết (gửi phản hồi cho người viết bài)..."
+                      value={rejectFeedback}
+                      onChange={(e) => setRejectFeedback(e.target.value)}
+                      className="w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[100px] mb-4"
+                    />
+                    <div className="flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => { setRejectingPostId(null); setRejectFeedback(""); }}
+                        className="rounded-lg border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-50"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                      >
+                        Gửi từ chối
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
