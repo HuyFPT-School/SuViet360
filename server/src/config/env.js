@@ -12,6 +12,7 @@ module.exports = {
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || "change-me-in-production",
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "30d",
   clientUrl: process.env.CLIENT_URL || "http://localhost:3000",
+  backendUrl: process.env.BACKEND_URL || "",
   cookieSecure: process.env.COOKIE_SECURE === "true",
   mailerUser: process.env.MAILER_USER || "",
   mailerPassword: process.env.MAILER_PASSWORD || "",
