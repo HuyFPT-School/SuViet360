@@ -40,6 +40,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: Colors.light.goldMuted,
         tabBarShowLabel: false,
       }}
+      sceneContainerStyle={{ backgroundColor: 'transparent' }}
     >
       <Tabs.Screen
         name="index"
