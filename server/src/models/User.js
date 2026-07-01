@@ -43,6 +43,15 @@ const userSchema = new mongoose.Schema(
       enum: ["admin", "student", "staff", "teacher"],
       default: "student",
     },
+    xp: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
+    level: {
+      type: Number,
+      default: 1,
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,

@@ -203,6 +203,16 @@ export default function PodcastDetailPage() {
     setIsPlaying(!isPlaying);
   };
 
+  const handleAudioEnded = async () => {
+    setIsPlaying(false);
+    if (!user) return;
+    try {
+      await api.post(`/progress/podcast/${id}/complete`);
+    } catch (err) {
+      console.error("Error completing podcast:", err);
+    }
+  };
+
   const handleTimeUpdate = () => {
     if (audioRef.current) {
       setCurrentTime(audioRef.current.currentTime);
@@ -411,7 +421,7 @@ export default function PodcastDetailPage() {
         src={podcast.audioUrl || "/audios/Bai_01.m4a"}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={handleAudioEnded}
       />
 
       <div className="max-w-[1200px] mx-auto px-6 py-6">

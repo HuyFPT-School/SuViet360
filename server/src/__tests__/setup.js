@@ -18,6 +18,7 @@ const mockRedisClient = {
     return 1;
   }),
   keys: vi.fn(async () => Array.from(mockRedisStore.keys())),
+  publish: vi.fn(async () => 1),
 };
 
 // Override the require cache for redis config

@@ -111,6 +111,35 @@ if (process.env.VERCEL !== "1") {
               }
             }
           );
+
+          await redisSubscriber.subscribe(
+            "leaderboard:update",
+            async (messageStr) => {
+              try {
+                const { userId, name, xp, level, gained, reason } = JSON.parse(messageStr);
+                io.emit("leaderboard_updated", {
+                  userId,
+                  name,
+                  xp,
+                  level,
+                  gained,
+                  reason,
+                });
+                io.to(`user:${userId}`).emit("xp_updated", {
+                  xp,
+                  level,
+                  gained,
+                  reason,
+                });
+              } catch (err) {
+                // eslint-disable-next-line no-console
+                console.error(
+                  "[Redis Subscriber] Leaderboard message processing error:",
+                  err.message
+                );
+              }
+            }
+          );
         } catch (err) {
           // eslint-disable-next-line no-console
           console.error(

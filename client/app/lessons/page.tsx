@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
+import { useAppSelector } from "@/store";
 
 type Tileset = { name: string; imageUrl: string };
 type SpriteFrame = { key: string; frame: number; imageUrl: string };
@@ -21,7 +22,9 @@ type Lesson = {
 };
 
 export default function LessonsPage() {
+  const { user } = useAppSelector((state) => state.auth);
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [unlockedLessons, setUnlockedLessons] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,12 +32,26 @@ export default function LessonsPage() {
 
   // Fetch all lessons on mount
   useEffect(() => {
-    api
-      .get<{ success: boolean; lessons: Lesson[] }>("/lessons")
-      .then((res) => setLessons(res.data.lessons))
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
+    const fetchData = async () => {
+      try {
+        const lessonsRes = await api.get<{ success: boolean; lessons: Lesson[] }>("/lessons");
+        setLessons(lessonsRes.data.lessons);
+
+        // If student is logged in, fetch their progress dashboard
+        if (user && user.role === "student") {
+          const progressRes = await api.get<{ success: boolean; data: { unlockedLessons: string[] } }>(
+            "/progress/dashboard"
+          );
+          setUnlockedLessons(progressRes.data.data.unlockedLessons || []);
+        }
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [user]);
 
   // Fetch single lesson when selected
   const handleSelect = async (id: string) => {
@@ -84,39 +101,55 @@ export default function LessonsPage() {
 
       {/* ── Lesson list ── */}
       <div className="space-y-4">
-        {lessons.map((lesson) => (
-          <div key={lesson._id}>
-            <button
-              type="button"
-              onClick={() => handleSelect(lesson._id)}
-              className={`w-full text-left rounded-xl border-2 p-5 transition-all duration-200 ${
-                selectedId === lesson._id
-                  ? "border-amber-500 bg-amber-50 shadow-md"
-                  : "border-amber-200/60 bg-white hover:border-amber-400 hover:shadow-sm"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-display text-lg font-semibold text-amber-950">
-                  {lesson.title}
-                </span>
-                <div className="flex items-center gap-3">
-                  <Link
-                    href={`/game?id=${lesson._id}`}
-                    className="rounded-lg bg-amber-600 px-4 py-1.5 text-sm font-medium text-white
-                               hover:bg-amber-700 transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    🎮 Chơi
-                  </Link>
-                  <span className="text-amber-500 text-xl">
-                    {selectedId === lesson._id ? "▲" : "▼"}
+        {lessons.map((lesson) => {
+          const isStudent = user?.role === "student";
+          const isLocked = isStudent && unlockedLessons.length > 0 && !unlockedLessons.includes(lesson._id);
+
+          return (
+            <div key={lesson._id}>
+              <button
+                type="button"
+                onClick={() => handleSelect(lesson._id)}
+                className={`w-full text-left rounded-xl border-2 p-5 transition-all duration-200 ${
+                  isLocked ? "opacity-65 bg-amber-50/20" : "bg-white"
+                } ${
+                  selectedId === lesson._id
+                    ? "border-amber-500 bg-amber-50 shadow-md"
+                    : "border-amber-200/60 hover:border-amber-400 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-display text-lg font-semibold text-amber-950 flex items-center gap-2">
+                    {isLocked && <span>🔒</span>}
+                    {lesson.title}
                   </span>
+                  <div className="flex items-center gap-3">
+                    {isLocked ? (
+                      <span
+                        className="rounded-lg bg-gray-400 px-4 py-1.5 text-sm font-medium text-white cursor-not-allowed select-none"
+                        onClick={(e) => e.stopPropagation()}
+                        title="Hãy hoàn thành bài học trước đó để mở khóa!"
+                      >
+                        Khóa
+                      </span>
+                    ) : (
+                      <Link
+                        href={`/game?id=${lesson._id}`}
+                        className="rounded-lg bg-amber-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-amber-700 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        🎮 Chơi
+                      </Link>
+                    )}
+                    <span className="text-amber-500 text-xl">
+                      {selectedId === lesson._id ? "▲" : "▼"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <p className="mt-1 text-sm text-amber-700 line-clamp-2">
-                {lesson.content}
-              </p>
-            </button>
+                <p className="mt-1 text-sm text-amber-700 line-clamp-2">
+                  {lesson.content}
+                </p>
+              </button>
 
             {/* ── Detail panel ── */}
             {selectedId === lesson._id && (
@@ -129,7 +162,8 @@ export default function LessonsPage() {
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {lessons.length === 0 && (

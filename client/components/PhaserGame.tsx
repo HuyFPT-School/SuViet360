@@ -38,13 +38,17 @@ const INTERACT_DISTANCE = 80;
 
 interface PhaserGameProps {
   lessonGame: LessonGameData;
+  onQuizComplete?: (score: number, total: number) => void;
 }
 
-export default function PhaserGame({ lessonGame }: PhaserGameProps) {
+export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGameProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const dataRef = useRef(lessonGame);
   dataRef.current = lessonGame;
+
+  const callbackRef = useRef(onQuizComplete);
+  callbackRef.current = onQuizComplete;
 
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return;
@@ -93,6 +97,8 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
 
       // Khóa tương tác tạm thời khi người chơi chọn đáp án để đợi hiệu ứng chuyển câu
       private isAnswering = false;
+      private correctAnswersCount = 0;
+      private answeredQuestions = new Set<string>();
 
       preload() {
         // Load tilemap JSON trước
@@ -117,6 +123,8 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
       }
 
       create() {
+        this.correctAnswersCount = 0;
+        this.answeredQuestions = new Set();
         const map = this.make.tilemap({ key: "lesson-map" });
         const mapData = this.cache.tilemap.get("lesson-map")?.data as any;
 
@@ -389,7 +397,17 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
         });
 
         // Chuẩn hóa và so khớp chữ trực tiếp
-        if (selectedAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()) {
+        const isCorrect = selectedAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+        const questionKey = qPoint.title;
+        
+        if (!this.answeredQuestions.has(questionKey)) {
+          this.answeredQuestions.add(questionKey);
+          if (isCorrect) {
+            this.correctAnswersCount += 1;
+          }
+        }
+
+        if (isCorrect) {
           // Đúng -> Đổi nút sang màu xanh lá
           btn.style.backgroundColor = "#2e7d32";
           btn.style.color = "#ffffff";
@@ -425,6 +443,14 @@ export default function PhaserGame({ lessonGame }: PhaserGameProps) {
           if (this.popupEl) {
             this.popupEl.style.display = "none";
             this.currentPopup = null;
+          }
+
+          // Kiểm tra xem đã trả lời hết câu hỏi chưa
+          const totalQuestions = this.questionPoints.length;
+          if (this.answeredQuestions.size === totalQuestions) {
+            if (callbackRef.current) {
+              callbackRef.current(this.correctAnswersCount, totalQuestions);
+            }
           }
         });
       }
