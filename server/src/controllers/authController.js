@@ -547,7 +547,7 @@ const logout = asyncHandler(async (req, res) => {
 
 const googleOAuthClient = new OAuth2Client(env.googleClientId);
 
-const googleLogin = asyncHandler(async (req, res) => {
+const googleLogin = asyncHandler(async (req, res) => { 
   const { idToken } = req.body;
 
   if (!idToken) {
@@ -598,6 +598,113 @@ const googleLogin = asyncHandler(async (req, res) => {
   await sendAuthResponse(res, 200, user, "Google login successful");
 });
 
+// ─── Mobile Google OAuth callback ─────────────────────────────
+// Flow: Mobile → Google OAuth → redirect về backend → backend xử lý
+// → redirect về app với mobileToken → app gọi finalize để lấy user
+
+const mobileTokenSecret = env.jwtSecret + "-mobile-google";
+const mobileTokenExpiresIn = "2m";
+
+const googleMobileCallback = asyncHandler(async (req, res) => {
+  const { code, state: appReturnUrl } = req.query;
+
+  // Build backend origin from env or request (handles proxies correctly)
+  const proto = req.get("x-forwarded-proto") || req.protocol;
+  const host = req.get("x-forwarded-host") || req.get("host");
+  const backendOrigin =
+    (env.backendUrl || `${proto}://${host}`).replace(/\/+$/, "");
+
+  // App return URL: mobile gửi qua state, fallback về custom scheme
+  const appBase = appReturnUrl || "suviet360://login";
+  const buildAppUrl = (params) => {
+    const sep = appBase.includes("?") ? "&" : "?";
+    return `${appBase}${sep}${params}`;
+  };
+
+  if (!code) {
+    return res.redirect(buildAppUrl(`error=${encodeURIComponent("Thiếu mã xác thực")}`));
+  }
+
+  try {
+    // Đổi authorization code → tokens
+    const { tokens } = await googleOAuthClient.getToken({
+      code,
+      redirect_uri: `${backendOrigin}/api/auth/google/callback`,
+    });
+
+    const idToken = tokens.id_token;
+    if (!idToken) {
+      return res.redirect(buildAppUrl(`error=${encodeURIComponent("Không nhận được id_token")}`));
+    }
+
+    // Verify idToken
+    const ticket = await googleOAuthClient.verifyIdToken({
+      idToken,
+      audience: env.googleClientId,
+    });
+    const payload = ticket.getPayload();
+
+    if (!payload || !payload.email) {
+      return res.redirect(buildAppUrl(`error=${encodeURIComponent("Không lấy được email")}`));
+    }
+
+    const email = normalizeEmail(payload.email);
+    const googleId = payload.sub;
+    const name = payload.name || email.split("@")[0];
+
+    let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
+    if (user) {
+      if (!user.googleId) user.googleId = googleId;
+      if (!user.isEmailVerified) user.isEmailVerified = true;
+    } else {
+      user = await User.create({
+        name,
+        email,
+        googleId,
+        isEmailVerified: true,
+      });
+    }
+
+    await user.save({ validateBeforeSave: false });
+
+    // Tạo mobileToken ngắn hạn (2 phút) để app gọi finalize
+    const mobileToken = jwt.sign(
+      { userId: user._id.toString() },
+      mobileTokenSecret,
+      { expiresIn: mobileTokenExpiresIn },
+    );
+
+    res.redirect(buildAppUrl(`mt=${mobileToken}`));
+  } catch (error) {
+    console.error("[Google Mobile Callback Error]", error);
+    res.redirect(buildAppUrl(`error=${encodeURIComponent("Đăng nhập Google thất bại")}`));
+  }
+});
+
+// App gọi endpoint này với mobileToken để hoàn tất đăng nhập
+const googleMobileFinalize = asyncHandler(async (req, res) => {
+  const { mobileToken } = req.body;
+
+  if (!mobileToken) {
+    throw new AppError("Mobile token is required", 400);
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(mobileToken, mobileTokenSecret);
+  } catch {
+    throw new AppError("Invalid or expired mobile token", 401);
+  }
+
+  const user = await User.findById(decoded.userId);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  await sendAuthResponse(res, 200, user, "Google login successful");
+});
+
 module.exports = {
   register,
   login,
@@ -611,4 +718,6 @@ module.exports = {
   logout,
   adminOnly,
   googleLogin,
+  googleMobileCallback,
+  googleMobileFinalize,
 };

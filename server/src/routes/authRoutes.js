@@ -3,6 +3,8 @@ const {
   register,
   login,
   googleLogin,
+  googleMobileCallback,
+  googleMobileFinalize,
   verifyEmail,
   resendVerification,
   forgotPassword,
@@ -20,6 +22,8 @@ const router = express.Router();
 router.post("/register", register);
 router.post("/login", login);
 router.post("/google", googleLogin);
+router.get("/google/callback", googleMobileCallback);
+router.post("/google/mobile-finalize", googleMobileFinalize);
 router.get("/verify-email", verifyEmail);
 router.post("/resend-verification", resendVerification);
 router.post("/forgot-password", forgotPassword);

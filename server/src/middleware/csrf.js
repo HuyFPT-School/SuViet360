@@ -28,6 +28,14 @@ const requireCsrfToken = (req, res, next) => {
     return next();
   }
 
+  // Mobile apps (React Native) don't maintain cookie jars automatically,
+  // so the double-submit CSRF pattern (cookie vs header) cannot work.
+  // We skip CSRF for mobile clients; they authenticate via JWT tokens instead.
+  const isMobile = req.get("x-client-type") === "mobile";
+  if (isMobile) {
+    return next();
+  }
+
   const cookieToken = getCookie(req, CSRF_COOKIE_NAME);
   const headerToken = req.get("x-csrf-token");
 

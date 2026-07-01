@@ -91,4 +91,15 @@ export const authApi = {
     });
     return response.data;
   },
+
+  /** Mobile Google OAuth: gọi sau khi nhận mobileToken từ backend callback */
+  googleMobileFinalize: async (mobileToken: string) => {
+    const token = await ensureCsrfToken();
+    const response = await api.post<AuthResponse>(
+      '/auth/google/mobile-finalize',
+      { mobileToken },
+      { headers: { 'x-csrf-token': token } },
+    );
+    return response.data;
+  },
 };
