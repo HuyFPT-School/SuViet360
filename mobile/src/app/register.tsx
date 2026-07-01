@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AxiosError } from 'axios';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { authApi } from '@/services/authApi';
+import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 import { Colors, FontSizes, BorderRadius } from '@/constants/theme';
 
 export default function RegisterScreen() {
@@ -25,6 +27,12 @@ export default function RegisterScreen() {
   const [serverError, setServerError] = useState('');
   const [serverSuccess, setServerSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    triggerGoogleLogin,
+    isLoading: isGoogleLoading,
+    error: googleError,
+  } = useGoogleAuth();
 
   const handleRegister = async () => {
     setServerError('');
@@ -155,6 +163,37 @@ export default function RegisterScreen() {
                 <ActivityIndicator color="#3a2312" size="small" />
               ) : (
                 <Text style={styles.submitText}>Đăng Ký</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>hoặc</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* ── Google Sign-Up ── */}
+            <TouchableOpacity
+              style={[
+                styles.googleButton,
+                (isGoogleLoading || isSubmitting) && styles.submitDisabled,
+              ]}
+              onPress={triggerGoogleLogin}
+              disabled={isGoogleLoading || isSubmitting}
+              activeOpacity={0.8}
+            >
+              {isGoogleLoading ? (
+                <ActivityIndicator color="#3a2312" size="small" />
+              ) : (
+                <>
+                  <Ionicons
+                    name="logo-google"
+                    size={20}
+                    color="#3a2312"
+                    style={styles.googleIcon}
+                  />
+                  <Text style={styles.googleText}>Đăng ký với Google</Text>
+                </>
               )}
             </TouchableOpacity>
 
@@ -309,6 +348,51 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
     color: '#3a2312',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginVertical: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.light.divider,
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    fontSize: FontSizes.sm,
+    color: Colors.light.authFrame,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  googleButton: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    paddingVertical: 13,
+    backgroundColor: '#fff',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  googleIcon: {
+    marginRight: 10,
+  },
+  googleText: {
+    fontFamily: 'Cinzel',
+    fontSize: FontSizes.sm,
+    fontWeight: '600',
+    color: '#3a2312',
+    letterSpacing: 0.5,
   },
   footer: {
     flexDirection: 'row',

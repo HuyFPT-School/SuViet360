@@ -16,6 +16,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { authApi } from '@/services/authApi';
 import { setUser } from '@/store/features/authSlice';
 import { useAppDispatch } from '@/store';
+import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 import { Colors, FontSizes, BorderRadius } from '@/constants/theme';
 
 export default function LoginScreen() {
@@ -26,6 +27,13 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    triggerGoogleLogin,
+    isLoading: isGoogleLoading,
+    error: googleError,
+    debugInfo,
+  } = useGoogleAuth();
 
   const handleLogin = async () => {
     setServerError('');
@@ -72,6 +80,11 @@ export default function LoginScreen() {
             {serverError ? (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>{serverError}</Text>
+              </View>
+            ) : null}
+            {googleError && !serverError ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{googleError}</Text>
               </View>
             ) : null}
 
@@ -140,6 +153,31 @@ export default function LoginScreen() {
               <View style={styles.dividerLine} />
             </View>
 
+            {/* ── Google Sign-In ── */}
+            <TouchableOpacity
+              style={[
+                styles.googleButton,
+                (isGoogleLoading || isSubmitting) && styles.submitDisabled,
+              ]}
+              onPress={triggerGoogleLogin}
+              disabled={isGoogleLoading || isSubmitting}
+              activeOpacity={0.8}
+            >
+              {isGoogleLoading ? (
+                <ActivityIndicator color="#3a2312" size="small" />
+              ) : (
+                <>
+                  <Ionicons
+                    name="logo-google"
+                    size={20}
+                    color="#3a2312"
+                    style={styles.googleIcon}
+                  />
+                  <Text style={styles.googleText}>Đăng nhập với Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
             <View style={styles.footer}>
               <Text style={styles.footerText}>Chưa có tài khoản? </Text>
               <TouchableOpacity onPress={() => router.push('/register')}>
@@ -148,6 +186,23 @@ export default function LoginScreen() {
             </View>
           </View>
         </View>
+
+        {/* ── Debug Panel (dev only) ── */}
+        {__DEV__ && debugInfo.length > 0 && (
+          <View style={styles.debugPanel}>
+            <Text style={styles.debugTitle}>🐛 Debug Log</Text>
+            <ScrollView
+              style={styles.debugScroll}
+              nestedScrollEnabled
+            >
+              {debugInfo.map((line, i) => (
+                <Text key={i} style={styles.debugLine}>
+                  {line}
+                </Text>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -306,6 +361,33 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  googleButton: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    paddingVertical: 13,
+    backgroundColor: '#fff',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  googleIcon: {
+    marginRight: 10,
+  },
+  googleText: {
+    fontFamily: 'Cinzel',
+    fontSize: FontSizes.sm,
+    fontWeight: '600',
+    color: '#3a2312',
+    letterSpacing: 0.5,
+  },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -319,5 +401,30 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.sm,
     color: '#6b451d',
     fontWeight: '600',
+  },
+  // ── Debug ──
+  debugPanel: {
+    marginTop: 20,
+    backgroundColor: '#0a0a0a',
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: '#333',
+    padding: 12,
+    maxHeight: 200,
+  },
+  debugTitle: {
+    color: '#0f0',
+    fontSize: 12,
+    fontFamily: 'monospace',
+    marginBottom: 6,
+  },
+  debugScroll: {
+    maxHeight: 160,
+  },
+  debugLine: {
+    color: '#aaa',
+    fontSize: 11,
+    fontFamily: 'monospace',
+    lineHeight: 16,
   },
 });
