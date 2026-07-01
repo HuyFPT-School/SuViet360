@@ -11,4 +11,6 @@ export interface User {
   gender?: "male" | "female" | "other";
   address?: string;
   bio?: string;
+  xp?: number;
+  level?: number;
 }

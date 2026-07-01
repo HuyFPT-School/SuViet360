@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { profileApi, type ProfileUpdatePayload } from "@/lib/profileApi";
+import { api } from "@/lib/api";
 
 /* ─── Data ─────────────────────────────────── */
 
@@ -88,6 +89,15 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState(0);
   const { user, isLoading, refreshUser } = useAuth();
   const router = useRouter();
+  const [progressData, setProgressData] = useState<any>(null);
+
+  useEffect(() => {
+    if (user && user.role === "student") {
+      api.get<{ success: boolean; data: any }>("/progress/dashboard")
+        .then((res) => setProgressData(res.data.data))
+        .catch((err) => console.error("Error fetching progress dashboard:", err));
+    }
+  }, [user]);
 
   /* ── Edit state ── */
   const [isEditing, setIsEditing] = useState(false);
@@ -241,6 +251,26 @@ export default function ProfilePage() {
     );
   }
 
+  const xp = progressData?.xp ?? user?.xp ?? 0;
+  const level = progressData?.level ?? user?.level ?? 1;
+  const minXP = 100 * Math.pow(level - 1, 2);
+  const maxXP = 100 * Math.pow(level, 2);
+  const diffXP = maxXP - minXP;
+  const currentOffset = xp - minXP;
+  const percentFill = Math.min(100, Math.max(0, (currentOffset / (diffXP || 1)) * 100));
+
+  const totalLessons = progressData?.stats?.totalLessons || 0;
+  const totalPodcasts = progressData?.stats?.totalPodcasts || 0;
+  const lessonPercent = totalLessons > 0 
+    ? ((progressData?.stats?.completedLessonsCount || 0) / totalLessons) * 100 
+    : 0;
+  const podcastPercent = totalPodcasts > 0 
+    ? ((progressData?.stats?.completedPodcastsCount || 0) / totalPodcasts) * 100 
+    : 0;
+  const unlockedPercent = totalLessons > 0
+    ? ((progressData?.unlockedLessons?.length || 0) / totalLessons) * 100
+    : 0;
+
   const name = user?.name || "Nguyễn Văn An";
   const email = user?.email || "nguyenvanan@gmail.com";
   const avatarUrl = avatarPreview || user?.avatar || "";
@@ -336,11 +366,11 @@ export default function ProfilePage() {
                 {/* XP bar */}
                 <div className="xp-bar-wrap">
                   <div className="xp-bar-labels">
-                    <span>Cấp 12</span>
-                    <span>2.350 / 4.000 XP</span>
+                    <span>Cấp {level}</span>
+                    <span>{xp.toLocaleString()} / {maxXP.toLocaleString()} XP</span>
                   </div>
                   <div className="xp-bar-track">
-                    <div className="xp-bar-fill" style={{ width: "58.75%" }} />
+                    <div className="xp-bar-fill" style={{ width: `${percentFill}%` }} />
                   </div>
                 </div>
 
@@ -448,102 +478,132 @@ export default function ProfilePage() {
         {/* ── Bottom section ── */}
         <div className="profile-bottom">
 
-          {/* Achievements */}
+          {/* XP History */}
           <div className="card bottom-card">
-            <CardHeader title="Thành Tựu Khám Phá" />
+            <CardHeader title="Lịch Sử Tích Lũy XP" />
             <div className="achievements-grid">
-              {achievements.map((a, i) => (
-                <div key={i} className="achievement-item">
+              {(progressData?.xpHistory || []).slice(0, 6).map((item: any, i: number) => (
+                <div key={item._id || i} className="achievement-item">
                   <div
                     className="achievement-icon-bar"
-                    style={{ borderColor: a.color, boxShadow: `0 0 8px ${a.color}44` }}
+                    style={{ borderColor: "#D4AF37", boxShadow: "0 0 8px #D4AF3744" }}
                   />
-                  <div className="achievement-title">{a.title}</div>
-                  <div className="achievement-desc">{a.desc}</div>
+                  <div className="achievement-title">{item.description}</div>
+                  <div className="achievement-desc">+{item.amount} XP · {formatDate(item.createdAt)}</div>
                 </div>
               ))}
+              {(!progressData?.xpHistory || progressData.xpHistory.length === 0) && (
+                <p className="text-xs text-amber-600/70 italic text-center py-4 col-span-2">Chưa có lịch sử XP nào.</p>
+              )}
             </div>
-            <button className="btn-card">Xem Tất Cả Thành Tựu</button>
           </div>
 
-          {/* Journeys */}
+          {/* Completion Stats */}
           <div className="card bottom-card">
-            <CardHeader title="Hành Trình Của Tôi" />
+            <CardHeader title="Tiến Độ Học Tập" />
             <div className="journey-list">
-              {journeys.map((j, i) => (
-                <div key={i} className="journey-item">
+              <div className="journey-item">
+                <div className="journey-info">
+                  <div className="journey-label">Bài học RPG</div>
+                  <div className="journey-title">Bài học lịch sử đã hoàn thành</div>
+                  <div className="journey-progress-row">
+                    <div className="progress-track">
+                      <div
+                        className="progress-fill"
+                        style={{
+                          width: `${lessonPercent}%`,
+                          background: "linear-gradient(90deg, #D4AF3788, #D4AF37)",
+                          boxShadow: "0 0 6px #D4AF3788",
+                        }}
+                      />
+                    </div>
+                    <span className="journey-pct" style={{ color: "#D4AF37" }}>
+                      {progressData?.stats?.completedLessonsCount || 0}/{progressData?.stats?.totalLessons || 0} ({Math.round(lessonPercent)}%)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="journey-item">
+                <div className="journey-info">
+                  <div className="journey-label">Audio Podcast</div>
+                  <div className="journey-title">Podcast âm thanh đã nghe</div>
+                  <div className="journey-progress-row">
+                    <div className="progress-track">
+                      <div
+                        className="progress-fill"
+                        style={{
+                          width: `${podcastPercent}%`,
+                          background: "linear-gradient(90deg, #C0903088, #C09030)",
+                          boxShadow: "0 0 6px #C0903088",
+                        }}
+                      />
+                    </div>
+                    <span className="journey-pct" style={{ color: "#C09030" }}>
+                      {progressData?.stats?.completedPodcastsCount || 0}/{progressData?.stats?.totalPodcasts || 0} ({Math.round(podcastPercent)}%)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quiz Performances */}
+          <div className="card bottom-card">
+            <CardHeader title="Kết Quả Làm Quiz" />
+            <div className="journey-list">
+              {(progressData?.quizPerformances || []).slice(0, 3).map((item: any, i: number) => (
+                <div key={item.lessonId || i} className="journey-item">
                   <div className="journey-info">
-                    <div className="journey-label">Hành trình</div>
-                    <div className="journey-title">{j.label}</div>
-                    <div className="journey-progress-row">
-                      <div className="progress-track">
-                        <div
-                          className="progress-fill"
-                          style={{
-                            width: `${j.progress}%`,
-                            background: `linear-gradient(90deg, ${j.color}88, ${j.color})`,
-                            boxShadow: `0 0 6px ${j.color}88`,
-                          }}
-                        />
-                      </div>
-                      <span className="journey-pct" style={{ color: j.color }}>
-                        {j.progress}%
+                    <div className="journey-label">Bài trắc nghiệm trong Game</div>
+                    <div className="journey-title flex items-center justify-between mt-1">
+                      <span className="text-amber-950 font-medium text-xs break-all">ID: {item.lessonId}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        item.passed ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                      }`}>
+                        {item.passed ? "ĐẠT" : "CHƯA ĐẠT"}
                       </span>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button className="btn-card">Tiếp Tục Hành Trình</button>
-          </div>
-
-          {/* Heritage */}
-          <div className="card bottom-card">
-            <CardHeader title="Di Sản Đã Mở Khóa" />
-            <div className="heritage-grid">
-              {heritage.map((h, i) => (
-                <div
-                  key={i}
-                  className={`heritage-item ${h.unlocked ? "heritage-item--unlocked" : "heritage-item--locked"}`}
-                >
-                  <div className="heritage-item__badge">
-                    {h.unlocked
-                      ? <div className="badge-check">✓</div>
-                      : <div className="badge-lock">✕</div>
-                    }
-                  </div>
-                  <div className="heritage-item__name">{h.name}</div>
-                </div>
-              ))}
-            </div>
-            <button className="btn-card">Khám Phá Bản Đồ Di Sản</button>
-          </div>
-
-          {/* Streak */}
-          <div className="card bottom-card">
-            <CardHeader title="Streak Đăng Nhập" />
-            <div className="streak-body">
-              <div className="streak-circle">
-                <span className="streak-count">32</span>
-              </div>
-
-              <div className="streak-label">Ngày liên tiếp</div>
-
-              <div className="streak-week">
-                {weekDays.map((d, i) => (
-                  <div key={d} className="streak-day">
-                    <span className="streak-day__name">{d}</span>
-                    <div className={`streak-day__box ${i < 6 ? "streak-day__box--done" : "streak-day__box--pending"}`}>
-                      {i < 6 ? "✓" : ""}
+                    <div className="mt-1 flex items-center justify-between text-xs text-amber-700">
+                      <span>Đúng: {item.score}/{item.total} câu</span>
+                      <span>{formatDate(item.updatedAt)}</span>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              <div className="streak-hint">Đăng nhập mỗi ngày để nhận thưởng!</div>
-
-              <button className="btn-card">Xem Phần Thưởng</button>
+                </div>
+              ))}
+              {(!progressData?.quizPerformances || progressData.quizPerformances.length === 0) && (
+                <p className="text-xs text-amber-600/70 italic text-center py-4">Chưa thực hiện bài quiz nào.</p>
+              )}
             </div>
+          </div>
+
+          {/* Unlocked game stages */}
+          <div className="card bottom-card">
+            <CardHeader title="Màn Chơi Đã Mở Khóa" />
+            <div className="journey-list">
+              <div className="journey-item">
+                <div className="journey-info">
+                  <div className="journey-label">Game RPG 2D</div>
+                  <div className="journey-title">Màn chơi game đã được mở khóa</div>
+                  <div className="journey-progress-row">
+                    <div className="progress-track">
+                      <div
+                        className="progress-fill"
+                        style={{
+                          width: `${unlockedPercent}%`,
+                          background: "linear-gradient(90deg, #b8963e88, #b8963e)",
+                          boxShadow: "0 0 6px #b8963e88",
+                        }}
+                      />
+                    </div>
+                    <span className="journey-pct" style={{ color: "#b8963e" }}>
+                      {progressData?.unlockedLessons?.length || 0}/{progressData?.stats?.totalLessons || 0} ({Math.round(unlockedPercent)}%)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <a href="/lessons" className="btn-card block text-center mt-auto">Chơi Game Ngay</a>
           </div>
 
         </div>{/* end profile-bottom */}

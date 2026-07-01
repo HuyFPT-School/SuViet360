@@ -11,6 +11,7 @@ const podcastRoutes = require("./routes/podcastRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const blogRoutes = require("./routes/blogRoutes");
+const progressRoutes = require("./routes/progressRoutes");
 const errorHandler = require("./middleware/errorHandler");
 const { setCsrfToken, requireCsrfToken } = require("./middleware/csrf");
 
@@ -71,6 +72,7 @@ app.use("/api/lessons", lessonRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/user/notifications", notificationRoutes);
 app.use("/api/blog", blogRoutes);
+app.use("/api/progress", progressRoutes);
 app.use("/api", podcastRoutes);
 app.use(errorHandler);
 
