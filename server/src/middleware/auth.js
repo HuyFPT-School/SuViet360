@@ -6,7 +6,11 @@ const env = require("../config/env");
 const { getCookie } = require("../utils/cookies");
 
 const protect = asyncHandler(async (req, res, next) => {
-  const token = getCookie(req, "token");
+  let token = getCookie(req, "token");
+
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    token = req.headers.authorization.split(" ")[1];
+  }
 
   if (!token) {
     throw new AppError("Not authenticated", 401);

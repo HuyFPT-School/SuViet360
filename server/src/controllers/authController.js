@@ -545,7 +545,39 @@ const logout = asyncHandler(async (req, res) => {
   });
 });
 
-const googleOAuthClient = new OAuth2Client(env.googleClientId);
+const googleOAuthClient = new OAuth2Client(
+  env.googleClientId,
+  env.googleClientSecret
+);
+
+const findOrCreateGoogleUser = async (payload) => {
+  const email = normalizeEmail(payload.email);
+  const googleId = payload.sub;
+  const name = payload.name || email.split("@")[0];
+
+  let user = await User.findOne({
+    $or: [{ googleId }, { email }],
+  });
+
+  if (user) {
+    if (!user.googleId) {
+      user.googleId = googleId;
+    }
+    if (!user.isEmailVerified) {
+      user.isEmailVerified = true;
+    }
+  } else {
+    user = await User.create({
+      name,
+      email,
+      googleId,
+      isEmailVerified: true,
+    });
+  }
+
+  await user.save({ validateBeforeSave: false });
+  return user;
+};
 
 const googleLogin = asyncHandler(async (req, res) => { 
   const { idToken } = req.body;
@@ -569,31 +601,7 @@ const googleLogin = asyncHandler(async (req, res) => {
     throw new AppError("Unable to retrieve email from Google", 400);
   }
 
-  const email = normalizeEmail(payload.email);
-  const googleId = payload.sub;
-  const name = payload.name || email.split("@")[0];
-
-  let user = await User.findOne({
-    $or: [{ googleId }, { email }],
-  });
-
-  if (user) {
-    // Link Google account if user exists by email but not yet linked
-    if (!user.googleId) {
-      user.googleId = googleId;
-    }
-    if (!user.isEmailVerified) {
-      user.isEmailVerified = true;
-    }
-  } else {
-    // Create new user from Google profile
-    user = await User.create({
-      name,
-      email,
-      googleId,
-      isEmailVerified: true,
-    });
-  }
+  const user = await findOrCreateGoogleUser(payload);
 
   await sendAuthResponse(res, 200, user, "Google login successful");
 });
@@ -615,7 +623,13 @@ const googleMobileCallback = asyncHandler(async (req, res) => {
     (env.backendUrl || `${proto}://${host}`).replace(/\/+$/, "");
 
   // App return URL: mobile gửi qua state, fallback về custom scheme
-  const appBase = appReturnUrl || "suviet360://login";
+  let appBase = appReturnUrl || "suviet360://login";
+
+  // Ngăn chặn lỗ hổng Open Redirect bằng cách kiểm duyệt Scheme di động
+  if (!appBase.startsWith("suviet360://")) {
+    appBase = "suviet360://login";
+  }
+
   const buildAppUrl = (params) => {
     const sep = appBase.includes("?") ? "&" : "?";
     return `${appBase}${sep}${params}`;
@@ -648,25 +662,7 @@ const googleMobileCallback = asyncHandler(async (req, res) => {
       return res.redirect(buildAppUrl(`error=${encodeURIComponent("Không lấy được email")}`));
     }
 
-    const email = normalizeEmail(payload.email);
-    const googleId = payload.sub;
-    const name = payload.name || email.split("@")[0];
-
-    let user = await User.findOne({ $or: [{ googleId }, { email }] });
-
-    if (user) {
-      if (!user.googleId) user.googleId = googleId;
-      if (!user.isEmailVerified) user.isEmailVerified = true;
-    } else {
-      user = await User.create({
-        name,
-        email,
-        googleId,
-        isEmailVerified: true,
-      });
-    }
-
-    await user.save({ validateBeforeSave: false });
+    const user = await findOrCreateGoogleUser(payload);
 
     // Tạo mobileToken ngắn hạn (2 phút) để app gọi finalize
     const mobileToken = jwt.sign(
