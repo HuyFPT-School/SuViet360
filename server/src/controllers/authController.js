@@ -625,8 +625,8 @@ const googleMobileCallback = asyncHandler(async (req, res) => {
   // App return URL: mobile gửi qua state, fallback về custom scheme
   let appBase = appReturnUrl || "suviet360://login";
 
-  // Ngăn chặn lỗ hổng Open Redirect bằng cách kiểm duyệt Scheme di động
-  if (!appBase.startsWith("suviet360://")) {
+  // Ngăn chặn lỗ hổng Open Redirect bằng cách kiểm duyệt Scheme di động (cho phép suviet360:// và exp:// cho development)
+  if (!appBase.startsWith("suviet360://") && !appBase.startsWith("exp://")) {
     appBase = "suviet360://login";
   }
 
