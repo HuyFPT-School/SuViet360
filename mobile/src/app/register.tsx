@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  ImageBackground,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AxiosError } from 'axios';
@@ -68,22 +69,45 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
+    <ImageBackground
+      source={require('@/assets/images/login_screen_bg.jpg')}
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      resizeMode="cover"
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.brandSection}>
-          <Text style={styles.brandText}>Hành Trình Sử Việt</Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.brandSection}>
+            <Text style={styles.brandText}>Hành Trình Sử Việt</Text>
+          </View>
 
-        <View style={styles.panel}>
-          <View style={styles.panelInner}>
-            <Text style={styles.title}>Đăng Ký</Text>
-            <Text style={styles.subtitle}>Khám phá lịch sử Việt Nam</Text>
+          <ImageBackground
+            source={require('@/assets/images/login_card_bg.png')}
+            style={styles.panel}
+            resizeMode="stretch"
+          >
+            <View style={styles.panelInner}>
+              {/* Tab Switcher */}
+              <View style={styles.tabHeader}>
+                <TouchableOpacity
+                  style={styles.tabButton}
+                  onPress={() => router.push('/login')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.tabButtonText}>ĐĂNG NHẬP</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.tabButton, styles.tabButtonActive]} activeOpacity={0.8}>
+                  <Text style={[styles.tabButtonText, styles.tabButtonTextActive]}>ĐĂNG KÝ</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.title}>Tạo Tài Khoản!</Text>
+              <Text style={styles.subtitle}>Đăng ký để bắt đầu hành trình khám phá.</Text>
 
             {serverError ? (
               <View style={styles.errorBox}>
@@ -100,7 +124,7 @@ export default function RegisterScreen() {
               <Text style={styles.label}>Họ tên</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Nguyễn Văn A"
+                placeholder="Nhập họ và tên của bạn"
                 placeholderTextColor="rgba(74, 52, 28, 0.45)"
                 value={name}
                 onChangeText={setName}
@@ -112,7 +136,7 @@ export default function RegisterScreen() {
               <Text style={styles.label}>Email</Text>
               <TextInput
                 style={styles.input}
-                placeholder="your@email.com"
+                placeholder="Nhập email của bạn"
                 placeholderTextColor="rgba(74, 52, 28, 0.45)"
                 value={email}
                 onChangeText={setEmail}
@@ -125,7 +149,7 @@ export default function RegisterScreen() {
               <Text style={styles.label}>Mật khẩu</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Ít nhất 8 ký tự"
+                placeholder="Nhập mật khẩu (ít nhất 8 ký tự)"
                 placeholderTextColor="rgba(74, 52, 28, 0.45)"
                 value={password}
                 onChangeText={setPassword}
@@ -137,7 +161,7 @@ export default function RegisterScreen() {
               <Text style={styles.label}>Xác nhận mật khẩu</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Nhập lại mật khẩu"
+                placeholder="Nhập lại mật khẩu để xác nhận"
                 placeholderTextColor="rgba(74, 52, 28, 0.45)"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -168,7 +192,7 @@ export default function RegisterScreen() {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>hoặc</Text>
+              <Text style={styles.dividerText}>HOẶC ĐĂNG KÝ VỚI</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -200,20 +224,20 @@ export default function RegisterScreen() {
             <View style={styles.footer}>
               <Text style={styles.footerText}>Đã có tài khoản? </Text>
               <TouchableOpacity onPress={() => router.push('/login')}>
-                <Text style={styles.footerLink}>Đăng nhập</Text>
+                <Text style={[styles.footerLink, { fontWeight: 'bold' }]}>Đăng nhập ngay</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ImageBackground>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#120a06',
   },
   scrollContent: {
     flexGrow: 1,
@@ -236,10 +260,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   panel: {
-    backgroundColor: Colors.light.panel,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    borderColor: Colors.light.panelBorder,
+    width: '100%',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -248,12 +269,41 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   panelInner: {
-    padding: 24,
+    paddingHorizontal: 55,
+    paddingTop: 95, // give space for the dragon decoration
+    paddingBottom: 48, // give space for the bottom border
     alignItems: 'center',
+  },
+  tabHeader: {
+    flexDirection: 'row',
+    width: '100%',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#c7ab73',
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#b5834c',
+  },
+  tabButtonActive: {
+    backgroundColor: '#502e17',
+  },
+  tabButtonText: {
+    fontFamily: 'Cinzel',
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+    color: '#e2cfb4',
+  },
+  tabButtonTextActive: {
+    color: '#fbf5e6',
   },
   title: {
     fontFamily: 'Playfair Display',
-    fontSize: FontSizes.xxl,
+    fontSize: FontSizes.xl,
     fontWeight: '700',
     color: Colors.light.textAuth,
     textAlign: 'center',

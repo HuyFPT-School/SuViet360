@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  ImageBackground,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AxiosError } from 'axios';
@@ -58,24 +59,47 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
+    <ImageBackground
+      source={require('@/assets/images/login_screen_bg.jpg')}
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      resizeMode="cover"
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Brand */}
-        <View style={styles.brandSection}>
-          <Text style={styles.brandText}>Hành Trình Sử Việt</Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Brand */}
+          <View style={styles.brandSection}>
+            <Text style={styles.brandText}>Hành Trình Sử Việt</Text>
+          </View>
 
-        {/* Form Panel */}
-        <View style={styles.panel}>
-          <View style={styles.panelInner}>
-            <Text style={styles.title}>Đăng Nhập</Text>
-            <Text style={styles.subtitle}>Tiếp bước cha ông</Text>
+          {/* Form Panel */}
+          <ImageBackground
+            source={require('@/assets/images/login_card_bg.png')}
+            style={styles.panel}
+            resizeMode="stretch"
+          >
+            <View style={styles.panelInner}>
+              {/* Tab Switcher */}
+              <View style={styles.tabHeader}>
+                <TouchableOpacity style={[styles.tabButton, styles.tabButtonActive]} activeOpacity={0.8}>
+                  <Text style={[styles.tabButtonText, styles.tabButtonTextActive]}>ĐĂNG NHẬP</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.tabButton}
+                  onPress={() => router.push('/register')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.tabButtonText}>ĐĂNG KÝ</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.title}>Chào mừng Trở lại!</Text>
+              <Text style={styles.subtitle}>Đăng nhập để tiếp tục hành trình khám phá.</Text>
 
             {serverError ? (
               <View style={styles.errorBox}>
@@ -92,7 +116,7 @@ export default function LoginScreen() {
               <Text style={styles.label}>Email</Text>
               <TextInput
                 style={styles.input}
-                placeholder="your@email.com"
+                placeholder="Nhập email của bạn"
                 placeholderTextColor="rgba(74, 52, 28, 0.45)"
                 value={email}
                 onChangeText={setEmail}
@@ -106,7 +130,7 @@ export default function LoginScreen() {
               <View style={styles.passwordRow}>
                 <TextInput
                   style={[styles.input, { width: '100%' }]}
-                  placeholder="••••••••"
+                  placeholder="Nhập mật khẩu"
                   placeholderTextColor="rgba(74, 52, 28, 0.45)"
                   value={password}
                   onChangeText={setPassword}
@@ -149,7 +173,7 @@ export default function LoginScreen() {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>hoặc</Text>
+              <Text style={styles.dividerText}>HOẶC ĐĂNG NHẬP VỚI</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -181,37 +205,20 @@ export default function LoginScreen() {
             <View style={styles.footer}>
               <Text style={styles.footerText}>Chưa có tài khoản? </Text>
               <TouchableOpacity onPress={() => router.push('/register')}>
-                <Text style={styles.footerLink}>Đăng ký</Text>
+                <Text style={[styles.footerLink, { fontWeight: 'bold' }]}>Đăng ký ngay</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-
-        {/* ── Debug Panel (dev only) ── */}
-        {__DEV__ && debugInfo.length > 0 && (
-          <View style={styles.debugPanel}>
-            <Text style={styles.debugTitle}>🐛 Debug Log</Text>
-            <ScrollView
-              style={styles.debugScroll}
-              nestedScrollEnabled
-            >
-              {debugInfo.map((line, i) => (
-                <Text key={i} style={styles.debugLine}>
-                  {line}
-                </Text>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ImageBackground>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#120a06',
   },
   scrollContent: {
     flexGrow: 1,
@@ -234,10 +241,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   panel: {
-    backgroundColor: Colors.light.panel,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    borderColor: Colors.light.panelBorder,
+    width: '100%',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -246,12 +250,41 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   panelInner: {
-    padding: 28,
+    paddingHorizontal: 55,
+    paddingTop: 95, // give space for the dragon decoration
+    paddingBottom: 48, // give space for the bottom border
     alignItems: 'center',
+  },
+  tabHeader: {
+    flexDirection: 'row',
+    width: '100%',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#c7ab73',
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#b5834c',
+  },
+  tabButtonActive: {
+    backgroundColor: '#502e17',
+  },
+  tabButtonText: {
+    fontFamily: 'Cinzel',
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+    color: '#e2cfb4',
+  },
+  tabButtonTextActive: {
+    color: '#fbf5e6',
   },
   title: {
     fontFamily: 'Playfair Display',
-    fontSize: FontSizes.xxl,
+    fontSize: FontSizes.xl,
     fontWeight: '700',
     color: Colors.light.textAuth,
     textAlign: 'center',
