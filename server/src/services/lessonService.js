@@ -211,6 +211,65 @@ const updateLesson = async (id, updates) => {
     throw new AppError("Lesson not found", 404);
   }
 
+  // Determine if this is a content update to a Published lesson
+  const isContentUpdate = updates.title !== undefined ||
+    updates.content !== undefined ||
+    updates.tilemapJsonFile ||
+    updates.tilesetFiles ||
+    updates.animationGroups ||
+    updates.spawnX !== undefined ||
+    updates.spawnY !== undefined;
+
+  const isPublishedContentUpdate = lesson.status === "Published" && isContentUpdate;
+
+  if (isPublishedContentUpdate) {
+    // Build draft object with only changed fields
+    const draft = { updatedAt: new Date() };
+
+    if (updates.title !== undefined) draft.title = updates.title;
+    if (updates.content !== undefined) draft.content = updates.content;
+    if (updates.spawnX !== undefined || updates.spawnY !== undefined) {
+      draft.spawnPoint = {
+        x: updates.spawnX !== undefined ? updates.spawnX : lesson.game.spawnPoint.x,
+        y: updates.spawnY !== undefined ? updates.spawnY : lesson.game.spawnPoint.y,
+      };
+    }
+
+    // Upload new tilemap JSON WITHOUT deleting old one
+    if (updates.tilemapJsonFile) {
+      const jsonUpload = await uploadTilemapJson(updates.tilemapJsonFile.buffer);
+      draft.tilemapJsonUrl = jsonUpload.secure_url;
+      draft.tilemapJsonPublicId = jsonUpload.public_id;
+    }
+
+    // Upload new tilesets WITHOUT deleting old ones
+    if (updates.tilesetFiles && updates.tilesetFiles.length > 0 &&
+        updates.tilesetNames && updates.tilesetNames.length === updates.tilesetFiles.length) {
+      const newTilesets = [];
+      for (let i = 0; i < updates.tilesetFiles.length; i++) {
+        const imgUpload = await uploadTilesetImage(updates.tilesetFiles[i].buffer);
+        newTilesets.push({
+          name: updates.tilesetNames[i],
+          imageUrl: imgUpload.secure_url,
+          publicId: imgUpload.public_id,
+        });
+      }
+      draft.tilesets = newTilesets;
+    }
+
+    // Upload new animations WITHOUT deleting old ones
+    if (updates.animationGroups && Object.keys(updates.animationGroups).length > 0) {
+      const characterId = new mongoose.Types.ObjectId().toString();
+      const newAnimations = await processAnimationGroups(updates.animationGroups, characterId);
+      draft.animations = newAnimations;
+    }
+
+    lesson.pendingDraft = draft;
+    lesson.markModified("pendingDraft");
+    await lesson.save();
+    return lesson;
+  }
+
   // ── Text fields ──────────────────────────────────────────────
   if (updates.title !== undefined) lesson.title = updates.title;
   if (updates.content !== undefined) lesson.content = updates.content;
@@ -387,10 +446,114 @@ const processAnimationGroups = async (animationGroups, characterId) => {
   return result;
 };
 
+/**
+ * Apply pending draft to the lesson (used when teacher approves).
+ * Overwrites main fields with draft content, deletes old Cloudinary assets.
+ */
+const applyDraft = async (id) => {
+  const lesson = await Lesson.findById(id);
+  if (!lesson) throw new AppError("Lesson not found", 404);
+  if (!lesson.pendingDraft) return lesson; // Nothing to apply
+
+  const draft = lesson.pendingDraft;
+
+  // Apply text fields
+  if (draft.title !== undefined) lesson.title = draft.title;
+  if (draft.content !== undefined) lesson.content = draft.content;
+  if (draft.spawnPoint) {
+    lesson.game.spawnPoint.x = draft.spawnPoint.x;
+    lesson.game.spawnPoint.y = draft.spawnPoint.y;
+  }
+
+  // Apply tilemap JSON (delete old, use new from draft)
+  if (draft.tilemapJsonUrl) {
+    if (lesson.game.tilemapJsonPublicId) {
+      await deleteCloudinaryResource(lesson.game.tilemapJsonPublicId, "raw");
+    }
+    lesson.game.tilemapJsonUrl = draft.tilemapJsonUrl;
+    lesson.game.tilemapJsonPublicId = draft.tilemapJsonPublicId;
+  }
+
+  // Apply tilesets (delete old, use new from draft)
+  if (draft.tilesets) {
+    for (const ts of lesson.game.tilesets) {
+      if (ts.publicId) {
+        await deleteCloudinaryResource(ts.publicId, "image");
+      }
+    }
+    lesson.game.tilesets = draft.tilesets;
+  }
+
+  // Apply animations (delete old, use new from draft)
+  if (draft.animations) {
+    for (const group of lesson.game.character.animations) {
+      for (const frame of group.frames) {
+        if (frame.publicId) {
+          await deleteCloudinaryResource(frame.publicId, "image");
+        }
+      }
+    }
+    lesson.game.character.animations = draft.animations;
+    lesson.markModified("game.character.animations");
+  }
+
+  // Clear draft and keep Published status
+  lesson.pendingDraft = null;
+  lesson.markModified("pendingDraft");
+  lesson.status = "Published";
+  lesson.reviewFeedback = "";
+
+  await lesson.save();
+  return lesson;
+};
+
+/**
+ * Discard pending draft (used when teacher rejects).
+ * Deletes NEW Cloudinary assets from the draft, keeps old content.
+ */
+const discardDraft = async (id, feedback) => {
+  const lesson = await Lesson.findById(id);
+  if (!lesson) throw new AppError("Lesson not found", 404);
+  if (!lesson.pendingDraft) return lesson; // Nothing to discard
+
+  const draft = lesson.pendingDraft;
+
+  // Delete draft Cloudinary assets
+  if (draft.tilemapJsonPublicId) {
+    await deleteCloudinaryResource(draft.tilemapJsonPublicId, "raw");
+  }
+  if (draft.tilesets) {
+    for (const ts of draft.tilesets) {
+      if (ts.publicId) {
+        await deleteCloudinaryResource(ts.publicId, "image");
+      }
+    }
+  }
+  if (draft.animations) {
+    for (const group of draft.animations) {
+      for (const frame of group.frames) {
+        if (frame.publicId) {
+          await deleteCloudinaryResource(frame.publicId, "image");
+        }
+      }
+    }
+  }
+
+  // Clear draft, keep Published status, set feedback
+  lesson.pendingDraft = null;
+  lesson.markModified("pendingDraft");
+  lesson.reviewFeedback = feedback || "Bản cập nhật không được duyệt.";
+
+  await lesson.save();
+  return lesson;
+};
+
 module.exports = {
   createLesson,
   getAllLessons,
   getLessonById,
   updateLesson,
   deleteLesson,
+  applyDraft,
+  discardDraft,
 };

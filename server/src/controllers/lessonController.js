@@ -282,9 +282,14 @@ const getLessonById = asyncHandler(async (req, res) => {
 
 // ─── PUT /api/lessons/:id ─────────────────────────────────────────────
 const updateLesson = asyncHandler(async (req, res) => {
+  const lesson = await lessonService.getLessonById(req.params.id);
   const updates = {};
-  updates.status = "Pending_Review";
-  updates.reviewFeedback = "";
+  // Only change status to Pending_Review for non-Published lessons
+  // For Published lessons, the service layer saves to pendingDraft instead
+  if (lesson.status !== "Published") {
+    updates.status = "Pending_Review";
+    updates.reviewFeedback = "";
+  }
 
   // Text fields
   if (req.body.title !== undefined) updates.title = req.body.title;
@@ -334,14 +339,14 @@ const updateLesson = asyncHandler(async (req, res) => {
     throw new AppError("No valid fields to update", 400);
   }
 
-  const lesson = await lessonService.updateLesson(req.params.id, updates);
+  const updatedLesson = await lessonService.updateLesson(req.params.id, updates);
 
   // Invalidate cache
   await invalidateLessonCache(req.params.id);
 
   res.status(200).json({
     success: true,
-    lesson: formatLessonResponse(lesson),
+    lesson: formatLessonResponse(updatedLesson),
   });
 });
 
@@ -365,6 +370,7 @@ const formatLessonResponse = (lesson) => ({
   content: lesson.content,
   status: lesson.status,
   reviewFeedback: lesson.reviewFeedback,
+  hasPendingDraft: !!lesson.pendingDraft,
   game: {
     tilemapJsonUrl: lesson.game.tilemapJsonUrl,
     tilesets: lesson.game.tilesets.map((ts) => ({
@@ -399,17 +405,29 @@ const formatAnimations = (animations) => {
 };
 
 const approveLesson = asyncHandler(async (req, res) => {
-  const lesson = await lessonService.updateLesson(req.params.id, {
+  const lesson = await lessonService.getLessonById(req.params.id);
+
+  if (lesson.pendingDraft) {
+    // Has a pending draft → apply it
+    const updated = await lessonService.applyDraft(req.params.id);
+    await invalidateLessonCache(req.params.id);
+    return res.status(200).json({
+      success: true,
+      lesson: formatLessonResponse(updated),
+    });
+  }
+
+  // No draft → normal approve (Draft/Pending_Review → Published)
+  const updated = await lessonService.updateLesson(req.params.id, {
     status: "Published",
     reviewFeedback: "",
   });
 
-  // Status thay đổi → invalidate cache
   await invalidateLessonCache(req.params.id);
 
   res.status(200).json({
     success: true,
-    lesson: formatLessonResponse(lesson),
+    lesson: formatLessonResponse(updated),
   });
 });
 
@@ -419,17 +437,29 @@ const rejectLesson = asyncHandler(async (req, res) => {
     throw new AppError("Feedback is required to reject a lesson", 400);
   }
 
-  const lesson = await lessonService.updateLesson(req.params.id, {
+  const lesson = await lessonService.getLessonById(req.params.id);
+
+  if (lesson.pendingDraft) {
+    // Has a pending draft → discard it, keep old Published content
+    const updated = await lessonService.discardDraft(req.params.id, feedback);
+    await invalidateLessonCache(req.params.id);
+    return res.status(200).json({
+      success: true,
+      lesson: formatLessonResponse(updated),
+    });
+  }
+
+  // No draft → normal reject
+  const updated = await lessonService.updateLesson(req.params.id, {
     status: "Rejected",
     reviewFeedback: feedback,
   });
 
-  // Status thay đổi → invalidate cache
   await invalidateLessonCache(req.params.id);
 
   res.status(200).json({
     success: true,
-    lesson: formatLessonResponse(lesson),
+    lesson: formatLessonResponse(updated),
   });
 });
 

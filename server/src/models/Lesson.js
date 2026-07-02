@@ -107,6 +107,10 @@ const lessonSchema = new mongoose.Schema(
         },
       },
     },
+    pendingDraft: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
     status: {
       type: String,
       enum: ["Draft", "Pending_Review", "Published", "Rejected"],
