@@ -70,6 +70,10 @@ const podcastSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    pendingDraft: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
   },
   {
     timestamps: true,

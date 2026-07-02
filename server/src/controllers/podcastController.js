@@ -144,13 +144,8 @@ const updatePodcast = asyncHandler(async (req, res) => {
     return id;
   };
 
-  if (title !== undefined) podcast.title = title;
-  if (description !== undefined) podcast.description = description;
-  if (content !== undefined) podcast.content = content;
-  if (level !== undefined) podcast.level = level;
-  if (category !== undefined) podcast.category = category;
-  podcast.status = "Pending_Review";
-  podcast.reviewFeedback = "";
+  // Validate lessonId if provided
+  let validatedLessonId;
   if (lessonId !== undefined) {
     const cleanedLessonId = cleanLessonId(lessonId);
     if (cleanedLessonId) {
@@ -162,7 +157,59 @@ const updatePodcast = asyncHandler(async (req, res) => {
         throw new AppError("Only approved (Published) lessons can be linked to a podcast", 400);
       }
     }
-    podcast.lessonId = cleanedLessonId;
+    validatedLessonId = cleanedLessonId;
+  }
+
+  // ── If podcast is Published → save to pendingDraft ──
+  if (podcast.status === "Published") {
+    const draft = { updatedAt: new Date() };
+
+    if (title !== undefined) draft.title = title;
+    if (description !== undefined) draft.description = description;
+    if (content !== undefined) draft.content = content;
+    if (level !== undefined) draft.level = level;
+    if (category !== undefined) draft.category = category;
+    if (lessonId !== undefined) draft.lessonId = validatedLessonId;
+
+    // Upload new thumbnail WITHOUT deleting old one
+    if (req.files && req.files.thumbnail) {
+      const thumbnailFile = req.files.thumbnail[0];
+      const thumbResult = await uploadPodcastThumbnail(thumbnailFile.buffer);
+      draft.thumbnail = thumbResult.secure_url;
+      draft.thumbnailPublicId = thumbResult.public_id;
+    }
+
+    // Upload new audio WITHOUT deleting old one
+    if (req.files && req.files.audio) {
+      const audioFile = req.files.audio[0];
+      const audioResult = await uploadPodcastAudio(audioFile.buffer);
+      draft.audioUrl = audioResult.secure_url;
+      draft.audioPublicId = audioResult.public_id;
+      draft.duration = audioResult.duration || 0;
+    }
+
+    podcast.pendingDraft = draft;
+    podcast.markModified("pendingDraft");
+    await podcast.save();
+
+    await invalidatePodcastCache(req.params.id);
+
+    return res.status(200).json({
+      success: true,
+      data: podcast,
+    });
+  }
+
+  // ── Not Published → direct update (existing behavior) ──
+  if (title !== undefined) podcast.title = title;
+  if (description !== undefined) podcast.description = description;
+  if (content !== undefined) podcast.content = content;
+  if (level !== undefined) podcast.level = level;
+  if (category !== undefined) podcast.category = category;
+  podcast.status = "Pending_Review";
+  podcast.reviewFeedback = "";
+  if (lessonId !== undefined) {
+    podcast.lessonId = validatedLessonId;
   }
 
   // Check if new thumbnail file is provided
@@ -638,6 +685,42 @@ const approvePodcast = asyncHandler(async (req, res) => {
     throw new AppError("Podcast not found", 404);
   }
 
+  // If there's a pending draft, apply it
+  if (podcast.pendingDraft) {
+    const draft = podcast.pendingDraft;
+
+    // Apply text fields from draft
+    if (draft.title !== undefined) podcast.title = draft.title;
+    if (draft.description !== undefined) podcast.description = draft.description;
+    if (draft.content !== undefined) podcast.content = draft.content;
+    if (draft.level !== undefined) podcast.level = draft.level;
+    if (draft.category !== undefined) podcast.category = draft.category;
+    if (draft.lessonId !== undefined) podcast.lessonId = draft.lessonId;
+
+    // Apply thumbnail (delete old, use new from draft)
+    if (draft.thumbnail) {
+      if (podcast.thumbnailPublicId) {
+        await deleteCloudinaryResource(podcast.thumbnailPublicId, "image");
+      }
+      podcast.thumbnail = draft.thumbnail;
+      podcast.thumbnailPublicId = draft.thumbnailPublicId;
+    }
+
+    // Apply audio (delete old, use new from draft)
+    if (draft.audioUrl) {
+      if (podcast.audioPublicId) {
+        await deleteCloudinaryResource(podcast.audioPublicId, "video");
+      }
+      podcast.audioUrl = draft.audioUrl;
+      podcast.audioPublicId = draft.audioPublicId;
+      if (draft.duration !== undefined) podcast.duration = draft.duration;
+    }
+
+    // Clear draft
+    podcast.pendingDraft = null;
+    podcast.markModified("pendingDraft");
+  }
+
   podcast.status = "Published";
   podcast.reviewFeedback = "";
   await podcast.save();
@@ -705,6 +788,32 @@ const rejectPodcast = asyncHandler(async (req, res) => {
     throw new AppError("Podcast not found", 404);
   }
 
+  // If there's a pending draft, discard it (delete new Cloudinary assets)
+  if (podcast.pendingDraft) {
+    const draft = podcast.pendingDraft;
+
+    if (draft.thumbnailPublicId) {
+      await deleteCloudinaryResource(draft.thumbnailPublicId, "image");
+    }
+    if (draft.audioPublicId) {
+      await deleteCloudinaryResource(draft.audioPublicId, "video");
+    }
+
+    podcast.pendingDraft = null;
+    podcast.markModified("pendingDraft");
+    podcast.reviewFeedback = feedback;
+    // Keep Published status — old content stays visible
+    await podcast.save();
+
+    await invalidatePodcastCache(req.params.id);
+
+    return res.status(200).json({
+      success: true,
+      data: podcast,
+    });
+  }
+
+  // No draft → normal reject
   podcast.status = "Rejected";
   podcast.reviewFeedback = feedback;
   await podcast.save();
