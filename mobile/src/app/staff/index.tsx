@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { PageBackground } from '@/components/PageBackground';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
@@ -18,17 +19,17 @@ export default function StaffScreen() {
 
   if (!user || (user.role !== 'staff' && user.role !== 'admin')) {
     return (
-      <View style={styles.container}>
+      <PageBackground style={styles.container}>
         <HeaderBar title="Staff" showBack />
         <View style={styles.centered}>
           <Text style={styles.deniedText}>Bạn không có quyền truy cập</Text>
         </View>
-      </View>
+      </PageBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <PageBackground style={styles.container}>
       <HeaderBar title="Nhân Viên" showBack />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.greeting}>Xin chào, {user.name}</Text>
@@ -44,12 +45,12 @@ export default function StaffScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </PageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
+  container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   deniedText: { fontFamily: 'Cormorant Garamond', fontSize: FontSizes.lg, color: Colors.light.error },
   scrollContent: { padding: Spacing.lg, gap: 24 },

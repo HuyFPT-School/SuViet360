@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  ImageBackground,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { AxiosError } from 'axios';
@@ -68,16 +69,25 @@ export default function ResetPasswordScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
+    <ImageBackground
+      source={require('@/assets/images/login_screen_bg.jpg')}
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      resizeMode="cover"
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.panel}>
-          <View style={styles.panelInner}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <ImageBackground
+            source={require('@/assets/images/login_card_bg.png')}
+            style={styles.panel}
+            resizeMode="stretch"
+          >
+            <View style={styles.panelInner}>
             <Text style={styles.title}>Đặt Lại Mật Khẩu</Text>
             <Text style={styles.subtitle}>Nhập mật khẩu mới của bạn</Text>
 
@@ -123,16 +133,16 @@ export default function ResetPasswordScreen() {
               )}
             </TouchableOpacity>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </ImageBackground>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#120a06',
     justifyContent: 'center',
   },
   scrollContent: {
@@ -149,10 +159,7 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
   },
   panel: {
-    backgroundColor: Colors.light.panel,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    borderColor: Colors.light.panelBorder,
+    width: '100%',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -161,12 +168,14 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   panelInner: {
-    padding: 28,
+    paddingHorizontal: 55,
+    paddingTop: 95, // give space for the dragon decoration
+    paddingBottom: 48, // give space for the bottom border
     alignItems: 'center',
   },
   title: {
     fontFamily: 'Playfair Display',
-    fontSize: FontSizes.xxl,
+    fontSize: FontSizes.xl,
     fontWeight: '700',
     color: Colors.light.textAuth,
     textAlign: 'center',

@@ -11,6 +11,7 @@ import { lessonApi } from '@/services/lessonApi';
 import type { Lesson } from '@/types/lesson';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
 import HeaderBar from '@/components/ui/HeaderBar';
+import { PageBackground } from '@/components/PageBackground';
 
 export default function LessonDetailScreen() {
   const router = useRouter();
@@ -31,28 +32,28 @@ export default function LessonDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <PageBackground style={styles.container}>
         <HeaderBar title="Bài Học" showBack />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.gold} />
         </View>
-      </View>
+      </PageBackground>
     );
   }
 
   if (error || !lesson) {
     return (
-      <View style={styles.container}>
+      <PageBackground style={styles.container}>
         <HeaderBar title="Bài Học" showBack />
         <View style={styles.centered}>
           <Text style={styles.errorText}>Lỗi: {error || 'Không tìm thấy bài học'}</Text>
         </View>
-      </View>
+      </PageBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <PageBackground style={styles.container}>
       <HeaderBar title={lesson.title} showBack />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.contentCard}>
@@ -82,14 +83,13 @@ export default function LessonDetailScreen() {
           )}
         </View>
       </ScrollView>
-    </View>
+    </PageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
   },
   centered: {
     flex: 1,

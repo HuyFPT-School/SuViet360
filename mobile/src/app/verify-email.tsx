@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ImageBackground } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { authApi } from '@/services/authApi';
@@ -38,50 +38,65 @@ export default function VerifyEmailScreen() {
   }, [token]);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        {status === 'loading' && (
-          <>
-            <ActivityIndicator size="large" color={Colors.light.gold} />
-            <Text style={styles.text}>Đang xác thực email...</Text>
-          </>
-        )}
-        {status === 'success' && (
-          <>
-            <Ionicons name="checkmark-circle" size={56} color={Colors.light.success} />
-            <Text style={styles.text}>{message}</Text>
-            <Text style={styles.subtext}>Đang chuyển hướng...</Text>
-          </>
-        )}
-        {status === 'error' && (
-          <>
-            <Ionicons name="close-circle" size={56} color={Colors.light.error} />
-            <Text style={styles.text}>{message}</Text>
-          </>
-        )}
-      </View>
-    </View>
+    <ImageBackground
+      source={require('@/assets/images/login_screen_bg.jpg')}
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <ImageBackground
+        source={require('@/assets/images/login_card_bg.png')}
+        style={styles.card}
+        resizeMode="stretch"
+      >
+        <View style={styles.cardInner}>
+          {status === 'loading' && (
+            <>
+              <ActivityIndicator size="large" color={Colors.light.gold} />
+              <Text style={styles.text}>Đang xác thực email...</Text>
+            </>
+          )}
+          {status === 'success' && (
+            <>
+              <Ionicons name="checkmark-circle" size={56} color={Colors.light.success} />
+              <Text style={styles.text}>{message}</Text>
+              <Text style={styles.subtext}>Đang chuyển hướng...</Text>
+            </>
+          )}
+          {status === 'error' && (
+            <>
+              <Ionicons name="close-circle" size={56} color={Colors.light.error} />
+              <Text style={styles.text}>{message}</Text>
+            </>
+          )}
+        </View>
+      </ImageBackground>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#120a06',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   card: {
-    backgroundColor: Colors.light.panel,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    borderColor: Colors.light.panelBorder,
-    padding: 40,
-    alignItems: 'center',
-    gap: 16,
     width: '100%',
     maxWidth: 400,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  cardInner: {
+    paddingHorizontal: 55,
+    paddingTop: 95, // give space for the dragon decoration
+    paddingBottom: 48, // give space for the bottom border
+    alignItems: 'center',
+    gap: 16,
   },
   text: {
     fontFamily: 'Playfair Display',

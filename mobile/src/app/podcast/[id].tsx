@@ -12,6 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { PageBackground } from '@/components/PageBackground';
 import { podcastApi } from '@/services/podcastApi';
 import type { Podcast, PodcastNote, PodcastComment } from '@/types/podcast';
 import { useAuth } from '@/hooks/useAuth';
@@ -105,28 +106,28 @@ export default function PodcastDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <PageBackground style={styles.container}>
         <HeaderBar title="Podcast" showBack />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.gold} />
         </View>
-      </View>
+      </PageBackground>
     );
   }
 
   if (error || !podcast) {
     return (
-      <View style={styles.container}>
+      <PageBackground style={styles.container}>
         <HeaderBar title="Podcast" showBack />
         <View style={styles.centered}>
           <Text style={styles.errorText}>{error || 'Không tìm thấy'}</Text>
         </View>
-      </View>
+      </PageBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <PageBackground style={styles.container}>
       <HeaderBar title={podcast.title} showBack />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Player */}
@@ -241,12 +242,12 @@ export default function PodcastDetailScreen() {
           )}
         </View>
       </ScrollView>
-    </View>
+    </PageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
+  container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   errorText: { fontFamily: 'Cormorant Garamond', fontSize: FontSizes.md, color: Colors.light.error },
   scrollContent: { paddingBottom: 40 },

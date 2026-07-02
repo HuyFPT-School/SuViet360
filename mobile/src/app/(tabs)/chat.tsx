@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { PageBackground } from '@/components/PageBackground';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useChat } from '@/hooks/useChat';
 import { useAuth } from '@/hooks/useAuth';
@@ -74,7 +75,7 @@ export default function ChatScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <PageBackground style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.light.chatGoldLight} />
@@ -164,14 +165,13 @@ export default function ChatScreen() {
           );
         }}
       />
-    </View>
+    </PageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.chatBg,
   },
   header: {
     backgroundColor: Colors.light.chatBgSecondary,

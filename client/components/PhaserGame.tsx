@@ -38,7 +38,17 @@ const INTERACT_DISTANCE = 80;
 
 interface PhaserGameProps {
   lessonGame: LessonGameData;
-  onQuizComplete?: (score: number, total: number) => void;
+  onQuizComplete?: (
+    score: number,
+    total: number,
+    details?: {
+      title: string;
+      question: string;
+      isCorrect: boolean;
+      selectedAnswer: string;
+      correctAnswer: string;
+    }[]
+  ) => void;
 }
 
 export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGameProps) {
@@ -99,6 +109,13 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
       private isAnswering = false;
       private correctAnswersCount = 0;
       private answeredQuestions = new Set<string>();
+      private quizDetails: {
+        title: string;
+        question: string;
+        isCorrect: boolean;
+        selectedAnswer: string;
+        correctAnswer: string;
+      }[] = [];
 
       preload() {
         // Load tilemap JSON trước
@@ -405,6 +422,13 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
           if (isCorrect) {
             this.correctAnswersCount += 1;
           }
+          this.quizDetails.push({
+            title: qPoint.title,
+            question: qPoint.cauHoi,
+            isCorrect,
+            selectedAnswer,
+            correctAnswer,
+          });
         }
 
         if (isCorrect) {
@@ -449,7 +473,7 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
           const totalQuestions = this.questionPoints.length;
           if (this.answeredQuestions.size === totalQuestions) {
             if (callbackRef.current) {
-              callbackRef.current(this.correctAnswersCount, totalQuestions);
+              callbackRef.current(this.correctAnswersCount, totalQuestions, this.quizDetails);
             }
           }
         });

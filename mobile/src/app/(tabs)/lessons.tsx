@@ -9,6 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { PageBackground } from '@/components/PageBackground';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { lessonApi } from '@/services/lessonApi';
 import type { Lesson } from '@/types/lesson';
@@ -44,7 +45,7 @@ export default function LessonsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <PageBackground style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
             <Ionicons name="book-outline" size={22} color={Colors.light.goldLight} />
@@ -54,12 +55,12 @@ export default function LessonsScreen() {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.gold} />
         </View>
-      </View>
+      </PageBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <PageBackground style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <Ionicons name="book-outline" size={22} color={Colors.light.goldLight} />
@@ -125,14 +126,13 @@ export default function LessonsScreen() {
           ))
         )}
       </ScrollView>
-    </View>
+    </PageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
   },
   header: {
     backgroundColor: Colors.light.backgroundDark,
