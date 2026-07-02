@@ -7,6 +7,7 @@ const env = require("./config/env");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const lessonRoutes = require("./routes/lessonRoutes");
+const curriculumRoutes = require("./routes/curriculumRoutes");
 const podcastRoutes = require("./routes/podcastRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
@@ -69,6 +70,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/lessons", lessonRoutes);
+app.use("/api/curriculum", curriculumRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/user/notifications", notificationRoutes);
 app.use("/api/blog", blogRoutes);

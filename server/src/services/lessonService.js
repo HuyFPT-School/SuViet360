@@ -99,6 +99,9 @@ const createLesson = async ({
   spawnX,
   spawnY,
   createdBy,
+  chapterId,
+  grade,
+  order,
 }) => {
   if (!tilemapJsonFile) {
     throw new AppError("Tilemap JSON file is required", 400);
@@ -165,6 +168,9 @@ const createLesson = async ({
     title,
     content,
     createdBy,
+    chapterId: chapterId || null,
+    grade: grade || null,
+    order: order || 0,
     game: {
       tilemapJsonUrl: jsonUpload.secure_url,
       tilemapJsonPublicId: jsonUpload.public_id,
@@ -183,17 +189,24 @@ const createLesson = async ({
 };
 
 /**
- * Get all lessons (sorted newest first).
+ * Get all lessons (sorted newest first). Supports grade & chapterId filtering.
  */
 const getAllLessons = async (filter = {}) => {
-  return Lesson.find(filter).populate("createdBy", "name email").sort({ createdAt: -1 });
+  return Lesson.find(filter)
+    .populate("createdBy", "name email")
+    .populate("chapterId", "title grade order")
+    .populate("podcastId", "title thumbnail audioUrl level category status")
+    .sort({ createdAt: -1 });
 };
 
 /**
  * Get a single lesson by ID.
  */
 const getLessonById = async (id) => {
-  const lesson = await Lesson.findById(id).populate("createdBy", "name email");
+  const lesson = await Lesson.findById(id)
+    .populate("createdBy", "name email")
+    .populate("chapterId", "title grade order")
+    .populate("podcastId", "title description thumbnail audioUrl level category status duration");
   if (!lesson) {
     throw new AppError("Lesson not found", 404);
   }
@@ -216,6 +229,10 @@ const updateLesson = async (id, updates) => {
   if (updates.content !== undefined) lesson.content = updates.content;
   if (updates.status !== undefined) lesson.status = updates.status;
   if (updates.reviewFeedback !== undefined) lesson.reviewFeedback = updates.reviewFeedback;
+  if (updates.chapterId !== undefined) lesson.chapterId = updates.chapterId;
+  if (updates.grade !== undefined) lesson.grade = updates.grade;
+  if (updates.order !== undefined) lesson.order = updates.order;
+  if (updates.podcastId !== undefined) lesson.podcastId = updates.podcastId;
 
   // ── Spawn point ──────────────────────────────────────────────
   if (updates.spawnX !== undefined) lesson.game.spawnPoint.x = updates.spawnX;

@@ -58,7 +58,7 @@ router.put("/podcast-comments/:id", updateComment);
 router.delete("/podcast-comments/:id", deleteComment);
 
 // ─── Staff Only Management Routes ────────────────────────────────────
-router.use(authorize("staff"));
+router.use(authorize("staff", "admin"));
 
 // Direct Cloudinary uploads
 router.post("/upload/image", upload.single("image"), uploadImageOnly);

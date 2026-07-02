@@ -121,11 +121,40 @@ const lessonSchema = new mongoose.Schema(
       ref: "User",
       required: false,
     },
+    // ── Chapter relationship ──────────────────────────────────
+    chapterId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Chapter",
+      default: null,
+      index: true,
+    },
+    grade: {
+      type: Number,
+      enum: [10, 11, 12],
+      default: null,
+      index: true,
+    },
+    order: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    // ── Direct podcast link (1 bài = 1 podcast) ──────────────
+    podcastId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Podcast",
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// ── Indexes ───────────────────────────────────────────────────
+lessonSchema.index({ chapterId: 1, order: 1 });
+lessonSchema.index({ grade: 1, order: 1 });
+lessonSchema.index({ status: 1, grade: 1 });
 
 const Lesson = mongoose.model("Lesson", lessonSchema);
 

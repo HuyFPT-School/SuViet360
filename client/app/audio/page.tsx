@@ -126,7 +126,7 @@ export default function PodcastListingPage() {
   };
 
   const handleCopyLink = (id: string) => {
-    const url = `${window.location.origin}/podcasts/${id}`;
+    const url = `${window.location.origin}/audio/${id}`;
     navigator.clipboard.writeText(url)
       .then(() => alert("Đã sao chép liên kết đến podcast này!"))
       .catch(() => alert("Không thể sao chép liên kết"));
@@ -357,7 +357,7 @@ export default function PodcastListingPage() {
                              {epList.map((ep, i) => (
                                 <Link 
                                    key={ep._id} 
-                                   href={`/podcasts/${ep._id}`}
+                                   href={`/audio/${ep._id}`}
                                    className="bg-white border border-[#e8d5b5] rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:border-[#c9a15a] transition-all shadow-sm group cursor-pointer block"
                                 >
                                    {/* Serial Number */}

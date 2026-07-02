@@ -21,6 +21,7 @@ function GameContent() {
 
   const [gameData, setGameData] = useState<LessonGameData | null>(null);
   const [title, setTitle] = useState("");
+  const [podcast, setPodcast] = useState<{ _id: string; title: string; thumbnail: string; audioUrl: string; level: string; category: string; duration: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -59,12 +60,13 @@ function GameContent() {
     }
 
     api
-      .get<{ success: boolean; lesson: { title: string; game: LessonGameData } }>(
+      .get<{ success: boolean; lesson: { title: string; game: LessonGameData; podcast?: any } }>(
         `/lessons/${lessonId}`
       )
       .then((res) => {
         setTitle(res.data.lesson.title);
         setGameData(res.data.lesson.game);
+        if (res.data.lesson.podcast) setPodcast(res.data.lesson.podcast);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));

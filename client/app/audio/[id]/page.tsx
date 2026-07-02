@@ -496,7 +496,7 @@ export default function PodcastDetailPage() {
         <div className="text-xs font-medium text-[#8c6a34] mb-6 flex items-center gap-2">
            <Link href="/" className="hover:text-[#a84d28] transition-colors"><HomeIcon /></Link>
            <span>/</span>
-           <Link href="/podcasts" className="hover:underline">Mục lục</Link>
+           <Link href="/audio" className="hover:underline">Podcast</Link>
            <span>/</span>
            <span className="text-[#a84d28]">{podcast.title}</span>
         </div>

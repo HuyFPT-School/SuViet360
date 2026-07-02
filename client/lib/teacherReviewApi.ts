@@ -56,6 +56,20 @@ export type TeacherReviewItem = {
   reviewFeedback?: string;
   reviewedBy?: UserSummary;
   reviewedAt?: string;
+  // Chapter info from lesson
+  chapter?: { _id: string; title: string; grade: number } | null;
+  grade?: number | null;
+  order?: number;
+  podcast?: {
+    _id: string;
+    title: string;
+    thumbnail: string;
+    audioUrl: string;
+    level: string;
+    category: string;
+    status: string;
+    duration: number;
+  } | null;
 };
 
 type LessonResponseItem = {
@@ -65,6 +79,21 @@ type LessonResponseItem = {
   status: ReviewStatus;
   reviewFeedback?: string;
   game: LessonGame;
+  chapter?: { _id: string; title: string; grade: number } | null;
+  chapterId?: string | null;
+  grade?: number | null;
+  order?: number;
+  podcast?: {
+    _id: string;
+    title: string;
+    thumbnail: string;
+    audioUrl: string;
+    level: string;
+    category: string;
+    status: string;
+    duration: number;
+  } | null;
+  podcastId?: string | null;
   createdAt: string;
   createdBy?: string | { _id: string; name: string; email: string };
 };
@@ -117,6 +146,10 @@ const toReviewItem = (
     summary: lesson.content,
     game: lesson.game,
     reviewFeedback: lesson.reviewFeedback || "",
+    chapter: lesson.chapter || null,
+    grade: lesson.grade || null,
+    order: lesson.order,
+    podcast: lesson.podcast || null,
   };
 };
 
