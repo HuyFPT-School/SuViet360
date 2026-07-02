@@ -442,9 +442,9 @@ describe("Auth API", () => {
       const verifyToken = user.createEmailVerificationToken();
       await user.save({ validateBeforeSave: false });
 
-      const res = await request.get(
-        `/api/auth/verify-email?token=${verifyToken}`
-      );
+      const res = await request
+        .get(`/api/auth/verify-email?token=${verifyToken}`)
+        .set("Accept", "application/json");
 
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("success");
@@ -462,9 +462,9 @@ describe("Auth API", () => {
       const verifyToken = user.createEmailVerificationToken();
       await user.save({ validateBeforeSave: false });
 
-      const res = await request.get(
-        `/api/auth/verify-email?token=${verifyToken}`
-      );
+      const res = await request
+        .get(`/api/auth/verify-email?token=${verifyToken}`)
+        .set("Accept", "application/json");
 
       expect(res.status).toBe(200);
       const cookies = res.headers["set-cookie"] || [];

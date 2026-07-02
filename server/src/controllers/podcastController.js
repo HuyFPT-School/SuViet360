@@ -331,7 +331,7 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
   let cachedETag = await getCacheETag(cacheKey);
   if (cachedETag && etagMatch(req.headers["if-none-match"], cachedETag)) {
     return res
-      .set("Cache-Control", "public, max-age=3600")
+      .set("Cache-Control", "no-cache")
       .status(304)
       .end();
   }
@@ -344,13 +344,13 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
     }
     if (etagMatch(req.headers["if-none-match"], payload.etag)) {
       return res
-        .set("Cache-Control", "public, max-age=3600")
+        .set("Cache-Control", "no-cache")
         .status(304)
         .end();
     }
     return res
       .status(200)
-      .set("Cache-Control", "public, max-age=3600")
+      .set("Cache-Control", "no-cache")
       .set("ETag", payload.etag)
       .type("json")
       .send(payload.body);
@@ -381,7 +381,7 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
   setCachePayload(cacheKey, responseData);
 
   res
-    .set("Cache-Control", "public, max-age=3600")
+    .set("Cache-Control", "no-cache")
     .status(200)
     .json(responseData);
 });
@@ -396,7 +396,7 @@ const getPodcastById = asyncHandler(async (req, res) => {
     // Vẫn tăng viewCount ngầm
     Podcast.findByIdAndUpdate(req.params.id, { $inc: { viewCount: 1 } }).catch(() => {});
     return res
-      .set("Cache-Control", "public, max-age=600")
+      .set("Cache-Control", "no-cache")
       .status(304)
       .end();
   }
@@ -407,13 +407,13 @@ const getPodcastById = asyncHandler(async (req, res) => {
     if (!cachedETag) await setCacheETag(cacheKey, payload.etag);
     if (etagMatch(req.headers["if-none-match"], payload.etag)) {
       return res
-        .set("Cache-Control", "public, max-age=600")
+        .set("Cache-Control", "no-cache")
         .status(304)
         .end();
     }
     return res
       .status(200)
-      .set("Cache-Control", "public, max-age=600")
+      .set("Cache-Control", "no-cache")
       .set("ETag", payload.etag)
       .type("json")
       .send(payload.body);
@@ -442,7 +442,7 @@ const getPodcastById = asyncHandler(async (req, res) => {
   setCachePayload(cacheKey, responseData, DETAIL_TTL);
 
   res
-    .set("Cache-Control", "public, max-age=600")
+    .set("Cache-Control", "no-cache")
     .status(200)
     .json(responseData);
 });

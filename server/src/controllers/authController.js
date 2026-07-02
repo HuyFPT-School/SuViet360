@@ -141,7 +141,12 @@ const sendAuthResponse = async (res, statusCode, user, message) => {
   const refreshToken = signRefreshToken(user._id);
 
   await user.save({ validateBeforeSave: false });
-  await storeRefreshToken(user._id, refreshToken);
+  // Don't fail the response if Redis is unavailable
+  try {
+    await storeRefreshToken(user._id, refreshToken);
+  } catch (_err) {
+    // Redis may not be configured — non-critical
+  }
   setAuthCookies(res, accessToken, refreshToken);
   res.status(statusCode).json({
     status: "success",
@@ -158,13 +163,17 @@ const sendAuthResponse = async (res, statusCode, user, message) => {
         gender: user.gender,
         address: user.address,
         bio: user.bio,
+        isEmailVerified: user.isEmailVerified,
       },
     },
   });
 };
 
-const sendVerificationEmail = async (user, token) => {
-  const verifyUrl = `${env.clientUrl}/verify-email?token=${token}`;
+const sendVerificationEmail = async (user, token, req) => {
+  const isMobile = req && req.get("x-client-type") === "mobile";
+  const verifyUrl = isMobile
+    ? `${env.backendUrl}/api/auth/verify-email?token=${token}`
+    : `${env.clientUrl}/verify-email?token=${token}`;
 
   const subject = "Verify your email";
   const text = `Hello ${user.name || "there"},\n\nPlease verify your email by visiting: ${verifyUrl}\n\nIf you did not create an account, you can ignore this email.`;
@@ -188,8 +197,11 @@ const sendVerificationEmail = async (user, token) => {
   });
 };
 
-const sendResetPasswordEmail = async (user, token) => {
-  const resetUrl = `${env.clientUrl}/reset-password?token=${token}`;
+const sendResetPasswordEmail = async (user, token, req) => {
+  const isMobile = req && req.get("x-client-type") === "mobile";
+  const resetUrl = isMobile
+    ? `${env.backendUrl}/api/auth/reset-password?token=${token}`
+    : `${env.clientUrl}/reset-password?token=${token}`;
 
   const subject = "Reset your password";
   const text = `Hello ${user.name || "there"},\n\nReset your password by visiting: ${resetUrl}\n\nThis link will expire in 1 hour.`;
@@ -232,7 +244,7 @@ const register = asyncHandler(async (req, res) => {
   const verificationToken = user.createEmailVerificationToken();
 
   await user.save({ validateBeforeSave: false });
-  await sendVerificationEmail(user, verificationToken);
+  await sendVerificationEmail(user, verificationToken, req);
 
   res.status(201).json({
     status: "success",
@@ -243,6 +255,7 @@ const register = asyncHandler(async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        isEmailVerified: user.isEmailVerified,
       },
     },
   });
@@ -294,7 +307,40 @@ const verifyEmail = asyncHandler(async (req, res) => {
   user.emailVerificationToken = undefined;
   user.emailVerificationExpires = undefined;
 
-  await sendAuthResponse(res, 200, user, "Email verified successfully");
+  // Save verification to DB FIRST so it persists even if sendAuthResponse fails
+  await user.save({ validateBeforeSave: false });
+
+  // Detect browser (phone/emulator) vs API call (Next.js client)
+  const acceptHeader = req.get("Accept") || "";
+  const isApiCall = acceptHeader.includes("application/json");
+
+  if (isApiCall) {
+    // API call → return JSON with auth cookies (Next.js client flow)
+    await sendAuthResponse(res, 200, user, "Email verified successfully");
+  } else {
+    // Browser → show simple HTML success page (mobile phone/emulator)
+    res.status(200).set("Content-Type", "text/html; charset=utf-8").send(`
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Xác thực thành công</title>
+<style>
+  body{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f7f3e9;color:#2a2016}
+  .card{text-align:center;padding:40px 30px;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);max-width:400px}
+  .icon{font-size:56px;margin-bottom:12px}
+  h1{font-size:22px;margin:0 0 8px;color:#4a3520}
+  p{font-size:15px;color:#6b5a3e;margin:0}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">✅</div>
+  <h1>Email đã được xác thực!</h1>
+  <p>${user.email} đã sẵn sàng.<br>Bạn có thể quay lại app để đăng nhập.</p>
+</div>
+</body>
+</html>`);
+  }
 });
 
 const resendVerification = asyncHandler(async (req, res) => {
@@ -323,7 +369,7 @@ const resendVerification = asyncHandler(async (req, res) => {
 
   const verificationToken = user.createEmailVerificationToken();
   await user.save({ validateBeforeSave: false });
-  await sendVerificationEmail(user, verificationToken);
+  await sendVerificationEmail(user, verificationToken, req);
 
   return res.status(200).json({
     status: "success",
@@ -351,7 +397,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
   const resetToken = user.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
-  await sendResetPasswordEmail(user, resetToken);
+  await sendResetPasswordEmail(user, resetToken, req);
 
   return res.status(200).json({
     status: "success",
@@ -499,9 +545,41 @@ const logout = asyncHandler(async (req, res) => {
   });
 });
 
-const googleOAuthClient = new OAuth2Client(env.googleClientId);
+const googleOAuthClient = new OAuth2Client(
+  env.googleClientId,
+  env.googleClientSecret
+);
 
-const googleLogin = asyncHandler(async (req, res) => {
+const findOrCreateGoogleUser = async (payload) => {
+  const email = normalizeEmail(payload.email);
+  const googleId = payload.sub;
+  const name = payload.name || email.split("@")[0];
+
+  let user = await User.findOne({
+    $or: [{ googleId }, { email }],
+  });
+
+  if (user) {
+    if (!user.googleId) {
+      user.googleId = googleId;
+    }
+    if (!user.isEmailVerified) {
+      user.isEmailVerified = true;
+    }
+  } else {
+    user = await User.create({
+      name,
+      email,
+      googleId,
+      isEmailVerified: true,
+    });
+  }
+
+  await user.save({ validateBeforeSave: false });
+  return user;
+};
+
+const googleLogin = asyncHandler(async (req, res) => { 
   const { idToken } = req.body;
 
   if (!idToken) {
@@ -523,30 +601,101 @@ const googleLogin = asyncHandler(async (req, res) => {
     throw new AppError("Unable to retrieve email from Google", 400);
   }
 
-  const email = normalizeEmail(payload.email);
-  const googleId = payload.sub;
-  const name = payload.name || email.split("@")[0];
+  const user = await findOrCreateGoogleUser(payload);
 
-  let user = await User.findOne({
-    $or: [{ googleId }, { email }],
-  });
+  await sendAuthResponse(res, 200, user, "Google login successful");
+});
 
-  if (user) {
-    // Link Google account if user exists by email but not yet linked
-    if (!user.googleId) {
-      user.googleId = googleId;
-    }
-    if (!user.isEmailVerified) {
-      user.isEmailVerified = true;
-    }
-  } else {
-    // Create new user from Google profile
-    user = await User.create({
-      name,
-      email,
-      googleId,
-      isEmailVerified: true,
+// ─── Mobile Google OAuth callback ─────────────────────────────
+// Flow: Mobile → Google OAuth → redirect về backend → backend xử lý
+// → redirect về app với mobileToken → app gọi finalize để lấy user
+
+const mobileTokenSecret = env.jwtSecret + "-mobile-google";
+const mobileTokenExpiresIn = "2m";
+
+const googleMobileCallback = asyncHandler(async (req, res) => {
+  const { code, state: appReturnUrl } = req.query;
+
+  // Build backend origin from env or request (handles proxies correctly)
+  const proto = req.get("x-forwarded-proto") || req.protocol;
+  const host = req.get("x-forwarded-host") || req.get("host");
+  const backendOrigin =
+    (env.backendUrl || `${proto}://${host}`).replace(/\/+$/, "");
+
+  // App return URL: mobile gửi qua state, fallback về custom scheme
+  let appBase = appReturnUrl || "suviet360://login";
+
+  // Ngăn chặn lỗ hổng Open Redirect bằng cách kiểm duyệt Scheme di động (cho phép suviet360:// và exp:// cho development)
+  if (!appBase.startsWith("suviet360://") && !appBase.startsWith("exp://")) {
+    appBase = "suviet360://login";
+  }
+
+  const buildAppUrl = (params) => {
+    const sep = appBase.includes("?") ? "&" : "?";
+    return `${appBase}${sep}${params}`;
+  };
+
+  if (!code) {
+    return res.redirect(buildAppUrl(`error=${encodeURIComponent("Thiếu mã xác thực")}`));
+  }
+
+  try {
+    // Đổi authorization code → tokens
+    const { tokens } = await googleOAuthClient.getToken({
+      code,
+      redirect_uri: `${backendOrigin}/api/auth/google/callback`,
     });
+
+    const idToken = tokens.id_token;
+    if (!idToken) {
+      return res.redirect(buildAppUrl(`error=${encodeURIComponent("Không nhận được id_token")}`));
+    }
+
+    // Verify idToken
+    const ticket = await googleOAuthClient.verifyIdToken({
+      idToken,
+      audience: env.googleClientId,
+    });
+    const payload = ticket.getPayload();
+
+    if (!payload || !payload.email) {
+      return res.redirect(buildAppUrl(`error=${encodeURIComponent("Không lấy được email")}`));
+    }
+
+    const user = await findOrCreateGoogleUser(payload);
+
+    // Tạo mobileToken ngắn hạn (2 phút) để app gọi finalize
+    const mobileToken = jwt.sign(
+      { userId: user._id.toString() },
+      mobileTokenSecret,
+      { expiresIn: mobileTokenExpiresIn },
+    );
+
+    res.redirect(buildAppUrl(`mt=${mobileToken}`));
+  } catch (error) {
+    console.error("[Google Mobile Callback Error]", error);
+    res.redirect(buildAppUrl(`error=${encodeURIComponent("Đăng nhập Google thất bại")}`));
+  }
+});
+
+// App gọi endpoint này với mobileToken để hoàn tất đăng nhập
+const googleMobileFinalize = asyncHandler(async (req, res) => {
+  const { mobileToken } = req.body;
+
+  if (!mobileToken) {
+    throw new AppError("Mobile token is required", 400);
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(mobileToken, mobileTokenSecret);
+  } catch {
+    throw new AppError("Invalid or expired mobile token", 401);
+  }
+
+  const user = await User.findById(decoded.userId);
+  if (!user) {
+    throw new AppError("User not found", 404);
   }
 
   await sendAuthResponse(res, 200, user, "Google login successful");
@@ -565,4 +714,6 @@ module.exports = {
   logout,
   adminOnly,
   googleLogin,
+  googleMobileCallback,
+  googleMobileFinalize,
 };

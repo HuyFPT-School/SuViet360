@@ -12,6 +12,7 @@ const podcastRoutes = require("./routes/podcastRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const blogRoutes = require("./routes/blogRoutes");
+const progressRoutes = require("./routes/progressRoutes");
 const errorHandler = require("./middleware/errorHandler");
 const { setCsrfToken, requireCsrfToken } = require("./middleware/csrf");
 
@@ -28,16 +29,18 @@ const allowedOrigins = [
   "https://suviet.io.vn",
   "https://www.suviet.io.vn",
   "https://su-viet360.vercel.app",
-  "http://localhost:3000"
+  "http://localhost:3000",
+  "http://localhost:8081",
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(null, true);
       }
     },
     credentials: true,
@@ -71,6 +74,7 @@ app.use("/api/curriculum", curriculumRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/user/notifications", notificationRoutes);
 app.use("/api/blog", blogRoutes);
+app.use("/api/progress", progressRoutes);
 app.use("/api", podcastRoutes);
 app.use(errorHandler);
 

@@ -193,7 +193,7 @@ const getAllLessons = asyncHandler(async (req, res) => {
     let cachedETag = await getCacheETag(cacheKey);
     if (cachedETag && etagMatch(req.headers["if-none-match"], cachedETag)) {
       return res
-        .set("Cache-Control", "public, max-age=3600")
+        .set("Cache-Control", "no-cache")
         .status(304)
         .end();
     }
@@ -204,13 +204,13 @@ const getAllLessons = asyncHandler(async (req, res) => {
       if (!cachedETag) await setCacheETag(cacheKey, payload.etag);
       if (etagMatch(req.headers["if-none-match"], payload.etag)) {
         return res
-          .set("Cache-Control", "public, max-age=3600")
+          .set("Cache-Control", "no-cache")
           .status(304)
           .end();
       }
       return res
         .status(200)
-        .set("Cache-Control", "public, max-age=3600")
+        .set("Cache-Control", "no-cache")
         .set("ETag", payload.etag)
         .type("json")
         .send(payload.body);
@@ -233,7 +233,7 @@ const getAllLessons = asyncHandler(async (req, res) => {
 
   // Admin/staff xem tất cả → không cache browser, tránh lộ unpublished
   res
-    .set("Cache-Control", showAll ? "no-store" : "public, max-age=3600")
+    .set("Cache-Control", showAll ? "no-store" : "no-cache")
     .status(200)
     .json(responseData);
 });
@@ -247,7 +247,7 @@ const getLessonById = asyncHandler(async (req, res) => {
   let cachedETag = await getCacheETag(cacheKey);
   if (cachedETag && etagMatch(req.headers["if-none-match"], cachedETag)) {
     return res
-      .set("Cache-Control", "public, max-age=3600")
+      .set("Cache-Control", "no-cache")
       .status(304)
       .end();
   }
@@ -258,13 +258,13 @@ const getLessonById = asyncHandler(async (req, res) => {
     if (!cachedETag) await setCacheETag(cacheKey, payload.etag);
     if (etagMatch(req.headers["if-none-match"], payload.etag)) {
       return res
-        .set("Cache-Control", "public, max-age=3600")
+        .set("Cache-Control", "no-cache")
         .status(304)
         .end();
     }
     return res
       .status(200)
-      .set("Cache-Control", "public, max-age=3600")
+      .set("Cache-Control", "no-cache")
       .set("ETag", payload.etag)
       .type("json")
       .send(payload.body);
@@ -303,7 +303,7 @@ const getLessonById = asyncHandler(async (req, res) => {
 
   // Lesson không Published → không cho browser cache (chỉ admin xem được)
   res
-    .set("Cache-Control", lesson.status === "Published" ? "public, max-age=3600" : "no-store")
+    .set("Cache-Control", lesson.status === "Published" ? "no-cache" : "no-store")
     .status(200)
     .json(responseData);
 });

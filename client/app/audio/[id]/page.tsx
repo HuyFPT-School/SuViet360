@@ -85,6 +85,72 @@ export default function PodcastDetailPage() {
   const [loading, setLoading] = useState(true);
   const [isFollowingCategory, setIsFollowingCategory] = useState(false);
   const [followingLoading, setFollowingLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [quizResult, setQuizResult] = useState<{
+    score: number;
+    total: number;
+    passed: boolean;
+    xpGained: number;
+    details?: {
+      title: string;
+      question: string;
+      isCorrect: boolean;
+      selectedAnswer: string;
+      correctAnswer: string;
+    }[];
+  } | null>(null);
+
+  const handleQuizComplete = async (
+    score: number,
+    total: number,
+    details?: {
+      title: string;
+      question: string;
+      isCorrect: boolean;
+      selectedAnswer: string;
+      correctAnswer: string;
+    }[]
+  ) => {
+    const linkedLessonId = typeof podcast?.lessonId === "object" ? podcast.lessonId._id : podcast?.lessonId;
+    if (!linkedLessonId) return;
+    setSubmitting(true);
+    try {
+      // Fetch CSRF token
+      const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+      const csrfToken = csrfRes.data.data.csrfToken;
+
+      // 1. Submit quiz score
+      const quizRes = await api.post<{ success: boolean; data: { xpGained: number; passed: boolean } }>(
+        `/progress/quiz/${linkedLessonId}/submit`,
+        { score, total },
+        { headers: { "x-csrf-token": csrfToken } }
+      );
+
+      // 2. Mark lesson as completed
+      const lessonRes = await api.post<{ success: boolean; data: { xpGained: number } }>(
+        `/progress/lesson/${linkedLessonId}/complete`,
+        {},
+        { headers: { "x-csrf-token": csrfToken } }
+      );
+
+      const totalXPGained = quizRes.data.data.xpGained + (lessonRes.data.data.xpGained || 0);
+
+      setQuizResult({
+        score,
+        total,
+        passed: quizRes.data.data.passed,
+        xpGained: totalXPGained,
+        details,
+      });
+      setShowResultModal(true);
+    } catch (err: any) {
+      console.error(err);
+      alert("Lỗi lưu tiến độ: " + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const checkFollowStatus = async () => {
@@ -201,6 +267,16 @@ export default function PodcastDetailPage() {
       audioRef.current.play();
     }
     setIsPlaying(!isPlaying);
+  };
+
+  const handleAudioEnded = async () => {
+    setIsPlaying(false);
+    if (!user) return;
+    try {
+      await api.post(`/progress/podcast/${id}/complete`);
+    } catch (err) {
+      console.error("Error completing podcast:", err);
+    }
   };
 
   const handleTimeUpdate = () => {
@@ -411,7 +487,7 @@ export default function PodcastDetailPage() {
         src={podcast.audioUrl || "/audios/Bai_01.m4a"}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={handleAudioEnded}
       />
 
       <div className="max-w-[1200px] mx-auto px-6 py-6">
@@ -575,13 +651,21 @@ export default function PodcastDetailPage() {
                      <p>Chưa có tài liệu liên quan cho bài học này.</p>
                   )}
                   {activeTab === "game" && podcast?.lessonId && (
-                     <div className="space-y-4">
+                     <div className="space-y-4 relative">
+                        {submitting && (
+                           <div className="absolute inset-0 bg-[#fbf7ee]/60 backdrop-blur-xs flex items-center justify-center z-40">
+                              <p className="text-amber-800 font-semibold animate-pulse">Đang nạp kết quả và lưu tiến độ của bạn...</p>
+                           </div>
+                        )}
                         <p className="text-sm text-[#8c6a34] font-medium">
                            Trò chơi 2D tương tác đi kèm bài học. Sử dụng các phím mũi tên di chuyển nhân vật để vượt qua thử thách.
                         </p>
                         <div className="border border-[#e8d5b5] rounded-xl overflow-hidden bg-white shadow-inner p-4 flex flex-col items-center justify-center min-h-[450px]">
                            {typeof podcast.lessonId === "object" && (podcast.lessonId as any).game ? (
-                              <PhaserGame lessonGame={(podcast.lessonId as any).game} />
+                              <PhaserGame 
+                                 lessonGame={(podcast.lessonId as any).game} 
+                                 onQuizComplete={handleQuizComplete}
+                              />
                            ) : (
                               <p className="text-amber-800">Không tìm thấy dữ liệu game cho bài học này.</p>
                            )}
@@ -855,6 +939,103 @@ export default function PodcastDetailPage() {
 
           </div>
         </div>
+      {/* ── Beautiful Result Overlay Modal ── */}
+      {showResultModal && quizResult && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-[#fdfbf7] border-4 border-amber-600/40 rounded-2xl p-8 max-w-md w-full shadow-2xl text-center relative overflow-hidden border-t-8 border-t-amber-700">
+            {/* Shiny gold details */}
+            <div className="absolute -top-12 -left-12 w-24 h-24 bg-amber-200/20 rounded-full blur-xl" />
+            <div className="absolute -bottom-12 -right-12 w-24 h-24 bg-amber-400/20 rounded-full blur-xl" />
+
+            <span className="text-6xl block mb-4">
+              {quizResult.passed ? "🏆" : "✊"}
+            </span>
+
+            <h2 className="font-display text-2xl font-bold text-amber-900 mb-2">
+              {quizResult.passed ? "Kiểm Tra Hoàn Thành!" : "Cố Gắng Lên!"}
+            </h2>
+
+            <p className="text-sm text-amber-800 mb-4">
+              Bạn đã giải đáp hết các câu hỏi lịch sử trên bản đồ bài học này.
+            </p>
+
+            {/* Score box */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 inline-block mx-auto min-w-[200px]">
+              <div className="text-xs text-amber-600 font-semibold uppercase tracking-wider mb-1">
+                Kết Quả Trả Lời
+              </div>
+              <div className="text-3xl font-extrabold text-amber-950">
+                {quizResult.score} / {quizResult.total}
+              </div>
+              <div className={`text-xs font-bold mt-1.5 px-2 py-0.5 rounded-full inline-block ${
+                quizResult.passed 
+                  ? "bg-emerald-100 text-emerald-800" 
+                  : "bg-red-100 text-red-800"
+              }`}>
+                {quizResult.passed ? "ĐẠT YÊU CẦU" : "CHƯA ĐẠT"}
+              </div>
+            </div>
+
+            {/* XP Gained display */}
+            {quizResult.xpGained > 0 ? (
+              <div className="mb-6 flex justify-center items-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-950 font-bold px-5 py-2.5 rounded-full shadow-md max-w-xs mx-auto animate-bounce animate-duration-1000">
+                <span>⭐</span>
+                <span>Nhận +{quizResult.xpGained} XP Tích Lũy!</span>
+              </div>
+            ) : (
+              <div className="mb-6 text-xs text-amber-600 italic">
+                Bạn đã nhận đủ XP của bài học này từ trước.
+              </div>
+            )}
+
+            {/* Scrollable details list */}
+            {quizResult.details && quizResult.details.length > 0 && (
+              <div className="text-left mb-6 max-h-48 overflow-y-auto border border-amber-200/50 rounded-xl p-3 bg-amber-50/30 text-amber-900 animate-fade-in">
+                <div className="text-xs font-bold text-amber-800/80 uppercase tracking-wider mb-2">
+                  Chi Tiết Đáp Án:
+                </div>
+                <div className="space-y-3">
+                  {quizResult.details.map((q, idx) => (
+                    <div key={idx} className="text-xs border-b border-amber-200/20 pb-2 last:border-0 last:pb-0">
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm">
+                          {q.isCorrect ? "✅" : "❌"}
+                        </span>
+                        <div className="flex-1">
+                          <p className="font-semibold text-amber-950 leading-tight">
+                            {q.title}: {q.question}
+                          </p>
+                          <p className="text-[11px] text-amber-800 mt-1">
+                            Đáp án đúng: <span className="font-semibold text-emerald-700">{q.correctAnswer}</span>
+                          </p>
+                          {!q.isCorrect && (
+                            <p className="text-[11px] text-red-700 mt-0.5">
+                              Bạn đã chọn: <span className="font-semibold">{q.selectedAnswer || "(Không trả lời)"}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-center">
+              <button
+                onClick={() => {
+                  setShowResultModal(false);
+                  window.location.reload();
+                }}
+                className="w-full bg-amber-700 hover:bg-amber-800 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors shadow-sm text-sm"
+              >
+                Chơi lại bản đồ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

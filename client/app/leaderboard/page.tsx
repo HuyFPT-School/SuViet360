@@ -2,31 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppSelector } from "@/store";
+import { api } from "@/lib/api";
+import { connectSocket } from "@/lib/socketClient";
 
 const PAGE_SIZE = 12;
-const MAX_ENTRIES = 120;
-
-const nameSeeds = [
-  "An",
-  "Bình",
-  "Chi",
-  "Đức",
-  "Hà",
-  "Huy",
-  "Khánh",
-  "Linh",
-  "Minh",
-  "Nam",
-  "Ngọc",
-  "Phúc",
-  "Quân",
-  "Sơn",
-  "Thảo",
-  "Trang",
-  "Tuấn",
-  "Vy",
-  "Yến",
-];
 
 const regions = [
   "Hà Nội",
@@ -48,62 +27,112 @@ type LeaderboardEntry = {
   region: string;
   initials: string;
   rankChange: number;
+  avatar?: string;
 };
-
-const createEntry = (rank: number): LeaderboardEntry => {
-  const seed = (rank * 7) % nameSeeds.length;
-  const region = regions[rank % regions.length];
-  const name = `${nameSeeds[seed]} ${nameSeeds[(seed + 5) % nameSeeds.length]}`;
-  const score = 2400 - rank * 11 + (rank % 3) * 7;
-  const level = Math.max(1, 18 - Math.floor(rank / 6));
-  const streak = 3 + (rank % 14);
-  const initials = `${name[0]}${name.split(" ")[1][0]}`.toUpperCase();
-
-  return {
-    id: `entry-${rank}`,
-    name,
-    score,
-    level,
-    streak,
-    region,
-    initials,
-    rankChange: 0,
-  };
-};
-
-const createBatch = (offset: number, size: number) =>
-  Array.from({ length: size }, (_, index) => createEntry(offset + index + 1));
 
 export default function LeaderboardPage() {
   const { user } = useAppSelector((state) => state.auth);
-  const [entries, setEntries] = useState<LeaderboardEntry[]>(() =>
-    createBatch(0, PAGE_SIZE)
-  );
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const loaderRef = useRef<HTMLDivElement | null>(null);
 
-  const displayEntries = useMemo(
-    () => entries.map((entry, index) => ({ ...entry, rank: index + 1 })),
-    [entries]
+  const getInitials = (name: string): string => {
+    const parts = (name || "").trim().split(" ");
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    return (name || "SV").slice(0, 2).toUpperCase();
+  };
+
+  const fetchLeaderboard = useCallback(
+    async (pageNum: number, reset = false) => {
+      if (isLoading) return;
+      setIsLoading(true);
+      try {
+        const res = await api.get<{
+          success: boolean;
+          data: {
+            leaderboard: Array<{
+              _id: string;
+              name: string;
+              xp: number;
+              level: number;
+              avatar?: string;
+            }>;
+            pagination: {
+              pages: number;
+            };
+          };
+        }>(`/progress/leaderboard?page=${pageNum}&limit=${PAGE_SIZE}`);
+
+        const list = res.data.data.leaderboard || [];
+        const mapped: LeaderboardEntry[] = list.map((item, idx) => {
+          const globalIdx = (pageNum - 1) * PAGE_SIZE + idx;
+          return {
+            id: item._id,
+            name: item.name,
+            score: item.xp || 0,
+            level: item.level || 1,
+            streak: 3 + ((item.xp || 0) % 14),
+            region: regions[globalIdx % regions.length],
+            initials: getInitials(item.name),
+            rankChange: 0,
+            avatar: item.avatar,
+          };
+        });
+
+        if (reset) {
+          setEntries(mapped);
+          setPage(1);
+          setHasMore(pageNum < res.data.data.pagination.pages);
+        } else {
+          setEntries((prev) => {
+            const next = [...prev];
+            mapped.forEach((item) => {
+              if (!next.some((x) => x.id === item.id)) {
+                next.push(item);
+              }
+            });
+            return next;
+          });
+          setHasMore(pageNum < res.data.data.pagination.pages);
+        }
+      } catch (err) {
+        console.error("Error fetching leaderboard:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [isLoading]
   );
+
+  // Fetch page 1 on mount
+  useEffect(() => {
+    fetchLeaderboard(1, true);
+  }, []);
+
+  // Set up real-time socket updates
+  useEffect(() => {
+    const socket = connectSocket();
+
+    socket.on("leaderboard_updated", () => {
+      // Refetch page 1 when someone completes a task and gains XP
+      fetchLeaderboard(1, true);
+    });
+
+    return () => {
+      socket.off("leaderboard_updated");
+    };
+  }, [fetchLeaderboard]);
 
   const loadMore = useCallback(() => {
     if (isLoading || !hasMore) return;
-    setIsLoading(true);
-
-    setTimeout(() => {
-      setEntries((prev) => {
-        const nextBatch = createBatch(prev.length, PAGE_SIZE);
-        const next = [...prev, ...nextBatch];
-        if (next.length >= MAX_ENTRIES) {
-          setHasMore(false);
-        }
-        return next.slice(0, MAX_ENTRIES);
-      });
-      setIsLoading(false);
-    }, 350);
-  }, [hasMore, isLoading]);
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchLeaderboard(nextPage, false);
+  }, [fetchLeaderboard, hasMore, isLoading, page]);
 
   useEffect(() => {
     const node = loaderRef.current;
@@ -122,31 +151,10 @@ export default function LeaderboardPage() {
     return () => observer.disconnect();
   }, [loadMore]);
 
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setEntries((prev) => {
-        const oldRank = new Map(
-          prev.map((entry, index) => [entry.id, index + 1])
-        );
-        const next = prev
-          .map((entry) => {
-            const delta = Math.round((Math.random() - 0.45) * 18);
-            return {
-              ...entry,
-              score: Math.max(0, entry.score + delta),
-            };
-          })
-          .sort((a, b) => b.score - a.score);
-
-        return next.map((entry, index) => ({
-          ...entry,
-          rankChange: (oldRank.get(entry.id) ?? index + 1) - (index + 1),
-        }));
-      });
-    }, 3500);
-
-    return () => window.clearInterval(interval);
-  }, []);
+  const displayEntries = useMemo(
+    () => entries.map((entry, index) => ({ ...entry, rank: index + 1 })),
+    [entries]
+  );
 
   return (
     <div className="leaderboard-page">
@@ -213,7 +221,15 @@ export default function LeaderboardPage() {
                 </div>
 
                 <div className="leaderboard-user">
-                  <div className="avatar-chip">{entry.initials}</div>
+                  {entry.avatar ? (
+                    <img
+                      src={entry.avatar}
+                      alt={entry.name}
+                      className="w-10 h-10 rounded-full object-cover border border-[#c9a15a]/30"
+                    />
+                  ) : (
+                    <div className="avatar-chip">{entry.initials}</div>
+                  )}
                   <div>
                     <div className="leaderboard-name">{entry.name}</div>
                     <div className="leaderboard-meta">
