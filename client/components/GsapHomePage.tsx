@@ -718,7 +718,7 @@ export default function GsapHomePage() {
                 )}
 
                 <div className="border-t border-[#e8d5b5]/30 pt-3.5 flex justify-between items-center text-xs font-bold mt-2">
-                  <Link href="/podcasts" className="hover:underline flex items-center gap-1 transition-colors" style={{ color: era.color }}>
+                  <Link href="/lessons" className="hover:underline flex items-center gap-1 transition-colors" style={{ color: era.color }}>
                     Xem chi tiết
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
@@ -972,7 +972,7 @@ export default function GsapHomePage() {
             <h3>Số Phát Sóng Mới Nhất</h3>
             
             <div className="gsap-podcast-tracks">
-              <Link href="/podcasts" className="gsap-podcast-track">
+              <Link href="/lessons" className="gsap-podcast-track">
                 <div className="gsap-track-play">
                   <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
                     <polygon points="8,5 19,12 8,19" />
@@ -987,7 +987,7 @@ export default function GsapHomePage() {
                 </div>
               </Link>
 
-              <Link href="/podcasts" className="gsap-podcast-track">
+              <Link href="/lessons" className="gsap-podcast-track">
                 <div className="gsap-track-play">
                   <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
                     <polygon points="8,5 19,12 8,19" />
@@ -1004,7 +1004,7 @@ export default function GsapHomePage() {
             </div>
 
             <div className="gsap-podcast-actions">
-              <Link href="/podcasts" className="gsap-btn-primary">
+              <Link href="/lessons" className="gsap-btn-primary">
                 <span>Nghe Trọn Bộ</span>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

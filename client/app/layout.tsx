@@ -26,16 +26,19 @@ export default function RootLayout({
                 <img
                   className="sv-brand-logo"
                   src="/images/Logo_SuViet-remove.png"
-                  alt="Hành Trình Sử Việt"
+                  alt="Sử Việt"
                 />
-                <span className="sv-brand-text">Hành Trình Sử Việt</span>
+                <span className="sv-brand-text">SỬ VIỆT</span>
               </div>
               <div className="sv-menu">
                 <Link href="/" className="sv-menu-link">
                   Trang Chủ
                 </Link>
-                <Link href="/podcasts" className="sv-menu-link">
+                <Link href="/lessons" className="sv-menu-link">
                   Hành Trình
+                </Link>
+                <Link href="/audio" className="sv-menu-link">
+                  Podcast
                 </Link>
                 <Link href="/leaderboard" className="sv-menu-link">
                   Bảng Vàng 

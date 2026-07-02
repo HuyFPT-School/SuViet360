@@ -24,7 +24,7 @@ export default function UserMenu() {
     const showStaff = user.role === "staff" || user.role === "admin";
     const showTeacher = user.role === "teacher" || user.role === "admin";
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 ">
         {showStaff && (
           <Link
             href="/staff"
@@ -59,7 +59,7 @@ export default function UserMenu() {
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 ">
       <Link
         href="/login"
         className="rounded border border-[#c9a15a]/50 bg-transparent px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#f0ddb7] transition hover:bg-[#c9a15a]/25 hover:text-[#f0ddb7] whitespace-nowrap"

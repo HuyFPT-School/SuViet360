@@ -126,7 +126,7 @@ export default function PodcastListingPage() {
   };
 
   const handleCopyLink = (id: string) => {
-    const url = `${window.location.origin}/podcasts/${id}`;
+    const url = `${window.location.origin}/audio/${id}`;
     navigator.clipboard.writeText(url)
       .then(() => alert("Đã sao chép liên kết đến podcast này!"))
       .catch(() => alert("Không thể sao chép liên kết"));
@@ -355,7 +355,11 @@ export default function PodcastListingPage() {
                         <div className="p-4 pt-0 border-t border-[#e8d5b5]/50 bg-[#f9f4e8]/50">
                            <div className="flex flex-col gap-3 mt-4">
                              {epList.map((ep, i) => (
-                                <div key={ep._id} className="bg-white border border-[#e8d5b5] rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:border-[#c9a15a] transition-all shadow-sm group">
+                                <Link 
+                                   key={ep._id} 
+                                   href={`/audio/${ep._id}`}
+                                   className="bg-white border border-[#e8d5b5] rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:border-[#c9a15a] transition-all shadow-sm group cursor-pointer block"
+                                >
                                    {/* Serial Number */}
                                    <div className="w-8 text-center text-[#c9a15a] font-bold font-display text-lg opacity-60 flex-shrink-0 self-center">
                                       {(i+1).toString().padStart(2, '0')}
@@ -388,45 +392,7 @@ export default function PodcastListingPage() {
                                          </p>
                                       )}
                                    </div>
-                                   
-                                   {/* Actions */}
-                                   <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0 relative">
-                                      <Link href={`/podcasts/${ep._id}`} className="w-10 h-10 rounded-full border border-[#e8d5b5] flex items-center justify-center text-[#a84d28] hover:bg-[#a84d28] hover:text-white transition-colors bg-[#fdf9f1]">
-                                         <PlayIcon />
-                                      </Link>
-                                      <button 
-                                        onClick={() => setActiveMenuId(activeMenuId === ep._id ? null : ep._id)}
-                                        className="w-8 h-8 flex items-center justify-center text-[#8c6a34] hover:bg-[#e8d5b5]/50 rounded-full transition-colors cursor-pointer"
-                                      >
-                                         <MoreVerticalIcon />
-                                      </button>
-                                      {activeMenuId === ep._id && (
-                                         <>
-                                            <div className="fixed inset-0 z-30" onClick={() => setActiveMenuId(null)} />
-                                            <div className="absolute right-0 top-full mt-1 bg-[#fcf8ef] border border-[#e8d5b5] rounded-lg shadow-lg py-1.5 z-40 min-w-[150px] text-xs font-semibold animate-in fade-in slide-in-from-top-1 duration-150">
-                                               <button 
-                                                  onClick={() => handleDownload(ep)}
-                                                  className="w-full text-left px-4 py-2 hover:bg-[#f3e9d8] text-[#5c4a3d] transition-colors flex items-center gap-2"
-                                               >
-                                                  <svg className="w-3.5 h-3.5 text-[#8c6a34]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                                  </svg>
-                                                  <span>Tải âm thanh</span>
-                                               </button>
-                                               <button 
-                                                  onClick={() => handleCopyLink(ep._id)}
-                                                  className="w-full text-left px-4 py-2 hover:bg-[#f3e9d8] text-[#5c4a3d] transition-colors flex items-center gap-2"
-                                               >
-                                                  <svg className="w-3.5 h-3.5 text-[#8c6a34]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
-                                                  </svg>
-                                                  <span>Sao chép liên kết</span>
-                                               </button>
-                                            </div>
-                                         </>
-                                      )}
-                                   </div>
-                                </div>
+                                </Link>
                              ))}
                            </div>
                         </div>

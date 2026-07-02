@@ -88,7 +88,7 @@ const extractAnimationGroups = (files) => {
 
 // ─── POST /api/lessons ────────────────────────────────────────────────
 const createLesson = asyncHandler(async (req, res) => {
-  const { title, content, spawnPoint, tilesetNames } = req.body;
+  const { title, content, spawnPoint, tilesetNames, chapterId, grade, order } = req.body;
 
   if (!title || !content) {
     throw new AppError("Title and content are required", 400);
@@ -120,6 +120,12 @@ const createLesson = asyncHandler(async (req, res) => {
 
   const animationGroups = extractAnimationGroups(req.files);
 
+  // Parse grade
+  const parsedGrade = grade ? parseInt(grade, 10) : null;
+  if (parsedGrade && ![10, 11, 12].includes(parsedGrade)) {
+    throw new AppError("grade must be 10, 11, or 12", 400);
+  }
+
   const lesson = await lessonService.createLesson({
     title,
     content,
@@ -130,6 +136,9 @@ const createLesson = asyncHandler(async (req, res) => {
     spawnX,
     spawnY,
     createdBy: req.user.id,
+    chapterId: chapterId || null,
+    grade: parsedGrade,
+    order: order !== undefined ? parseInt(order, 10) : 0,
   });
 
   // Invalidate list cache
@@ -157,12 +166,31 @@ const getAllLessons = asyncHandler(async (req, res) => {
     }
   }
 
-  const filter = showAll ? {} : { status: "Published" };
+  const filter = {};
+
+  // Staff/admin thấy tất cả, public chỉ thấy Published
+  if (!showAll) {
+    filter.status = "Published";
+  }
+
+  // Lọc theo grade (query: ?grade=10)
+  if (req.query.grade) {
+    const grade = parseInt(req.query.grade, 10);
+    if ([10, 11, 12].includes(grade)) {
+      filter.grade = grade;
+    }
+  }
+
+  // Lọc theo chapterId (query: ?chapterId=xxx)
+  if (req.query.chapterId) {
+    filter.chapterId = req.query.chapterId;
+  }
 
   // ── Redis Cache (2-step: ETag check nhỏ → body chỉ khi cần) ─
+  const cacheKey = `${LESSONS_LIST_KEY}${req.query.grade ? `:g${req.query.grade}` : ""}${req.query.chapterId ? `:c${req.query.chapterId}` : ""}`;
   if (!showAll) {
     // Bước 1: Chỉ đọc ETag (~50 bytes)
-    let cachedETag = await getCacheETag(LESSONS_LIST_KEY);
+    let cachedETag = await getCacheETag(cacheKey);
     if (cachedETag && etagMatch(req.headers["if-none-match"], cachedETag)) {
       return res
         .set("Cache-Control", "public, max-age=3600")
@@ -171,9 +199,9 @@ const getAllLessons = asyncHandler(async (req, res) => {
     }
 
     // Bước 2: Đọc full body
-    const payload = await getCachePayload(LESSONS_LIST_KEY);
+    const payload = await getCachePayload(cacheKey);
     if (payload) {
-      if (!cachedETag) await setCacheETag(LESSONS_LIST_KEY, payload.etag);
+      if (!cachedETag) await setCacheETag(cacheKey, payload.etag);
       if (etagMatch(req.headers["if-none-match"], payload.etag)) {
         return res
           .set("Cache-Control", "public, max-age=3600")
@@ -200,7 +228,7 @@ const getAllLessons = asyncHandler(async (req, res) => {
 
   // Lưu cache kèm ETag nếu là danh sách public
   if (!showAll) {
-    setCachePayload(LESSONS_LIST_KEY, responseData);
+    setCachePayload(cacheKey, responseData);
   }
 
   // Admin/staff xem tất cả → không cache browser, tránh lộ unpublished
@@ -289,6 +317,13 @@ const updateLesson = asyncHandler(async (req, res) => {
   // Text fields
   if (req.body.title !== undefined) updates.title = req.body.title;
   if (req.body.content !== undefined) updates.content = req.body.content;
+  if (req.body.chapterId !== undefined) updates.chapterId = req.body.chapterId || null;
+  if (req.body.grade !== undefined) {
+    const grade = parseInt(req.body.grade, 10);
+    if (grade && ![10, 11, 12].includes(grade)) throw new AppError("grade must be 10, 11, or 12", 400);
+    updates.grade = grade || null;
+  }
+  if (req.body.order !== undefined) updates.order = parseInt(req.body.order, 10) || 0;
 
   // Spawn point
   if (req.body.spawnPoint?.x !== undefined) {
@@ -365,6 +400,28 @@ const formatLessonResponse = (lesson) => ({
   content: lesson.content,
   status: lesson.status,
   reviewFeedback: lesson.reviewFeedback,
+  chapterId: lesson.chapterId?._id || lesson.chapterId || null,
+  chapter: lesson.chapterId && typeof lesson.chapterId === "object"
+    ? { _id: lesson.chapterId._id, title: lesson.chapterId.title, grade: lesson.chapterId.grade }
+    : null,
+  grade: lesson.grade,
+  order: lesson.order,
+  podcast: lesson.podcastId && typeof lesson.podcastId === "object"
+    ? {
+        _id: lesson.podcastId._id,
+        title: lesson.podcastId.title,
+        thumbnail: lesson.podcastId.thumbnail,
+        audioUrl: lesson.podcastId.audioUrl,
+        level: lesson.podcastId.level,
+        category: lesson.podcastId.category,
+        status: lesson.podcastId.status,
+        duration: lesson.podcastId.duration,
+      }
+    : null,
+  podcastId: lesson.podcastId?._id || lesson.podcastId || null,
+  createdBy: lesson.createdBy && typeof lesson.createdBy === "object"
+    ? { _id: lesson.createdBy._id, name: lesson.createdBy.name, email: lesson.createdBy.email }
+    : lesson.createdBy,
   game: {
     tilemapJsonUrl: lesson.game.tilemapJsonUrl,
     tilesets: lesson.game.tilesets.map((ts) => ({
@@ -433,6 +490,61 @@ const rejectLesson = asyncHandler(async (req, res) => {
   });
 });
 
+// ─── Chapter helpers (reuse curriculum controller's chapters) ────────
+const Chapter = require("../models/Chapter");
+
+const getChapters = asyncHandler(async (req, res) => {
+  const filter = {};
+  if (req.query.grade) {
+    const grade = parseInt(req.query.grade, 10);
+    if ([10, 11, 12].includes(grade)) filter.grade = grade;
+  }
+  const chapters = await Chapter.find(filter).sort({ grade: 1, order: 1 }).lean();
+
+  // Đếm số lesson mỗi chapter
+  const Lesson = require("../models/Lesson");
+  const counts = await Lesson.aggregate([
+    { $match: { chapterId: { $in: chapters.map((c) => c._id) } } },
+    { $group: { _id: "$chapterId", count: { $sum: 1 } } },
+  ]);
+  const countMap = Object.fromEntries(counts.map((c) => [c._id.toString(), c.count]));
+  chapters.forEach((ch) => { ch.lessonCount = countMap[ch._id.toString()] || 0; });
+
+  res.status(200).json({ success: true, count: chapters.length, chapters });
+});
+
+const getChaptersWithLessons = asyncHandler(async (req, res) => {
+  const Lesson = require("../models/Lesson");
+  const filter = {};
+  if (req.query.grade) {
+    const grade = parseInt(req.query.grade, 10);
+    if ([10, 11, 12].includes(grade)) filter.grade = grade;
+  }
+
+  const chapters = await Chapter.find(filter).sort({ grade: 1, order: 1 }).lean();
+
+  const lessons = await Lesson.find(
+    filter.grade ? { grade: filter.grade } : {}
+  )
+    .populate("createdBy", "name email")
+    .populate("chapterId", "title grade order")
+    .populate("podcastId", "title thumbnail audioUrl level category status")
+    .sort({ order: 1, createdAt: -1 })
+    .lean();
+
+  const result = chapters.map((ch) => ({
+    ...ch,
+    lessons: lessons
+      .filter((l) => {
+        const lChapterId = l.chapterId?._id?.toString() || l.chapterId?.toString();
+        return lChapterId === ch._id.toString();
+      })
+      .map(formatLessonResponse),
+  }));
+
+  res.status(200).json({ success: true, count: chapters.length, chapters: result });
+});
+
 module.exports = {
   createLesson,
   getAllLessons,
@@ -441,4 +553,7 @@ module.exports = {
   deleteLesson,
   approveLesson,
   rejectLesson,
+  // Chapter helpers
+  getChapters,
+  getChaptersWithLessons,
 };
