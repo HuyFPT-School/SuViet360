@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 export const Colors = {
   light: {
     // Backgrounds
-    background: 'transparent',
+    background: '#F7F3E9',
     backgroundDark: '#1f0a0d',
     backgroundCard: 'rgba(30, 18, 5, 0.95)',
     backgroundCardAlt: 'rgba(18, 10, 2, 0.98)',

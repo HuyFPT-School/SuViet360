@@ -30,6 +30,13 @@ function GameContent() {
     total: number;
     passed: boolean;
     xpGained: number;
+    details?: {
+      title: string;
+      question: string;
+      isCorrect: boolean;
+      selectedAnswer: string;
+      correctAnswer: string;
+    }[];
   } | null>(null);
 
   useEffect(() => {
@@ -63,19 +70,36 @@ function GameContent() {
       .finally(() => setLoading(false));
   }, [lessonId]);
 
-  const handleQuizComplete = async (score: number, total: number) => {
+  const handleQuizComplete = async (
+    score: number,
+    total: number,
+    details?: {
+      title: string;
+      question: string;
+      isCorrect: boolean;
+      selectedAnswer: string;
+      correctAnswer: string;
+    }[]
+  ) => {
     if (!lessonId) return;
     setSubmitting(true);
     try {
+      // Fetch CSRF token
+      const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+      const csrfToken = csrfRes.data.data.csrfToken;
+
       // 1. Submit quiz score
       const quizRes = await api.post<{ success: boolean; data: { xpGained: number; passed: boolean } }>(
         `/progress/quiz/${lessonId}/submit`,
-        { score, total }
+        { score, total },
+        { headers: { "x-csrf-token": csrfToken } }
       );
 
       // 2. Mark lesson as completed
       const lessonRes = await api.post<{ success: boolean; data: { xpGained: number } }>(
-        `/progress/lesson/${lessonId}/complete`
+        `/progress/lesson/${lessonId}/complete`,
+        {},
+        { headers: { "x-csrf-token": csrfToken } }
       );
 
       const totalXPGained = quizRes.data.data.xpGained + (lessonRes.data.data.xpGained || 0);
@@ -85,6 +109,7 @@ function GameContent() {
         total,
         passed: quizRes.data.data.passed,
         xpGained: totalXPGained,
+        details,
       });
       setShowResultModal(true);
     } catch (err: any) {
@@ -180,6 +205,39 @@ function GameContent() {
             ) : (
               <div className="mb-6 text-xs text-amber-600 italic">
                 Bạn đã nhận đủ XP của bài học này từ trước.
+              </div>
+            )}
+
+            {/* Scrollable details list */}
+            {quizResult.details && quizResult.details.length > 0 && (
+              <div className="text-left mb-6 max-h-48 overflow-y-auto border border-amber-200/50 rounded-xl p-3 bg-amber-50/30 text-amber-900">
+                <div className="text-xs font-bold text-amber-800/80 uppercase tracking-wider mb-2">
+                  Chi Tiết Đáp Án:
+                </div>
+                <div className="space-y-3">
+                  {quizResult.details.map((q, idx) => (
+                    <div key={idx} className="text-xs border-b border-amber-200/20 pb-2 last:border-0 last:pb-0">
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm">
+                          {q.isCorrect ? "✅" : "❌"}
+                        </span>
+                        <div className="flex-1">
+                          <p className="font-semibold text-amber-950 leading-tight">
+                            {q.title}: {q.question}
+                          </p>
+                          <p className="text-[11px] text-amber-800 mt-1">
+                            Đáp án đúng: <span className="font-semibold text-emerald-700">{q.correctAnswer}</span>
+                          </p>
+                          {!q.isCorrect && (
+                            <p className="text-[11px] text-red-700 mt-0.5">
+                              Bạn đã chọn: <span className="font-semibold">{q.selectedAnswer || "(Không trả lời)"}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

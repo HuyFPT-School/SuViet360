@@ -10,6 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { PageBackground } from '@/components/PageBackground';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { podcastApi } from '@/services/podcastApi';
 import type { Podcast } from '@/types/podcast';
@@ -56,7 +57,7 @@ export default function PodcastsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <PageBackground style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
             <Ionicons name="headset-outline" size={22} color={Colors.light.goldLight} />
@@ -66,12 +67,12 @@ export default function PodcastsScreen() {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.gold} />
         </View>
-      </View>
+      </PageBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <PageBackground style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <Ionicons name="headset-outline" size={22} color={Colors.light.goldLight} />
@@ -173,12 +174,12 @@ export default function PodcastsScreen() {
           ))
         )}
       </ScrollView>
-    </View>
+    </PageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
+  container: { flex: 1 },
   header: {
     backgroundColor: Colors.light.backgroundDark,
     borderBottomWidth: 2,

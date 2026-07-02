@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
+import { PageBackground } from '@/components/PageBackground';
 
 const { width } = Dimensions.get('window');
 
@@ -46,7 +47,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
 
   return (
-    <View style={styles.container}>
+    <PageBackground style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerBrand}>Hành Trình Sử Việt</Text>
@@ -127,14 +128,13 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </PageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
   },
   header: {
     backgroundColor: Colors.light.backgroundDark,

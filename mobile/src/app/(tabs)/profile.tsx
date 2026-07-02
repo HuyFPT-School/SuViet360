@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { PageBackground } from '@/components/PageBackground';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/hooks/useAuth';
 import { profileApi, type ProfileUpdatePayload } from '@/services/profileApi';
@@ -78,17 +79,17 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <PageBackground style={styles.container}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.gold} />
         </View>
-      </View>
+      </PageBackground>
     );
   }
 
   if (!user) {
     return (
-      <View style={styles.container}>
+      <PageBackground style={styles.container}>
         <View style={styles.centered}>
           <Text style={styles.loginPrompt}>Vui lòng đăng nhập</Text>
           <TouchableOpacity
@@ -98,12 +99,12 @@ export default function ProfileScreen() {
             <Text style={styles.loginButtonText}>Đăng Nhập</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </PageBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <PageBackground style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <Ionicons name="person-outline" size={22} color={Colors.light.goldLight} />
@@ -174,14 +175,13 @@ export default function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </PageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
   },
   centered: {
     flex: 1,
