@@ -22,6 +22,7 @@ const {
   deleteCoupon,
   sepayWebhook,
   getTransactionStatus,
+  getAdminDashboardStats,
 } = require("../controllers/subscriptionController");
 
 const router = express.Router();
@@ -51,9 +52,10 @@ router.get("/lesson-requests/teacher", authorize("teacher"), getTeacherLessonReq
 router.put("/lesson-requests/:id/accept", authorize("teacher"), acceptLessonRequest);
 router.put("/lesson-requests/:id/reject", authorize("teacher"), rejectLessonRequest);
 
-// Admin: Coupons
+// Admin: Coupons & Dashboard Stats
 router.post("/coupons", authorize("admin"), createCoupon);
 router.get("/coupons", authorize("admin"), getCoupons);
 router.delete("/coupons/:id", authorize("admin"), deleteCoupon);
+router.get("/admin/dashboard-stats", authorize("admin"), getAdminDashboardStats);
 
 module.exports = router;

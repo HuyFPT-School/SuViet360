@@ -12,6 +12,7 @@ const chatRoutes = require("./routes/chatRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const blogRoutes = require("./routes/blogRoutes");
 const progressRoutes = require("./routes/progressRoutes");
+const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const errorHandler = require("./middleware/errorHandler");
 const { setCsrfToken, requireCsrfToken } = require("./middleware/csrf");
 
@@ -73,7 +74,12 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/user/notifications", notificationRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/progress", progressRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api", podcastRoutes);
+
+// Load subscription cron job
+require("./jobs/subscriptionCron");
+
 app.use(errorHandler);
 
 module.exports = app;

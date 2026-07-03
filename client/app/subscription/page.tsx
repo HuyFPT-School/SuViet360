@@ -244,6 +244,31 @@ export default function SubscriptionPage() {
 
   const displayedTiers = tiers.length > 0 ? tiers : (fallbackTiers as unknown as SubscriptionTier[]);
 
+  const renderTierIcon = (slug: string) => {
+    const s = slug.toLowerCase();
+    if (s === "student-pro") {
+      return (
+        <svg className="w-10 h-10 fill-amber-300/10 text-amber-300 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 12 12 2l6 10-6 10-6-10Z" />
+          <path d="M12 2v20" />
+          <path d="M6 12h12" />
+        </svg>
+      );
+    }
+    if (s === "student-plus") {
+      return (
+        <svg className="w-10 h-10 fill-yellow-300/10 text-yellow-300 mx-auto animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-10 h-10 fill-stone-400/10 text-stone-400 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+    );
+  };
+
   return (
     <div className="sub-page-wrapper">
       <div className="sub-container">
@@ -351,7 +376,7 @@ export default function SubscriptionPage() {
                       className={`tier-card ${tier.slug === "student-plus" ? "featured" : ""}`}
                     >
                       <div className="tier-header">
-                        <div className="text-3xl mb-2">{tier.badge || (isFree ? "🆓" : tier.slug === "student-plus" ? "⭐" : "💎")}</div>
+                        <div className="mb-4">{renderTierIcon(tier.slug)}</div>
                         <h3 className="tier-name">{tier.name}</h3>
                         <p className="text-muted text-sm px-4 min-h-[40px]">{tier.description}</p>
                         <div className="tier-price-box">

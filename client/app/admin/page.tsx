@@ -3,11 +3,11 @@
 import Link from "next/link";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { adminApi, type Lesson, type LessonFormValues } from "@/lib/adminApi";
+import { adminApi, type Lesson, type LessonFormValues, type AdminSubscriptionStats } from "@/lib/adminApi";
 import { useAuth } from "@/hooks/useAuth";
 import type { User } from "@/types/auth";
 
-type AdminTab = "dashboard" | "lessons" | "users";
+type AdminTab = "dashboard" | "lessons" | "users" | "subscriptions";
 
 const emptyForm: LessonFormValues = {
   title: "",
@@ -25,6 +25,7 @@ const tabs: Array<{ id: AdminTab; label: string }> = [
   { id: "dashboard", label: "Dashboard" },
   { id: "lessons", label: "Quản lý lesson" },
   { id: "users", label: "Quản lý user" },
+  { id: "subscriptions", label: "Quản lý Gói VIP" },
 ];
 
 function formatDate(value?: string) {
@@ -56,11 +57,15 @@ export default function AdminPage() {
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [query, setQuery] = useState("");
   const [userQuery, setUserQuery] = useState("");
+  const [subQuery, setSubQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  
+  // Subscription management state
+  const [subStats, setSubStats] = useState<AdminSubscriptionStats | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -76,9 +81,19 @@ export default function AdminPage() {
           adminApi.getAvailableUsers(currentUser),
         ]);
 
+        let subscriptionDashboardStats = null;
+        try {
+          subscriptionDashboardStats = await adminApi.getSubscriptionDashboardStats();
+        } catch (subErr) {
+          console.error("Failed to load subscription dashboard stats:", subErr);
+        }
+
         if (!mounted) return;
         setLessons(lessonResponse.lessons);
         setUsers(availableUsers);
+        if (subscriptionDashboardStats) {
+          setSubStats(subscriptionDashboardStats);
+        }
       } catch {
         if (mounted) {
           setError("Bạn cần đăng nhập bằng tài khoản admin để vào trang này.");
@@ -115,6 +130,19 @@ export default function AdminPage() {
     );
   }, [users, userQuery]);
 
+  const filteredSubs = useMemo(() => {
+    const term = subQuery.trim().toLowerCase();
+    if (!subStats?.subscriptions) return [];
+    if (!term) return subStats.subscriptions;
+    return subStats.subscriptions.filter(
+      (sub) =>
+        sub.userId.name.toLowerCase().includes(term) ||
+        sub.userId.email.toLowerCase().includes(term) ||
+        sub.tierId.name.toLowerCase().includes(term) ||
+        sub.status.toLowerCase().includes(term)
+    );
+  }, [subStats, subQuery]);
+
   const dashboardStats = useMemo(() => {
     const totalFrames = lessons.reduce(
       (total, lesson) => total + getAnimationCount(lesson),
@@ -125,13 +153,25 @@ export default function AdminPage() {
       0
     );
 
-    return [
+    const baseStats = [
       { label: "Tổng lesson", value: lessons.length },
       { label: "Tileset", value: totalTilesets },
       { label: "Sprite frame", value: totalFrames },
       { label: "Admin hiện có", value: users.filter((u) => u.role === "admin").length },
     ];
-  }, [lessons, users]);
+
+    if (subStats?.stats) {
+      return [
+        ...baseStats,
+        { label: "Tổng doanh thu", value: `${subStats.stats.totalRevenue.toLocaleString("vi-VN")}đ` },
+        { label: "Gói VIP đang chạy", value: subStats.stats.totalActiveSubscriptions },
+        { label: "Số lượng giao dịch", value: subStats.stats.totalTransactions },
+        { label: "Tổng số User", value: subStats.stats.totalUsers },
+      ];
+    }
+
+    return baseStats;
+  }, [lessons, users, subStats]);
 
   const resetForm = () => {
     setForm(emptyForm);
@@ -316,6 +356,7 @@ export default function AdminPage() {
               users={users}
               onOpenLessons={() => setActiveTab("lessons")}
               onOpenUsers={() => setActiveTab("users")}
+              onOpenSubscriptions={() => setActiveTab("subscriptions")}
             />
           )}
 
@@ -341,6 +382,15 @@ export default function AdminPage() {
               allUsers={users}
               query={userQuery}
               setQuery={setUserQuery}
+            />
+          )}
+
+          {activeTab === "subscriptions" && (
+            <SubscriptionsPanel
+              subStats={subStats}
+              filteredSubs={filteredSubs}
+              query={subQuery}
+              setQuery={setSubQuery}
             />
           )}
         </div>
@@ -420,12 +470,14 @@ function DashboardPanel({
   users,
   onOpenLessons,
   onOpenUsers,
+  onOpenSubscriptions,
 }: {
-  stats: Array<{ label: string; value: number }>;
+  stats: Array<{ label: string; value: any }>;
   lessons: Lesson[];
   users: User[];
   onOpenLessons: () => void;
   onOpenUsers: () => void;
+  onOpenSubscriptions: () => void;
 }) {
   return (
     <div className="admin-stack">
@@ -440,6 +492,9 @@ function DashboardPanel({
           </button>
           <button type="button" onClick={onOpenUsers}>
             Xem user
+          </button>
+          <button type="button" onClick={onOpenSubscriptions}>
+            Xem Gói VIP
           </button>
         </div>
       </div>
@@ -877,6 +932,226 @@ function UsersPanel({
           Các nút sửa quyền và khóa tài khoản đang ở trạng thái chờ API server.
           Phần client đã chuẩn bị layout để nối endpoint sau.
         </p>
+      </div>
+    </div>
+  );
+}
+
+function SubscriptionsPanel({
+  subStats,
+  filteredSubs,
+  query,
+  setQuery,
+}: {
+  subStats: AdminSubscriptionStats | null;
+  filteredSubs: any[];
+  query: string;
+  setQuery: (val: string) => void;
+}) {
+  const maxRevenue = useMemo(() => {
+    if (!subStats?.monthlyRevenue) return 100000;
+    const vals = subStats.monthlyRevenue.map((r) => r.revenue);
+    return Math.max(...vals, 100000);
+  }, [subStats]);
+
+  const formatVND = (val: number) => {
+    return val.toLocaleString("vi-VN") + "đ";
+  };
+
+  return (
+    <div className="admin-stack">
+      {/* Header & Search */}
+      <div className="admin-heading">
+        <div>
+          <p className="admin-kicker">Gói thành viên</p>
+          <h2>Quản lý Gói VIP</h2>
+        </div>
+        <input
+          className="admin-search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Tìm học sinh, gói VIP..."
+        />
+      </div>
+
+      {/* Revenue Chart Section */}
+      {subStats?.monthlyRevenue && (
+        <div className="admin-panel mb-6">
+          <div className="admin-panel-heading mb-6">
+            <h3>Doanh thu đăng ký thành viên (6 tháng qua)</h3>
+            <span>Tổng cộng: {formatVND(subStats.stats.totalRevenue)}</span>
+          </div>
+
+          <div style={{ padding: "16px 8px 8px" }}>
+            <div className="flex gap-4 items-end justify-between h-48 border-b border-gold/20 pb-2 relative">
+              {/* Y Axis Guide Lines */}
+              <div className="absolute left-0 right-0 top-0 border-t border-gold/5 text-[9px] text-muted/65 pt-0.5">
+                {formatVND(maxRevenue)}
+              </div>
+              <div className="absolute left-0 right-0 top-1/2 border-t border-gold/5 text-[9px] text-muted/65 pt-0.5">
+                {formatVND(maxRevenue / 2)}
+              </div>
+
+              {subStats.monthlyRevenue.map((r, idx) => {
+                const pct = (r.revenue / maxRevenue) * 85; // Max 85% height to leave room for labels
+                return (
+                  <div key={idx} className="flex-1 flex flex-col items-center group relative z-10">
+                    {/* Tooltip on hover */}
+                    <div className="absolute bottom-full mb-2 bg-[#1a0f05] border border-gold/30 text-gold text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
+                      <div>Doanh thu: {formatVND(r.revenue)}</div>
+                      <div className="text-[10px] text-muted text-center">Giao dịch: {r.transactions}</div>
+                    </div>
+
+                    {/* Bar */}
+                    <div
+                      className="w-8 sm:w-12 rounded-t-md transition-all duration-300 group-hover:brightness-125"
+                      style={{
+                        height: `${pct}%`,
+                        background: r.revenue > 0 
+                          ? "linear-gradient(180deg, #d2a85b, #9b6b2f)" 
+                          : "rgba(210, 168, 91, 0.08)",
+                        minHeight: r.revenue > 0 ? "4px" : "1px",
+                        boxShadow: r.revenue > 0 ? "0 0 10px rgba(210, 168, 91, 0.25)" : "none"
+                      }}
+                    />
+
+                    {/* Month Label */}
+                    <span className="text-[10px] text-muted mt-2 font-mono">{r.month}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Grid: Active VIP & Recent Transactions */}
+      <div className="admin-grid-2 admin-grid-2--wide">
+        
+        {/* Active VIP List */}
+        <div className="admin-panel">
+          <div className="admin-panel-heading">
+            <h3>Danh sách kích hoạt VIP</h3>
+            <span>{filteredSubs.length} tài khoản</span>
+          </div>
+
+          <div className="admin-table admin-user-table">
+            <div className="admin-table-head">
+              <span>Học sinh</span>
+              <span>Gói VIP</span>
+              <span>Bắt đầu</span>
+              <span>Hết hạn</span>
+              <span>Trạng thái</span>
+            </div>
+            
+            {filteredSubs.map((sub) => {
+              const isExpired = sub.status === "Expired" || new Date(sub.endDate) < new Date();
+              return (
+                <div key={sub._id} className="admin-table-row">
+                  <div className="admin-user-cell">
+                    <div
+                      className="admin-avatar"
+                      style={
+                        sub.userId?.avatar
+                          ? { backgroundImage: `url(${sub.userId.avatar})` }
+                          : undefined
+                      }
+                    >
+                      {!sub.userId?.avatar && sub.userId?.name.slice(0, 1).toUpperCase()}
+                    </div>
+                    <div>
+                      <strong>{sub.userId?.name || "Người dùng"}</strong>
+                      <small className="text-[10px] text-muted font-mono">{sub.userId?.email}</small>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="font-semibold text-gold">{sub.tierId?.name || "VIP"}</span>
+                    <small className="text-[9px] uppercase tracking-wide text-muted block">{sub.billingCycle === "monthly" ? "Hàng tháng" : "Hàng năm"}</small>
+                  </div>
+
+                  <span>{formatDate(sub.startDate)}</span>
+                  <span className={isExpired ? "text-red-400 font-bold" : "text-emerald-400"}>
+                    {formatDate(sub.endDate)}
+                  </span>
+                  
+                  <div>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        fontSize: "9px",
+                        fontWeight: "bold",
+                        textTransform: "uppercase",
+                        padding: "2px 8px",
+                        borderRadius: "9999px",
+                        border: "1px solid",
+                        borderColor: isExpired ? "rgba(239, 68, 68, 0.3)" : "rgba(16, 185, 129, 0.3)",
+                        color: isExpired ? "#f87171" : "#34d399",
+                        backgroundColor: isExpired ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)"
+                      }}
+                    >
+                      {isExpired ? "Hết hạn" : "Hoạt động"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {filteredSubs.length === 0 && (
+              <p className="admin-empty">Không có dữ liệu đăng ký VIP.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Recent Transactions List */}
+        <div className="admin-panel">
+          <div className="admin-panel-heading">
+            <h3>Lịch sử giao dịch</h3>
+            <span>{subStats?.recentTransactions.length || 0} mục</span>
+          </div>
+
+          <div className="admin-table admin-user-table">
+            <div className="admin-table-head">
+              <span>Mã GD / Người mua</span>
+              <span>Gói VIP</span>
+              <span>Số tiền</span>
+              <span>Thanh toán</span>
+              <span>Ngày mua</span>
+            </div>
+
+            {subStats?.recentTransactions.map((tx) => (
+              <div key={tx._id} className="admin-table-row">
+                <div>
+                  <strong className="font-mono text-xs text-gold select-all">{tx.transactionId}</strong>
+                  <small className="text-[10px] text-muted block">Mua bởi: {tx.buyerId?.name || "Ẩn danh"}</small>
+                </div>
+
+                <div>
+                  <strong>{tx.tierId?.name || "VIP"}</strong>
+                  {tx.isGift && (
+                    <span className="text-[9px] bg-purple-950/40 text-purple-300 border border-purple-800 px-1.5 py-0.5 rounded ml-1 uppercase font-bold">Quà tặng</span>
+                  )}
+                </div>
+
+                <span className="font-mono font-bold text-emerald-400">{formatVND(tx.amount)}</span>
+                
+                <div>
+                  <span className="text-xs uppercase font-semibold text-muted">{tx.paymentMethod}</span>
+                  {tx.couponCode && (
+                    <small className="text-[9px] text-emerald-300 block font-mono">Coupon: {tx.couponCode}</small>
+                  )}
+                </div>
+
+                <span>{formatDate(tx.createdAt)}</span>
+              </div>
+            ))}
+
+            {(!subStats?.recentTransactions || subStats.recentTransactions.length === 0) && (
+              <p className="admin-empty">Chưa có giao dịch nào.</p>
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   );
