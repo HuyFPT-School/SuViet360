@@ -29,4 +29,11 @@ module.exports = {
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || "",
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || "",
+  payosClientId: process.env.PAYOS_CLIENT_ID || "",
+  payosApiKey: process.env.PAYOS_API_KEY || "",
+  payosChecksumKey: process.env.PAYOS_CHECKSUM_KEY || "",
+  sepayWebhookToken: process.env.SEPAY_WEBHOOK_TOKEN || "change-me-in-production-sepay",
+  bankBin: process.env.BANK_BIN || "970422", // Default MBBank bin
+  bankAccountNumber: process.env.BANK_ACCOUNT_NUMBER || "1234567890",
+  bankAccountName: process.env.BANK_ACCOUNT_NAME || "NGUYEN VAN A",
 };

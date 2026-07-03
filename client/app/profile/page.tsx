@@ -91,6 +91,20 @@ export default function ProfilePage() {
   const router = useRouter();
   const [progressData, setProgressData] = useState<any>(null);
 
+  const daysRemaining = (() => {
+    const expiryDate = user?.subscriptionExpiry;
+    const tierName = user?.subscriptionTier || "Free";
+    if (!expiryDate || tierName === "Free") return null;
+    try {
+      const expiry = new Date(expiryDate).getTime();
+      const now = new Date().getTime();
+      const diff = expiry - now;
+      return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    } catch {
+      return null;
+    }
+  })();
+
   useEffect(() => {
     if (user && user.role === "student") {
       api.get<{ success: boolean; data: any }>("/progress/dashboard")
@@ -361,6 +375,26 @@ export default function ProfilePage() {
                 )}
 
                 <div className="profile-name">{name}</div>
+                
+                {/* Subscription Tier Badge right below name */}
+                <div className="flex flex-col items-center gap-1 mt-1 mb-2">
+                  <span className={`px-3 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase border flex items-center gap-1 ${
+                    (user?.subscriptionTier || "Free") === "Student Pro" 
+                      ? "bg-amber-500/10 text-amber-300 border-amber-500/30" 
+                      : (user?.subscriptionTier || "Free") === "Student Plus"
+                      ? "bg-yellow-500/10 text-yellow-300 border-yellow-500/30"
+                      : "bg-stone-500/10 text-stone-400 border-stone-500/20"
+                  }`}>
+                    {(user?.subscriptionTier || "Free") === "Student Pro" ? "💎 " : (user?.subscriptionTier || "Free") === "Student Plus" ? "⭐ " : "🆓 "}
+                    Gói: {user?.subscriptionTier || "Free"}
+                  </span>
+                  {(user?.subscriptionTier || "Free") !== "Free" && user?.subscriptionExpiry && (
+                    <span className="text-[10px] text-stone-400">
+                      Hạn dùng: {new Date(user.subscriptionExpiry).toLocaleDateString("vi-VN")}
+                    </span>
+                  )}
+                </div>
+
                 <div className="profile-role-badge">Nhà khám phá</div>
 
                 {/* XP bar */}
@@ -397,6 +431,19 @@ export default function ProfilePage() {
               <div className="profile-info-panel">
                 <div className="section-title">Thông Tin Cá Nhân</div>
                 <div className="divider-line" />
+
+                {/* Expiration warning alert if nearing expiration (< 3 days) */}
+                {user?.subscriptionTier && user?.subscriptionTier !== "Free" && daysRemaining !== null && daysRemaining <= 3 && (
+                  <div 
+                    className="mb-4 p-3 bg-red-950/60 border border-red-500/40 text-red-200 text-sm rounded-lg flex items-start gap-2"
+                    style={{ fontFamily: "sans-serif" }}
+                  >
+                    <span className="text-lg">⚠️</span>
+                    <div>
+                      <strong className="text-red-400">Cảnh báo hết hạn!</strong> Gói <span className="text-amber-300 font-semibold">{user.subscriptionTier}</span> của bạn sẽ hết hạn trong {daysRemaining <= 0 ? "hôm nay" : `${daysRemaining} ngày`} nữa. Vui lòng gia hạn để không bị gián đoạn quyền lợi.
+                    </div>
+                  </div>
+                )}
 
                 {/* Success/Error message */}
                 {saveMessage && (
