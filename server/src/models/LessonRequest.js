@@ -18,4 +18,7 @@ const lessonRequestSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+lessonRequestSchema.index({ status: 1 });
+lessonRequestSchema.index({ assignedTeacherId: 1 });
+
 module.exports = mongoose.models.LessonRequest || mongoose.model("LessonRequest", lessonRequestSchema);

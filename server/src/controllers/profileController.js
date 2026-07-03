@@ -75,6 +75,8 @@ const updateProfile = asyncHandler(async (req, res) => {
         gender: user.gender,
         address: user.address,
         bio: user.bio,
+        subscriptionTier: user.subscriptionTier,
+        subscriptionExpiry: user.subscriptionExpiry,
       },
     },
   });

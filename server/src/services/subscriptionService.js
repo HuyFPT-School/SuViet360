@@ -65,7 +65,10 @@ const validateCoupon = async (code, tierId, amount) => {
  * Activate a subscription for a user.
  */
 const activateSubscription = async (userId, tierId, billingCycle, giftedBy = null, giftMessage = "") => {
-  const tier = await SubscriptionTier.findById(tierId);
+  const mongoose = require("mongoose");
+  const tier = mongoose.Types.ObjectId.isValid(tierId)
+    ? await SubscriptionTier.findById(tierId)
+    : await SubscriptionTier.findOne({ slug: tierId });
   if (!tier) throw new AppError("Gói subscription không tồn tại", 404);
 
   // Calculate end date
@@ -86,7 +89,7 @@ const activateSubscription = async (userId, tierId, billingCycle, giftedBy = nul
   // Create new subscription
   const subscription = await Subscription.create({
     userId,
-    tierId,
+    tierId: tier._id,
     status: "Active",
     startDate: now,
     endDate,
@@ -108,7 +111,10 @@ const activateSubscription = async (userId, tierId, billingCycle, giftedBy = nul
  * Purchase a subscription for self.
  */
 const purchaseForSelf = async (userId, tierId, billingCycle, couponCode = "", paymentMethod = "sepay") => {
-  const tier = await SubscriptionTier.findById(tierId);
+  const mongoose = require("mongoose");
+  const tier = mongoose.Types.ObjectId.isValid(tierId)
+    ? await SubscriptionTier.findById(tierId)
+    : await SubscriptionTier.findOne({ slug: tierId });
   if (!tier) throw new AppError("Gói subscription không tồn tại", 404);
   if (tier.slug === "free") throw new AppError("Không thể mua gói Free", 400);
 
@@ -117,7 +123,7 @@ const purchaseForSelf = async (userId, tierId, billingCycle, couponCode = "", pa
   let couponCodeUsed = "";
 
   if (couponCode) {
-    const result = await validateCoupon(couponCode, tierId, price);
+    const result = await validateCoupon(couponCode, tier._id, price);
     discount = result.discount;
     couponCodeUsed = couponCode.toUpperCase();
   }
@@ -128,7 +134,7 @@ const purchaseForSelf = async (userId, tierId, billingCycle, couponCode = "", pa
   const transaction = await Transaction.create({
     buyerId: userId,
     recipientId: userId,
-    tierId,
+    tierId: tier._id,
     amount: finalAmount,
     originalAmount: price,
     billingCycle,
@@ -179,7 +185,10 @@ const purchaseForSelf = async (userId, tierId, billingCycle, couponCode = "", pa
  * mode: "instant" (apply immediately) or "code" (generate redeem code)
  */
 const purchaseGift = async (buyerId, recipientIdentifier, tierId, billingCycle, giftMessage = "", mode = "code", couponCode = "", paymentMethod = "sepay") => {
-  const tier = await SubscriptionTier.findById(tierId);
+  const mongoose = require("mongoose");
+  const tier = mongoose.Types.ObjectId.isValid(tierId)
+    ? await SubscriptionTier.findById(tierId)
+    : await SubscriptionTier.findOne({ slug: tierId });
   if (!tier) throw new AppError("Gói subscription không tồn tại", 404);
   if (tier.slug === "free") throw new AppError("Không thể tặng gói Free", 400);
 
@@ -187,7 +196,7 @@ const purchaseGift = async (buyerId, recipientIdentifier, tierId, billingCycle, 
   let recipient = await User.findOne({
     $or: [
       { email: recipientIdentifier.toLowerCase() },
-      { name: recipientIdentifier },
+      { name: { $regex: new RegExp(`^${recipientIdentifier}$`, "i") } },
     ],
     role: "student",
   });
@@ -200,7 +209,7 @@ const purchaseGift = async (buyerId, recipientIdentifier, tierId, billingCycle, 
   let couponCodeUsed = "";
 
   if (couponCode) {
-    const result = await validateCoupon(couponCode, tierId, price);
+    const result = await validateCoupon(couponCode, tier._id, price);
     discount = result.discount;
     couponCodeUsed = couponCode.toUpperCase();
   }
@@ -211,7 +220,7 @@ const purchaseGift = async (buyerId, recipientIdentifier, tierId, billingCycle, 
   const transaction = await Transaction.create({
     buyerId,
     recipientId: recipient._id,
-    tierId,
+    tierId: tier._id,
     amount: finalAmount,
     originalAmount: price,
     billingCycle,

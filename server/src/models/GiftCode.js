@@ -33,7 +33,6 @@ const giftCodeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-giftCodeSchema.index({ code: 1 });
 giftCodeSchema.index({ expiresAt: 1 });
 
 module.exports = mongoose.models.GiftCode || mongoose.model("GiftCode", giftCodeSchema);

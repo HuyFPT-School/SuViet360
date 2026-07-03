@@ -60,7 +60,7 @@ export interface GiftCode {
 
 export interface LessonRequest {
   _id: string;
-  requesterId: { _id: string; name: string; avatar?: string; email?: string };
+  requesterId: string | { _id: string; name: string; avatar?: string; email?: string };
   title: string;
   description: string;
   historicalPeriod: string;
