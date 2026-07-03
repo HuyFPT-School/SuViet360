@@ -342,14 +342,20 @@ const sepayWebhook = asyncHandler(async (req, res) => {
     throw new AppError("Thiếu thông tin giao dịch từ webhook", 400);
   }
 
-  // Find transaction code in the transfer description (e.g. TXN-20260703-ABCD)
-  const match = content.match(/TXN-\d{8}-[0-9A-Z]{8}/i);
+  // Find transaction code in the transfer description (supports both TXN-YYYYMMDD-RAND and stripped TXNYYYYMMDDRAND)
+  const match = content.match(/TXN-?\d{8}-?[0-9A-Z]{8}/i);
   if (!match) {
     console.log(`[SepayWebhook] Ignored payment. Description "${content}" does not contain a valid transaction ID.`);
     return res.status(200).json({ success: true, message: "Transaction ID not found in description" });
   }
 
-  const transactionId = match[0].toUpperCase();
+  let transactionId = match[0].toUpperCase();
+  // Normalize to database standard (TXN-YYYYMMDD-RANDOM)
+  const cleanId = transactionId.replace(/-/g, "");
+  if (cleanId.length === 19) {
+    transactionId = `TXN-${cleanId.slice(3, 11)}-${cleanId.slice(11)}`;
+  }
+
   const transaction = await Transaction.findOne({ transactionId });
   if (!transaction) {
     console.log(`[SepayWebhook] Transaction ${transactionId} not found in database.`);
