@@ -326,10 +326,13 @@ const sepayWebhook = asyncHandler(async (req, res) => {
 
   // Validate webhook secret token
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!authHeader) {
     throw new AppError("Không có token xác thực webhook", 401);
   }
-  const token = authHeader.split(" ")[1];
+  
+  const parts = authHeader.split(" ");
+  const token = parts.length > 1 ? parts[1] : parts[0];
+  
   if (token !== env.sepayWebhookToken) {
     throw new AppError("Token xác thực webhook không hợp lệ", 403);
   }
