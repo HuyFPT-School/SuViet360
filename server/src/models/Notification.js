@@ -10,8 +10,18 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["New_Podcast", "System"],
-      default: "New_Podcast",
+      enum: [
+        "New_Podcast",
+        "System",
+        "Subscription_Activated",
+        "Gift_Received",
+        "Subscription_Expired",
+        "Subscription_Expiring",
+        "Lesson_Request_New",
+        "Lesson_Request_Accepted",
+        "Lesson_Request_Rejected"
+      ],
+      default: "System",
     },
     title: {
       type: String,

@@ -164,6 +164,8 @@ const sendAuthResponse = async (res, statusCode, user, message) => {
         address: user.address,
         bio: user.bio,
         isEmailVerified: user.isEmailVerified,
+        subscriptionTier: user.subscriptionTier,
+        subscriptionExpiry: user.subscriptionExpiry,
       },
     },
   });
@@ -514,6 +516,8 @@ const me = asyncHandler(async (req, res) => {
         gender: req.user.gender,
         address: req.user.address,
         bio: req.user.bio,
+        subscriptionTier: req.user.subscriptionTier,
+        subscriptionExpiry: req.user.subscriptionExpiry,
       },
     },
   });

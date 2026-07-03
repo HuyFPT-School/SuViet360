@@ -142,7 +142,16 @@ function CheckoutForm() {
   useEffect(() => {
     if (!pendingPayment) return;
 
+    let pollCount = 0;
+    const maxPolls = 200; // 10 minutes (200 * 3s)
+
     const intervalId = setInterval(async () => {
+      pollCount++;
+      if (pollCount > maxPolls) {
+        clearInterval(intervalId);
+        console.log("Payment polling timed out after 10 minutes.");
+        return;
+      }
       try {
         const res = await subscriptionApi.getTransactionStatus(pendingPayment.id);
         if (res.status === "Completed") {

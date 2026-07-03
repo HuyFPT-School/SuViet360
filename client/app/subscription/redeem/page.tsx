@@ -55,6 +55,7 @@ export default function RedeemPage() {
       // Trigger actual success screen after 1.8 seconds of animation
       setTimeout(() => {
         setStage("success");
+        setLoading(false);
       }, 1800);
     } catch (err: any) {
       console.error(err);

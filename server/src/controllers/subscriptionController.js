@@ -129,7 +129,7 @@ const verifyRecipient = asyncHandler(async (req, res) => {
   const user = await User.findOne({
     $or: [
       { email: identifier.toLowerCase() },
-      { name: identifier },
+      { name: { $regex: new RegExp(`^${identifier}$`, "i") } },
     ],
     role: "student",
   }).select("name email avatar");
@@ -145,7 +145,7 @@ const verifyRecipient = asyncHandler(async (req, res) => {
 // GET /api/subscriptions/gift-code/:code
 const getGiftCodeInfo = asyncHandler(async (req, res) => {
   const giftCode = await GiftCode.findOne({ code: req.params.code.toUpperCase() })
-    .populate("tierId", "name slug features")
+    .populate("tierId")
     .populate("senderId", "name avatar");
 
   if (!giftCode) throw new AppError("Mã quà tặng không hợp lệ", 404);
@@ -266,7 +266,7 @@ const rejectLessonRequest = asyncHandler(async (req, res) => {
 
 // POST /api/subscriptions/coupons (Admin only)
 const createCoupon = asyncHandler(async (req, res) => {
-  const { code, discountType, discountValue, maxUses, minPurchaseAmount, applicableTiers, endDate, description } = req.body;
+  const { code, discountType, discountValue, maxUses, minPurchaseAmount, applicableTiers, startDate, endDate, description } = req.body;
   if (!code || !discountType || !discountValue || !endDate) {
     throw new AppError("Thiếu thông tin mã giảm giá", 400);
   }
@@ -278,6 +278,7 @@ const createCoupon = asyncHandler(async (req, res) => {
     maxUses: maxUses || -1,
     minPurchaseAmount: minPurchaseAmount || 0,
     applicableTiers: applicableTiers || [],
+    startDate: startDate ? new Date(startDate) : undefined,
     endDate: new Date(endDate),
     description: description || "",
   });
@@ -356,40 +357,42 @@ const sepayWebhook = asyncHandler(async (req, res) => {
     transactionId = `TXN-${cleanId.slice(3, 11)}-${cleanId.slice(11)}`;
   }
 
-  const transaction = await Transaction.findOne({ transactionId });
-  if (!transaction) {
+  const checkTransaction = await Transaction.findOne({ transactionId });
+  if (!checkTransaction) {
     console.log(`[SepayWebhook] Transaction ${transactionId} not found in database.`);
     return res.status(200).json({ success: true, message: "Transaction not found" });
   }
 
-  if (transaction.status === "Completed") {
+  if (checkTransaction.status === "Completed") {
     return res.status(200).json({ success: true, message: "Transaction already processed" });
   }
 
-  if (transferAmount < transaction.amount) {
-    console.log(`[SepayWebhook] Amount mismatch for ${transactionId}. Expected: ${transaction.amount}, Got: ${transferAmount}`);
-    transaction.status = "Failed";
-    transaction.metadata = { ...transaction.metadata, sepayError: "Amount mismatch", sepayPayload: req.body };
-    await transaction.save();
+  if (transferAmount < checkTransaction.amount) {
+    console.log(`[SepayWebhook] Amount mismatch for ${transactionId}. Expected: ${checkTransaction.amount}, Got: ${transferAmount}`);
+    checkTransaction.status = "Failed";
+    checkTransaction.metadata = { ...checkTransaction.metadata, sepayError: "Amount mismatch", sepayPayload: req.body };
+    await checkTransaction.save();
     return res.status(200).json({ success: true, message: "Amount mismatch" });
+  }
+
+  // Atomically update transaction to Completed to act as a lock
+  const transaction = await Transaction.findOneAndUpdate(
+    { transactionId, status: "Pending" },
+    {
+      status: "Completed",
+      paymentMethod: "sepay",
+      paymentGatewayRef: gatewayRef || "",
+      $set: { "metadata.sepayPayload": req.body }
+    },
+    { new: true }
+  );
+
+  if (!transaction) {
+    return res.status(200).json({ success: true, message: "Transaction already processed or state modified" });
   }
 
   const subscriptionService = require("../services/subscriptionService");
   const SubscriptionTier = require("../models/SubscriptionTier");
-
-  transaction.status = "Completed";
-  transaction.paymentMethod = "sepay";
-  transaction.paymentGatewayRef = gatewayRef || "";
-  transaction.metadata = { ...transaction.metadata, sepayPayload: req.body };
-  await transaction.save();
-
-  // Increment coupon usage if used
-  if (transaction.couponCode) {
-    await Coupon.findOneAndUpdate(
-      { code: transaction.couponCode },
-      { $inc: { usedCount: 1 } }
-    );
-  }
 
   if (transaction.isGift) {
     // Generate code
@@ -427,6 +430,14 @@ const sepayWebhook = asyncHandler(async (req, res) => {
       message: `Tài khoản của bạn đã được nâng cấp lên gói ${tier ? tier.name : "VIP"}.`,
       link: "/subscription",
     });
+  }
+
+  // Increment coupon usage if used
+  if (transaction.couponCode) {
+    await Coupon.findOneAndUpdate(
+      { code: transaction.couponCode },
+      { $inc: { usedCount: 1 } }
+    );
   }
 
   console.log(`[SepayWebhook] Processed successfully for transaction ${transactionId}`);

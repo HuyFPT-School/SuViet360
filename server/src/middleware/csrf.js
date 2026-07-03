@@ -29,7 +29,12 @@ const requireCsrfToken = (req, res, next) => {
   }
 
   // Bypass CSRF for external Sepay payment Webhook
-  if (req.path === "/api/subscriptions/sepay-webhook") {
+  const originalPath = req.originalUrl ? req.originalUrl.split("?")[0] : "";
+  if (
+    req.path === "/api/subscriptions/sepay-webhook" ||
+    req.path === "/sepay-webhook" ||
+    originalPath === "/api/subscriptions/sepay-webhook"
+  ) {
     return next();
   }
 

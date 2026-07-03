@@ -94,6 +94,15 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    subscriptionTier: {
+      type: String,
+      enum: ["Free", "Student Plus", "Student Pro"],
+      default: "Free",
+    },
+    subscriptionExpiry: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
