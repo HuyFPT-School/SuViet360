@@ -162,4 +162,43 @@ export const adminApi = {
   getAvailableUsers: async (currentUser: User | null) => {
     return currentUser ? [currentUser] : [];
   },
+  getSubscriptionDashboardStats: async () => {
+    const response = await api.get<{ success: boolean; data: AdminSubscriptionStats }>("/subscriptions/admin/dashboard-stats");
+    return response.data.data;
+  },
+};
+
+export type AdminSubscriptionStats = {
+  stats: {
+    totalActiveSubscriptions: number;
+    totalRevenue: number;
+    totalTransactions: number;
+    totalUsers: number;
+  };
+  monthlyRevenue: Array<{
+    month: string;
+    revenue: number;
+    transactions: number;
+  }>;
+  recentTransactions: Array<{
+    _id: string;
+    transactionId: string;
+    buyerId: { name: string; email: string };
+    recipientId: { name: string; email: string };
+    tierId: { name: string; slug: string };
+    amount: number;
+    paymentMethod: string;
+    createdAt: string;
+    isGift: boolean;
+    couponCode: string;
+  }>;
+  subscriptions: Array<{
+    _id: string;
+    userId: { name: string; email: string; avatar?: string };
+    tierId: { name: string; slug: string };
+    startDate: string;
+    endDate: string;
+    billingCycle: "monthly" | "yearly";
+    status: "Active" | "Expired" | "Cancelled";
+  }>;
 };

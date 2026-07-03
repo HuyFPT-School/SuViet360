@@ -7,6 +7,8 @@ const User = require("../models/User");
 const GiftCode = require("../models/GiftCode");
 const Coupon = require("../models/Coupon");
 const Transaction = require("../models/Transaction");
+const Subscription = require("../models/Subscription");
+const SubscriptionTier = require("../models/SubscriptionTier");
 
 // GET /api/subscriptions/tiers
 const getTiers = asyncHandler(async (req, res) => {
@@ -421,6 +423,84 @@ const sepayWebhook = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: "Processed successfully" });
 });
 
+// GET /api/subscriptions/admin/dashboard-stats
+const getAdminDashboardStats = asyncHandler(async (req, res) => {
+  // 1. Basic Stats
+  const totalActiveSubscriptions = await Subscription.countDocuments({ status: "Active" });
+  const totalUsers = await User.countDocuments({});
+
+  const revenueResult = await Transaction.aggregate([
+    { $match: { status: "Completed" } },
+    { $group: { _id: null, total: { $sum: "$amount" }, count: { $sum: 1 } } }
+  ]);
+
+  const totalRevenue = revenueResult[0]?.total || 0;
+  const totalTransactions = revenueResult[0]?.count || 0;
+
+  // 2. Revenue by month for the last 6 months (including current month)
+  const monthlyRevenue = [];
+  const now = new Date();
+  
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+    const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const matchResult = await Transaction.aggregate([
+      {
+        $match: {
+          status: "Completed",
+          createdAt: { $gte: startOfMonth, $lte: endOfMonth }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const monthLabel = `T${d.getMonth() + 1}/${d.getFullYear().toString().slice(2)}`;
+    monthlyRevenue.push({
+      month: monthLabel,
+      revenue: matchResult[0]?.total || 0,
+      transactions: matchResult[0]?.count || 0
+    });
+  }
+
+  // 3. Recent Transactions
+  const recentTransactions = await Transaction.find({ status: "Completed" })
+    .populate("buyerId", "name email")
+    .populate("recipientId", "name email")
+    .populate("tierId", "name slug")
+    .sort({ createdAt: -1 })
+    .limit(20);
+
+  // 4. All Subscriptions (Active & Expired)
+  const subscriptions = await Subscription.find({})
+    .populate("userId", "name email avatar")
+    .populate("tierId", "name slug")
+    .sort({ createdAt: -1 })
+    .limit(100);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      stats: {
+        totalActiveSubscriptions,
+        totalRevenue,
+        totalTransactions,
+        totalUsers
+      },
+      monthlyRevenue,
+      recentTransactions,
+      subscriptions
+    }
+  });
+});
+
 module.exports = {
   getTiers,
   getMySubscription,
@@ -441,4 +521,5 @@ module.exports = {
   deleteCoupon,
   getTransactionStatus,
   sepayWebhook,
+  getAdminDashboardStats,
 };

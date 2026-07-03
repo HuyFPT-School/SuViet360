@@ -385,7 +385,21 @@ export default function ProfilePage() {
                       ? "bg-yellow-500/10 text-yellow-300 border-yellow-500/30"
                       : "bg-stone-500/10 text-stone-400 border-stone-500/20"
                   }`}>
-                    {(user?.subscriptionTier || "Free") === "Student Pro" ? "💎 " : (user?.subscriptionTier || "Free") === "Student Plus" ? "⭐ " : "🆓 "}
+                    {(user?.subscriptionTier || "Free") === "Student Pro" ? (
+                      <svg className="w-3.5 h-3.5 fill-amber-300/20 text-amber-300 inline mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 12 12 2l6 10-6 10-6-10Z" />
+                        <path d="M12 2v20" />
+                        <path d="M6 12h12" />
+                      </svg>
+                    ) : (user?.subscriptionTier || "Free") === "Student Plus" ? (
+                      <svg className="w-3.5 h-3.5 fill-yellow-300/20 text-yellow-300 inline mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3.5 h-3.5 fill-stone-400/20 text-stone-400 inline mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                    )}
                     Gói: {user?.subscriptionTier || "Free"}
                   </span>
                   {(user?.subscriptionTier || "Free") !== "Free" && user?.subscriptionExpiry && (
