@@ -46,6 +46,9 @@ export default function RootLayout({
                 <Link href="/blog" className="sv-menu-link">
                   Diễn đàn
                 </Link>
+                <Link href="/subscription" className="sv-menu-link">
+                  Gói VIP
+                </Link>
               </div>
 
               <NotificationBell />

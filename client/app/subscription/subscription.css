@@ -1,0 +1,765 @@
+/* ==========================================================================
+   Subscription & Gifting System - Premium Heritage Dark / Cinzel Theme CSS
+   ========================================================================== */
+
+.sub-page-wrapper {
+  min-height: calc(100vh - 80px);
+  background: radial-gradient(circle at 50% 20%, #2a0e13 0%, #1a0f05 70%, #0d0702 100%);
+  color: #f4e7c9;
+  padding: 48px 24px;
+  font-family: "Cormorant Garamond", "Times New Roman", serif;
+}
+
+.sub-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+/* Titles & Headers */
+.sub-title {
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  text-align: center;
+  color: #c9a15a;
+  text-shadow: 0 0 15px rgba(201, 161, 90, 0.6), 0 0 30px rgba(201, 161, 90, 0.3);
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.sub-subtitle {
+  text-align: center;
+  color: #a08040;
+  font-size: 1.2rem;
+  margin-bottom: 40px;
+  font-style: italic;
+}
+
+/* Tabs */
+.sub-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 40px;
+  border-bottom: 1px solid rgba(199, 171, 115, 0.2);
+  padding-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.sub-tab-btn {
+  font-family: "Cinzel", serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 10px 24px;
+  color: #a08040;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sub-tab-btn:hover {
+  color: #c9a15a;
+  background: rgba(201, 161, 90, 0.05);
+}
+
+.sub-tab-btn.active {
+  color: #1a0f05;
+  background: linear-gradient(135deg, #c9a15a 0%, #8c6a34 100%);
+  border-color: #c9a15a;
+  box-shadow: 0 0 15px rgba(201, 161, 90, 0.4);
+  text-shadow: none;
+}
+
+/* Premium Cards */
+.sub-card {
+  background: rgba(30, 18, 5, 0.95);
+  border: 1px solid rgba(199, 171, 115, 0.3);
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.sub-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #c9a15a, transparent);
+}
+
+/* Comparison & Tier Grid */
+.tier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 32px;
+  margin-bottom: 48px;
+}
+
+.tier-card {
+  background: linear-gradient(180deg, rgba(40, 24, 10, 0.9) 0%, rgba(20, 12, 5, 0.95) 100%);
+  border: 1px solid rgba(199, 171, 115, 0.2);
+  border-radius: 16px;
+  padding: 32px 24px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.tier-card:hover {
+  transform: translateY(-8px);
+  border-color: #c9a15a;
+  box-shadow: 0 15px 35px rgba(201, 161, 90, 0.15), 0 0 20px rgba(201, 161, 90, 0.05);
+}
+
+.tier-card.featured {
+  border: 2px solid #c9a15a;
+  background: linear-gradient(180deg, rgba(74, 31, 36, 0.6) 0%, rgba(26, 15, 5, 0.95) 100%);
+  box-shadow: 0 10px 30px rgba(74, 31, 36, 0.4);
+}
+
+.tier-card.featured::after {
+  content: "PHỔ BIẾN NHẤT";
+  position: absolute;
+  top: 20px;
+  right: -35px;
+  background: #c9a15a;
+  color: #1a0f05;
+  font-family: "Cinzel", serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 6px 40px;
+  transform: rotate(45deg);
+  letter-spacing: 1px;
+}
+
+.tier-header {
+  text-align: center;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(199, 171, 115, 0.15);
+  padding-bottom: 24px;
+}
+
+.tier-name {
+  font-family: "Cinzel", serif;
+  font-size: 1.4rem;
+  color: #f4e7c9;
+  margin-bottom: 8px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.tier-price-box {
+  margin: 16px 0;
+}
+
+.tier-price {
+  font-family: "Cinzel", serif;
+  font-size: 2.2rem;
+  color: #c9a15a;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(201, 161, 90, 0.3);
+}
+
+.tier-period {
+  font-size: 0.9rem;
+  color: #a08040;
+  margin-left: 4px;
+}
+
+.tier-cycle-toggle {
+  display: inline-flex;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  border-radius: 30px;
+  border: 1px solid rgba(199, 171, 115, 0.2);
+  margin-top: 8px;
+}
+
+.tier-cycle-btn {
+  background: transparent;
+  border: none;
+  color: #a08040;
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 600;
+}
+
+.tier-cycle-btn.active {
+  background: #c9a15a;
+  color: #1a0f05;
+}
+
+.tier-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px 0;
+  flex-grow: 1;
+}
+
+.tier-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 1.05rem;
+  color: #e4d7b9;
+}
+
+.tier-feature-icon {
+  color: #c9a15a;
+  flex-shrink: 0;
+}
+
+.tier-feature-icon.disabled {
+  color: #4a3510;
+}
+
+.tier-feature-item.disabled {
+  color: #8c6a34;
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* Current user subscription status bar */
+.user-sub-status {
+  background: linear-gradient(90deg, rgba(74, 31, 36, 0.8) 0%, rgba(30, 18, 5, 0.95) 100%);
+  border: 1px solid #c9a15a;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-shadow: 0 0 15px rgba(201, 161, 90, 0.2);
+}
+
+.user-sub-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-sub-badge {
+  font-family: "Cinzel", serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 16px;
+  border-radius: 4px;
+  background: #c9a15a;
+  color: #1a0f05;
+  box-shadow: 0 0 10px rgba(201, 161, 90, 0.5);
+  letter-spacing: 1px;
+}
+
+.user-sub-expiry {
+  font-size: 0.95rem;
+  color: #f4e7c9;
+}
+
+/* Premium Buttons */
+.btn-gold {
+  display: inline-block;
+  text-align: center;
+  font-family: "Cinzel", serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #c9a15a 0%, #8c6a34 100%);
+  color: #1a0f05;
+  border: 1px solid #c9a15a;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(201, 161, 90, 0.3);
+  width: 100%;
+}
+
+.btn-gold:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d4b272 0%, #a27e43 100%);
+  box-shadow: 0 6px 20px rgba(201, 161, 90, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-gold:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-gold-outline {
+  display: inline-block;
+  text-align: center;
+  font-family: "Cinzel", serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 14px 28px;
+  background: transparent;
+  color: #c9a15a;
+  border: 1px solid rgba(201, 161, 90, 0.5);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.btn-gold-outline:hover:not(:disabled) {
+  background: rgba(201, 161, 90, 0.1);
+  border-color: #c9a15a;
+  color: #f4e7c9;
+}
+
+/* Forms & Inputs */
+.form-group {
+  margin-bottom: 24px;
+}
+
+.form-label {
+  display: block;
+  font-family: "Cinzel", serif;
+  font-size: 0.9rem;
+  color: #c9a15a;
+  margin-bottom: 8px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.input-gold {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(18, 10, 2, 0.8);
+  border: 1px solid rgba(199, 171, 115, 0.3);
+  border-radius: 6px;
+  color: #f4e7c9;
+  font-family: inherit;
+  font-size: 1.05rem;
+  transition: all 0.3s;
+}
+
+.input-gold:focus {
+  outline: none;
+  border-color: #c9a15a;
+  box-shadow: 0 0 10px rgba(201, 161, 90, 0.25);
+  background: rgba(18, 10, 2, 0.95);
+}
+
+.textarea-gold {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* Redeem Tab & Page */
+.redeem-wrap {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.redeem-description {
+  color: #a08040;
+  margin-bottom: 32px;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+/* Lock Screen overlay for VIP content */
+.lock-screen {
+  text-align: center;
+  padding: 48px 24px;
+  background: rgba(42, 14, 19, 0.4);
+  border: 1px dashed rgba(199, 171, 115, 0.4);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.lock-icon {
+  font-size: 3rem;
+  color: #c9a15a;
+  text-shadow: 0 0 15px rgba(201, 161, 90, 0.4);
+  animation: float 3s ease-in-out infinite;
+}
+
+.lock-title {
+  font-family: "Cinzel", serif;
+  font-size: 1.4rem;
+  color: #c9a15a;
+}
+
+/* Lesson Request Tab */
+.request-list-title {
+  font-family: "Cinzel", serif;
+  font-size: 1.2rem;
+  color: #c9a15a;
+  margin-top: 40px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(199, 171, 115, 0.2);
+  padding-bottom: 8px;
+}
+
+.request-card {
+  background: rgba(20, 12, 5, 0.6);
+  border: 1px solid rgba(199, 171, 115, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: border-color 0.3s;
+}
+
+.request-card:hover {
+  border-color: rgba(201, 161, 90, 0.5);
+}
+
+.request-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.request-title-text {
+  font-family: "Cinzel", serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #f4e7c9;
+}
+
+.request-status {
+  font-size: 0.8rem;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+
+.status-pending { background: rgba(201, 161, 90, 0.15); color: #c9a15a; border: 1px solid rgba(201, 161, 90, 0.3); }
+.status-accepted { background: rgba(33, 150, 243, 0.15); color: #2196f3; border: 1px solid rgba(33, 150, 243, 0.3); }
+.status-inprogress { background: rgba(255, 152, 0, 0.15); color: #ff9800; border: 1px solid rgba(255, 152, 0, 0.3); }
+.status-completed { background: rgba(76, 175, 80, 0.15); color: #4caf50; border: 1px solid rgba(76, 175, 80, 0.3); }
+.status-rejected { background: rgba(244, 67, 54, 0.15); color: #f44336; border: 1px solid rgba(244, 67, 54, 0.3); }
+
+.request-desc {
+  font-size: 1.05rem;
+  color: #e4d7b9;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.request-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: #a08040;
+}
+
+/* Historic scroll table (History Page) */
+.history-table-container {
+  overflow-x: auto;
+  border: 1px solid rgba(199, 171, 115, 0.3);
+  border-radius: 8px;
+  background: rgba(18, 10, 2, 0.8);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 1.05rem;
+}
+
+.history-table th {
+  font-family: "Cinzel", serif;
+  background: rgba(74, 31, 36, 0.6);
+  color: #c9a15a;
+  padding: 16px;
+  font-weight: 600;
+  border-bottom: 2px solid rgba(199, 171, 115, 0.4);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+.history-table td {
+  padding: 16px;
+  border-bottom: 1px solid rgba(199, 171, 115, 0.15);
+  color: #e4d7b9;
+}
+
+.history-table tbody tr:hover {
+  background: rgba(201, 161, 90, 0.03);
+}
+
+/* Checkout Page */
+.checkout-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 32px;
+}
+
+@media (max-width: 900px) {
+  .checkout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.checkout-section-title {
+  font-family: "Cinzel", serif;
+  font-size: 1.2rem;
+  color: #c9a15a;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(199, 171, 115, 0.2);
+  padding-bottom: 8px;
+}
+
+.mode-selectors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.mode-btn {
+  background: rgba(18, 10, 2, 0.6);
+  border: 1px solid rgba(199, 171, 115, 0.3);
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.mode-btn.active {
+  border-color: #c9a15a;
+  background: rgba(74, 31, 36, 0.4);
+  box-shadow: 0 0 10px rgba(201, 161, 90, 0.15);
+}
+
+.mode-title {
+  font-family: "Cinzel", serif;
+  font-weight: 600;
+  color: #f4e7c9;
+  margin-bottom: 4px;
+}
+
+.mode-desc {
+  font-size: 0.85rem;
+  color: #a08040;
+}
+
+.gift-activation-modes {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.gift-act-btn {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(199, 171, 115, 0.2);
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #a08040;
+  transition: all 0.2s;
+}
+
+.gift-act-btn.active {
+  border-color: #c9a15a;
+  background: #c9a15a;
+  color: #1a0f05;
+}
+
+.coupon-row {
+  display: flex;
+  gap: 12px;
+}
+
+.invoice-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 1.05rem;
+}
+
+.invoice-total {
+  border-top: 1px solid rgba(199, 171, 115, 0.3);
+  padding-top: 16px;
+  margin-top: 16px;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+/* Redeem Page & Open Box Animation */
+.gift-box-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0;
+}
+
+.gift-box-anim {
+  width: 200px;
+  height: 200px;
+  position: relative;
+  cursor: pointer;
+  perspective: 1000px;
+}
+
+.gift-box-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.gift-box-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(201, 161, 90, 0.6) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(20px);
+  z-index: 1;
+  opacity: 0.8;
+  animation: pulseGlow 2s ease-in-out infinite alternate;
+}
+
+.gift-details-card {
+  max-width: 500px;
+  width: 100%;
+  background: linear-gradient(135deg, rgba(74, 31, 36, 0.9) 0%, rgba(30, 18, 5, 0.95) 100%);
+  border: 2px solid #c9a15a;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(201, 161, 90, 0.2);
+  margin-top: 32px;
+  animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+.gift-sender-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px solid #c9a15a;
+  margin: 0 auto 16px auto;
+  box-shadow: 0 0 15px rgba(201, 161, 90, 0.4);
+  object-fit: cover;
+  background: #2a0e13;
+}
+
+.gift-message-bubble {
+  background: rgba(18, 10, 2, 0.8);
+  border: 1px solid rgba(199, 171, 115, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 20px 0;
+  font-style: italic;
+  color: #f4e7c9;
+  position: relative;
+}
+
+.gift-message-bubble::after {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 0 10px 10px 10px;
+  border-style: solid;
+  border-color: transparent transparent rgba(18, 10, 2, 0.8) transparent;
+}
+
+/* Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes pulseGlow {
+  0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+  100% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.success-badge {
+  color: #4caf50;
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.error-badge {
+  color: #f44336;
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Helper text */
+.text-gold {
+  color: #c9a15a;
+}
+.text-gold-dark {
+  color: #8c6a34;
+}
+.text-muted {
+  color: #a08040;
+}
+
+/* Payment Method Selector */
+.payment-method-option {
+  display: block;
+  border: 1px solid rgba(199, 171, 115, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.payment-method-option:hover {
+  border-color: rgba(201, 161, 90, 0.5);
+  background: rgba(201, 161, 90, 0.05);
+}
+
+.payment-method-option.active {
+  border-color: #c9a15a;
+  background: rgba(201, 161, 90, 0.1);
+  box-shadow: 0 0 10px rgba(201, 161, 90, 0.15);
+}

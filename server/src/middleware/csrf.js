@@ -28,6 +28,11 @@ const requireCsrfToken = (req, res, next) => {
     return next();
   }
 
+  // Bypass CSRF for external Sepay payment Webhook
+  if (req.path === "/api/subscriptions/sepay-webhook") {
+    return next();
+  }
+
   // Mobile apps (React Native) don't maintain cookie jars automatically,
   // so the double-submit CSRF pattern (cookie vs header) cannot work.
   // We skip CSRF for mobile clients; they authenticate via JWT tokens instead.

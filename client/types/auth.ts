@@ -13,4 +13,6 @@ export interface User {
   bio?: string;
   xp?: number;
   level?: number;
+  subscriptionTier?: "Free" | "Student Plus" | "Student Pro";
+  subscriptionExpiry?: string | null;
 }
