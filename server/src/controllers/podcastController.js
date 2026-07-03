@@ -827,6 +827,52 @@ const rejectPodcast = asyncHandler(async (req, res) => {
   });
 });
 
+// Rename category for all podcasts
+const renameCategory = asyncHandler(async (req, res) => {
+  const { oldCategory, newCategory } = req.body;
+
+  if (!oldCategory || !newCategory || oldCategory.trim() === "" || newCategory.trim() === "") {
+    throw new AppError("Tên chủ đề cũ và mới không được để trống", 400);
+  }
+
+  // Update all podcasts with the old category
+  await Podcast.updateMany(
+    { category: oldCategory.trim() },
+    { category: newCategory.trim() }
+  );
+
+  // Invalidate all podcast caches
+  await invalidatePodcastCache();
+
+  res.status(200).json({
+    success: true,
+    message: `Đã đổi tên chủ đề từ "${oldCategory}" thành "${newCategory}" cho tất cả bài học âm thanh`,
+  });
+});
+
+// Delete a category (resets to default "Chủ đề chung")
+const deleteCategory = asyncHandler(async (req, res) => {
+  const { category } = req.body;
+
+  if (!category || category.trim() === "") {
+    throw new AppError("Tên chủ đề cần xóa không được để trống", 400);
+  }
+
+  // Update all podcasts under this category to "Chủ đề chung"
+  await Podcast.updateMany(
+    { category: category.trim() },
+    { category: "Chủ đề chung" }
+  );
+
+  // Invalidate all podcast caches
+  await invalidatePodcastCache();
+
+  res.status(200).json({
+    success: true,
+    message: `Đã xóa chủ đề "${category}". Các podcast liên quan đã được chuyển sang "Chủ đề chung"`,
+  });
+});
+
 module.exports = {
   createPodcast,
   updatePodcast,
@@ -847,4 +893,6 @@ module.exports = {
   updateComment,
   approvePodcast,
   rejectPodcast,
+  renameCategory,
+  deleteCategory,
 };
