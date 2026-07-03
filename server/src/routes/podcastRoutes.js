@@ -21,6 +21,8 @@ const {
   updateComment,
   approvePodcast,
   rejectPodcast,
+  renameCategory,
+  deleteCategory,
 } = require("../controllers/podcastController");
 
 const router = express.Router();
@@ -87,5 +89,9 @@ router.put(
 );
 
 router.delete("/staff/podcasts/:id", deletePodcast);
+
+// Category Management
+router.put("/staff/categories/rename", renameCategory);
+router.delete("/staff/categories/delete", deleteCategory);
 
 module.exports = router;

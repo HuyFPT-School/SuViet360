@@ -334,6 +334,73 @@ export default function StaffPage() {
     setNewCategoryName("");
   };
 
+  const handleRenameCategoryPrompt = async () => {
+    const oldCat = podcastForm.category;
+    if (!oldCat) return;
+
+    const newCat = window.prompt(`Nhập tên mới cho chủ đề "${oldCat}":`, oldCat);
+    if (!newCat || newCat.trim() === "" || newCat.trim() === oldCat) return;
+
+    if (window.confirm(`Bạn có chắc chắn muốn đổi tên chủ đề từ "${oldCat}" thành "${newCat.trim()}" cho TẤT CẢ các podcast liên quan?`)) {
+      setSaving(true);
+      setMessage(null);
+      try {
+        const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+        const csrfToken = csrfRes.data.data.csrfToken;
+
+        await api.put(
+          "/staff/categories/rename",
+          { oldCategory: oldCat, newCategory: newCat.trim() },
+          { headers: { "x-csrf-token": csrfToken } }
+        );
+
+        setMessage({ type: "success", text: `Đã đổi tên chủ đề "${oldCat}" thành "${newCat.trim()}" thành công.` });
+        loadPodcasts();
+        setPodcastFormField("category", newCat.trim());
+      } catch (err: any) {
+        console.error(err);
+        setMessage({ type: "error", text: "Lỗi đổi tên chủ đề: " + (err.response?.data?.message || err.message) });
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
+  const handleDeleteCategoryPrompt = async () => {
+    const catToDelete = podcastForm.category;
+    if (!catToDelete) return;
+
+    if (
+      window.confirm(
+        `Bạn có chắc chắn muốn xóa chủ đề "${catToDelete}"? Tất cả các podcast thuộc chủ đề này sẽ được chuyển sang chủ đề mặc định "Chủ đề chung".`
+      )
+    ) {
+      setSaving(true);
+      setMessage(null);
+      try {
+        const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+        const csrfToken = csrfRes.data.data.csrfToken;
+
+        await api.delete(
+          "/staff/categories/delete",
+          {
+            headers: { "x-csrf-token": csrfToken },
+            data: { category: catToDelete }
+          }
+        );
+
+        setMessage({ type: "success", text: `Đã xóa chủ đề "${catToDelete}" thành công. Các podcast liên quan đã chuyển sang "Chủ đề chung".` });
+        loadPodcasts();
+        setPodcastFormField("category", "");
+      } catch (err: any) {
+        console.error(err);
+        setMessage({ type: "error", text: "Lỗi xóa chủ đề: " + (err.response?.data?.message || err.message) });
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
   const handleSelectPodcast = (podcast: Podcast) => {
     setSelectedPodcastId(podcast._id);
     setPodcastFormMode("edit");
@@ -1211,17 +1278,37 @@ export default function StaffPage() {
                     <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
                       Chủ đề (Category)
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAddingNewCategory(!isAddingNewCategory);
-                        setNewCategoryName("");
-                        setPodcastFormField("category", "");
-                      }}
-                      className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline"
-                    >
-                      {isAddingNewCategory ? "Hủy" : "Tạo mới"}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      {podcastForm.category && !isAddingNewCategory && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleRenameCategoryPrompt}
+                            className="text-xs font-semibold text-blue-700 hover:text-blue-900 underline cursor-pointer"
+                          >
+                            Đổi tên
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDeleteCategoryPrompt}
+                            className="text-xs font-semibold text-red-700 hover:text-red-900 underline cursor-pointer"
+                          >
+                            Xóa
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingNewCategory(!isAddingNewCategory);
+                          setNewCategoryName("");
+                          setPodcastFormField("category", "");
+                        }}
+                        className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline cursor-pointer"
+                      >
+                        {isAddingNewCategory ? "Hủy" : "Tạo mới"}
+                      </button>
+                    </div>
                   </div>
                   {isAddingNewCategory ? (
                     <input

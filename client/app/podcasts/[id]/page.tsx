@@ -273,7 +273,11 @@ export default function PodcastDetailPage() {
     setIsPlaying(false);
     if (!user) return;
     try {
-      await api.post(`/progress/podcast/${id}/complete`);
+      const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+      const csrfToken = csrfRes.data.data.csrfToken;
+      await api.post(`/progress/podcast/${id}/complete`, {}, {
+        headers: { "x-csrf-token": csrfToken },
+      });
     } catch (err) {
       console.error("Error completing podcast:", err);
     }
