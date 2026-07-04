@@ -15,6 +15,7 @@ export type LessonGameData = {
 
 // ── Định nghĩa lại 2 kiểu dữ liệu rõ ràng theo mong muốn nhập chữ trực tiếp ──
 type QuestionPointData = {
+  id: string;
   cx: number;
   cy: number;
   title: string;
@@ -292,7 +293,9 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
                 });
               }
 
+              const qId = obj.id ? String(obj.id) : `q_${cx}_${cy}`;
               this.questionPoints.push({
+                id: qId,
                 cx, cy,
                 title: questionTitle,
                 cauHoi: cauHoi || "Nội dung câu hỏi chưa nhập",
@@ -422,7 +425,7 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
 
         // Chuẩn hóa và so khớp chữ trực tiếp
         const isCorrect = selectedAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
-        const questionKey = qPoint.title;
+        const questionKey = qPoint.id;
 
         if (!this.answeredQuestions.has(questionKey)) {
           this.answeredQuestions.add(questionKey);
@@ -512,7 +515,7 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
 
         // 1. Quét tìm vị trí thuộc Layer_CauHoi gần nhất chưa được giải đáp
         for (const pt of this.questionPoints) {
-          if (this.answeredQuestions.has(pt.title)) continue; // Bỏ qua nếu đã trả lời xong
+          if (this.answeredQuestions.has(pt.id)) continue; // Bỏ qua nếu đã trả lời xong
           if (pt.sprite && !pt.sprite.active) continue; // Bỏ qua nếu dấu hỏi đã bị xóa
 
           const dist = Phaser.Math.Distance.Between(px, py, pt.cx, pt.cy);
