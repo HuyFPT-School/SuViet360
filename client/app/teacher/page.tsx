@@ -495,7 +495,14 @@ function ContentDetailModal({
             <InfoRow label="Ngày gửi duyệt" value={formatDate(item.submittedAt)} />
             <div className="teacher-info-row">
               <span>Trạng thái hiện tại</span>
-              <StatusBadge status={item.status} />
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <StatusBadge status={item.status} />
+                {item.isDraftUpdate && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                    Bản thảo chỉnh sửa
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="teacher-section">

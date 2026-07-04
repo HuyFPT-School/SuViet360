@@ -56,6 +56,7 @@ export type TeacherReviewItem = {
   reviewFeedback?: string;
   reviewedBy?: UserSummary;
   reviewedAt?: string;
+  isDraftUpdate?: boolean;
 };
 
 type LessonResponseItem = {
@@ -67,6 +68,8 @@ type LessonResponseItem = {
   game: LessonGame;
   createdAt: string;
   createdBy?: string | { _id: string; name: string; email: string };
+  hasPendingDraft?: boolean;
+  pendingDraft?: any;
 };
 
 type LessonsResponse = {
@@ -89,6 +92,7 @@ type PodcastResponseItem = {
   reviewFeedback?: string;
   createdAt: string;
   createdBy?: string | { _id: string; name: string; email: string };
+  pendingDraft?: any;
 };
 
 const formatCreator = (creator: any): string => {
@@ -107,39 +111,54 @@ const formatCreator = (creator: any): string => {
 const toReviewItem = (
   lesson: LessonResponseItem
 ): TeacherReviewItem => {
+  const isDraftUpdate = lesson.status === "Published" && !!lesson.hasPendingDraft;
+  const draft = lesson.pendingDraft;
+  
   return {
     id: lesson._id,
-    title: lesson.title,
+    title: isDraftUpdate ? (draft?.title || lesson.title) : lesson.title,
     type: "Lesson",
     createdBy: formatCreator(lesson.createdBy),
     submittedAt: lesson.createdAt,
-    status: lesson.status || "Pending_Review",
-    summary: lesson.content,
-    game: lesson.game,
+    status: isDraftUpdate ? "Pending_Review" : (lesson.status || "Pending_Review"),
+    summary: isDraftUpdate ? (draft?.content || lesson.content) : lesson.content,
+    game: isDraftUpdate ? {
+      tilemapJsonUrl: draft?.tilemapJsonUrl || lesson.game.tilemapJsonUrl,
+      tilesets: draft?.tilesets || lesson.game.tilesets,
+      character: draft?.animations 
+        ? { animations: draft.animations } 
+        : lesson.game.character,
+      spawnPoint: draft?.spawnPoint || lesson.game.spawnPoint,
+    } : lesson.game,
     reviewFeedback: lesson.reviewFeedback || "",
+    isDraftUpdate,
   };
 };
 
 const podcastToReviewItem = (
   podcast: PodcastResponseItem
 ): TeacherReviewItem => {
+  const isDraftUpdate = podcast.status === "Published" && !!podcast.pendingDraft;
+  const draft = podcast.pendingDraft;
+
   return {
     id: podcast._id,
-    title: podcast.title,
+    title: isDraftUpdate ? (draft?.title || podcast.title) : podcast.title,
     type: "Podcast",
     createdBy: formatCreator(podcast.createdBy),
     submittedAt: podcast.createdAt,
-    status: podcast.status || "Pending_Review",
-    summary: podcast.description || podcast.content || "",
+    status: isDraftUpdate ? "Pending_Review" : (podcast.status || "Pending_Review"),
+    summary: isDraftUpdate ? (draft?.description || draft?.content || podcast.description || podcast.content || "") : (podcast.description || podcast.content || ""),
     podcastDetails: {
-      thumbnail: podcast.thumbnail,
-      audioUrl: podcast.audioUrl,
-      level: podcast.level || "Medium",
-      category: podcast.category || "Chủ đề chung",
-      duration: podcast.duration || 0,
-      lessonId: podcast.lessonId,
+      thumbnail: isDraftUpdate ? (draft?.thumbnail || podcast.thumbnail) : podcast.thumbnail,
+      audioUrl: isDraftUpdate ? (draft?.audioUrl || podcast.audioUrl) : podcast.audioUrl,
+      level: isDraftUpdate ? (draft?.level || podcast.level || "Medium") : (podcast.level || "Medium"),
+      category: isDraftUpdate ? (draft?.category || podcast.category || "Chủ đề chung") : (podcast.category || "Chủ đề chung"),
+      duration: isDraftUpdate ? (draft?.duration || podcast.duration || 0) : (podcast.duration || 0),
+      lessonId: isDraftUpdate ? (draft?.lessonId || podcast.lessonId) : podcast.lessonId,
     },
     reviewFeedback: podcast.reviewFeedback || "",
+    isDraftUpdate,
   };
 };
 

@@ -258,7 +258,9 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
                   const valStr = String(p.value || "").trim();
 
                   if (nameLower.includes("cau hoi") || nameLower.includes("câu hỏi")) {
-                    questionTitle = p.name; // Dùng tên thân thiện như "Câu hỏi 1", "Câu hỏi 2"
+                    if (p.name.toLowerCase() !== "cau_hoi" && p.name.toLowerCase() !== "cau hoi") {
+                      questionTitle = p.name; // Dùng tên thân thiện như "Câu hỏi 1", "Câu hỏi 2"
+                    }
                     if (valStr.includes("|")) {
                       const parts = valStr.split("|").map((x) => x.trim());
                       if (parts.length >= 6) {
@@ -280,11 +282,10 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
                     dapAnB = valStr;
                   } else if (nameLower.includes("dap an c") || nameLower.includes("đáp án c")) {
                     dapAnC = valStr;
-                  } else if (nameLower.includes("dap an d") || nameLower.includes("đáp án d")) {
-                    dapAnD = valStr;
-                    // Hỗ trợ trường hợp đáp án đúng được lưu dưới dạng đáp án D
                   } else if (nameLower.includes("dap an dung") || nameLower.includes("đáp án đúng")) {
                     dapAnDung = valStr;
+                  } else if (nameLower.includes("dap an d") || nameLower.includes("đáp án d")) {
+                    dapAnD = valStr;
                   }
                 });
               }
@@ -310,7 +311,9 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
                   const valStr = String(p.value || "").trim();
 
                   if (nameLower.includes("goi y") || nameLower.includes("gợi ý")) {
-                    hintTitle = p.name; // Dùng tên thân thiện như "Gợi ý 1"
+                    if (p.name.toLowerCase() !== "goi_y" && p.name.toLowerCase() !== "goi y") {
+                      hintTitle = p.name; // Dùng tên thân thiện như "Gợi ý 1"
+                    }
                     goiYVal = valStr;
                   }
                 });
@@ -437,11 +440,6 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
           btn.style.color = "#ffffff";
           btn.style.borderColor = "#1b5e20";
           btn.innerHTML = `✓ ${btn.innerHTML}`;
-
-          // Trả lời đúng -> Xóa bỏ dấu chấm hỏi xoay tròn trên bản đồ
-          if (qPoint.sprite) {
-            qPoint.sprite.destroy();
-          }
         } else {
           // Sai -> Đổi nút sang màu đỏ hỏa hoạn
           btn.style.backgroundColor = "#c62828";
@@ -459,6 +457,11 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
               btnEl.style.borderColor = "#1b5e20";
             }
           });
+        }
+
+        // Đã trả lời (Đúng hoặc Sai) -> Xóa bỏ dấu chấm hỏi xoay tròn trên bản đồ
+        if (qPoint.sprite) {
+          qPoint.sprite.destroy();
         }
 
         // Tạo độ trễ ngắn 2 giây trước khi đóng popup cho người học kịp ghi nhận đáp án đúng
@@ -505,6 +508,7 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
 
         // 1. Quét tìm vị trí thuộc Layer_CauHoi gần nhất chưa được giải đáp
         for (const pt of this.questionPoints) {
+          if (this.answeredQuestions.has(pt.title)) continue; // Bỏ qua nếu đã trả lời xong
           if (pt.sprite && !pt.sprite.active) continue; // Bỏ qua nếu dấu hỏi đã bị xóa
 
           const dist = Phaser.Math.Distance.Between(px, py, pt.cx, pt.cy);
