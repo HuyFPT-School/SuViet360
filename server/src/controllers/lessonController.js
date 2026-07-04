@@ -402,6 +402,7 @@ const formatLessonResponse = (lesson) => ({
       y: lesson.game.spawnPoint.y,
     },
   },
+  createdBy: lesson.createdBy,
   createdAt: lesson.createdAt,
   updatedAt: lesson.updatedAt,
 });
