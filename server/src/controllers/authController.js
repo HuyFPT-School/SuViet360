@@ -285,6 +285,10 @@ const login = asyncHandler(async (req, res) => {
     throw new AppError("Invalid email or password", 401);
   }
 
+  if (user.isLocked) {
+    throw new AppError("Tài khoản của bạn đã bị khóa.", 403);
+  }
+
   await sendAuthResponse(res, 200, user, "Login successful");
 });
 
@@ -705,6 +709,73 @@ const googleMobileFinalize = asyncHandler(async (req, res) => {
   await sendAuthResponse(res, 200, user, "Google login successful");
 });
 
+const getAllUsers = asyncHandler(async (req, res) => {
+  const users = await User.find({});
+  res.status(200).json({
+    status: "success",
+    data: users.map(u => ({
+      id: u._id.toString(),
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      avatar: u.avatar || "",
+      isLocked: u.isLocked || false,
+    })),
+  });
+});
+
+const updateUserRole = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { role } = req.body;
+
+  if (!["admin", "student", "staff", "teacher"].includes(role)) {
+    throw new AppError("Invalid role", 400);
+  }
+
+  if (req.user._id.toString() === id && role !== "admin") {
+    throw new AppError("You cannot remove your own admin role", 450); // custom or standard bad request
+  }
+
+  const user = await User.findByIdAndUpdate(id, { role }, { new: true });
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "User role updated successfully",
+    data: {
+      id: user._id.toString(),
+      role: user.role,
+    },
+  });
+});
+
+const toggleUserLock = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (req.user._id.toString() === id) {
+    throw new AppError("You cannot lock your own account", 400);
+  }
+
+  const user = await User.findById(id);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  user.isLocked = !user.isLocked;
+  await user.save();
+
+  res.status(200).json({
+    status: "success",
+    message: user.isLocked ? "User locked successfully" : "User unlocked successfully",
+    data: {
+      id: user._id.toString(),
+      isLocked: user.isLocked,
+    },
+  });
+});
+
 module.exports = {
   register,
   login,
@@ -720,4 +791,7 @@ module.exports = {
   googleLogin,
   googleMobileCallback,
   googleMobileFinalize,
+  getAllUsers,
+  updateUserRole,
+  toggleUserLock,
 };

@@ -2512,9 +2512,6 @@ img.avatar-circle {
 .admin-page {
   min-height: calc(100vh - 80px);
   padding: 28px 24px 64px;
-  background:
-    linear-gradient(180deg, rgba(253, 246, 232, 0.82), rgba(247, 243, 233, 0.96)),
-    url("/textures/paper.jpg") center/cover;
 }
 
 .admin-page--center {
@@ -2933,11 +2930,61 @@ img.avatar-circle {
 .admin-user-table .admin-table-head,
 .admin-user-table .admin-table-row {
   grid-template-columns:
-    minmax(150px, 1fr)
-    minmax(210px, 1.25fr)
-    86px
-    118px
-    190px;
+    minmax(140px, 1.2fr)
+    minmax(180px, 1.2fr)
+    116px
+    106px
+    118px;
+}
+
+.admin-vip-table .admin-table-head,
+.admin-vip-table .admin-table-row {
+  grid-template-columns:
+    minmax(110px, 1.1fr)
+    minmax(70px, 0.7fr)
+    82px
+    82px
+    76px;
+}
+
+.admin-tx-table .admin-table-head,
+.admin-tx-table .admin-tx-row,
+.admin-tx-table .admin-table-row {
+  grid-template-columns:
+    minmax(110px, 1.1fr)
+    minmax(70px, 0.7fr)
+    82px
+    82px
+    82px;
+}
+
+.admin-vip-table-new {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.admin-vip-table-new th {
+  font-family: "Cinzel", serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #8c6a34;
+  padding: 10px 12px;
+  border-bottom: 2px solid rgba(140, 106, 52, 0.25);
+  white-space: nowrap;
+}
+
+.admin-vip-table-new td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(140, 106, 52, 0.15);
+  vertical-align: middle;
+  color: #2a2016;
+}
+
+.admin-vip-table-new tr:hover {
+  background: rgba(140, 106, 52, 0.05);
 }
 
 .admin-user-table .admin-row-actions {

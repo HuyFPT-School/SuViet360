@@ -4,6 +4,8 @@ import Link from "next/link";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { adminApi, type Lesson, type LessonFormValues, type AdminSubscriptionStats } from "@/lib/adminApi";
+import { subscriptionApi } from "@/lib/subscriptionApi";
+import type { SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
 import type { User } from "@/types/auth";
 
@@ -23,7 +25,6 @@ const emptyForm: LessonFormValues = {
 
 const tabs: Array<{ id: AdminTab; label: string }> = [
   { id: "dashboard", label: "Dashboard" },
-  { id: "lessons", label: "Quản lý lesson" },
   { id: "users", label: "Quản lý user" },
   { id: "subscriptions", label: "Quản lý Gói VIP" },
 ];
@@ -66,6 +67,7 @@ export default function AdminPage() {
   
   // Subscription management state
   const [subStats, setSubStats] = useState<AdminSubscriptionStats | null>(null);
+  const [tiers, setTiers] = useState<SubscriptionTier[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -76,9 +78,10 @@ export default function AdminPage() {
       try {
         const currentUser = await refreshUser();
         await adminApi.checkAdmin();
-        const [lessonResponse, availableUsers] = await Promise.all([
+        const [lessonResponse, availableUsers, loadedTiers] = await Promise.all([
           adminApi.getLessons(),
-          adminApi.getAvailableUsers(currentUser),
+          adminApi.getAvailableUsers(),
+          subscriptionApi.getTiers(),
         ]);
 
         let subscriptionDashboardStats = null;
@@ -91,6 +94,7 @@ export default function AdminPage() {
         if (!mounted) return;
         setLessons(lessonResponse.lessons);
         setUsers(availableUsers);
+        setTiers(loadedTiers);
         if (subscriptionDashboardStats) {
           setSubStats(subscriptionDashboardStats);
         }
@@ -144,19 +148,10 @@ export default function AdminPage() {
   }, [subStats, subQuery]);
 
   const dashboardStats = useMemo(() => {
-    const totalFrames = lessons.reduce(
-      (total, lesson) => total + getAnimationCount(lesson),
-      0
-    );
-    const totalTilesets = lessons.reduce(
-      (total, lesson) => total + lesson.game.tilesets.length,
-      0
-    );
-
     const baseStats = [
       { label: "Tổng lesson", value: lessons.length },
-      { label: "Tileset", value: totalTilesets },
-      { label: "Sprite frame", value: totalFrames },
+      { label: "Staff hiện có", value: users.filter((u) => u.role === "staff").length },
+      { label: "Teacher hiện có", value: users.filter((u) => u.role === "teacher").length },
       { label: "Admin hiện có", value: users.filter((u) => u.role === "admin").length },
     ];
 
@@ -273,6 +268,58 @@ export default function AdminPage() {
     }
   };
 
+  const handleUpdateRole = async (userId: string, role: string) => {
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      await adminApi.updateUserRole(userId, role);
+      const updatedUsers = await adminApi.getAvailableUsers();
+      setUsers(updatedUsers);
+      setMessage("Cập nhật vai trò người dùng thành công.");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Không thể cập nhật vai trò người dùng.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleLock = async (userId: string) => {
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      await adminApi.toggleUserLock(userId);
+      const updatedUsers = await adminApi.getAvailableUsers();
+      setUsers(updatedUsers);
+      setMessage("Thay đổi trạng thái khóa tài khoản thành công.");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Không thể thay đổi trạng thái khóa tài khoản.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateTierPrice = async (id: string, priceMonthly: number, priceYearly: number) => {
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      await adminApi.updateTierPrice(id, priceMonthly, priceYearly);
+      const [loadedTiers, stats] = await Promise.all([
+        subscriptionApi.getTiers(),
+        adminApi.getSubscriptionDashboardStats()
+      ]);
+      setTiers(loadedTiers);
+      if (stats) setSubStats(stats);
+      setMessage("Cập nhật giá gói thành viên thành công.");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Không thể cập nhật giá gói.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading || isLoading) {
     return (
       <section className="admin-page admin-page--center">
@@ -352,27 +399,9 @@ export default function AdminPage() {
           {activeTab === "dashboard" && (
             <DashboardPanel
               stats={dashboardStats}
-              lessons={lessons}
-              users={users}
-              onOpenLessons={() => setActiveTab("lessons")}
+              subStats={subStats}
               onOpenUsers={() => setActiveTab("users")}
               onOpenSubscriptions={() => setActiveTab("subscriptions")}
-            />
-          )}
-
-          {activeTab === "lessons" && (
-            <LessonsPanel
-              form={form}
-              setForm={setForm}
-              editingLesson={editingLesson}
-              saving={saving}
-              filteredLessons={filteredLessons}
-              query={query}
-              setQuery={setQuery}
-              onSubmit={handleSubmit}
-              onReset={resetForm}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
             />
           )}
 
@@ -382,6 +411,8 @@ export default function AdminPage() {
               allUsers={users}
               query={userQuery}
               setQuery={setUserQuery}
+              onUpdateRole={handleUpdateRole}
+              onToggleLock={handleToggleLock}
             />
           )}
 
@@ -391,6 +422,8 @@ export default function AdminPage() {
               filteredSubs={filteredSubs}
               query={subQuery}
               setQuery={setSubQuery}
+              tiers={tiers}
+              onUpdateTierPrice={handleUpdateTierPrice}
             />
           )}
         </div>
@@ -466,19 +499,25 @@ export default function AdminPage() {
 
 function DashboardPanel({
   stats,
-  lessons,
-  users,
-  onOpenLessons,
+  subStats,
   onOpenUsers,
   onOpenSubscriptions,
 }: {
   stats: Array<{ label: string; value: any }>;
-  lessons: Lesson[];
-  users: User[];
-  onOpenLessons: () => void;
+  subStats: AdminSubscriptionStats | null;
   onOpenUsers: () => void;
   onOpenSubscriptions: () => void;
 }) {
+  const maxRevenue = useMemo(() => {
+    if (!subStats?.monthlyRevenue) return 100000;
+    const vals = subStats.monthlyRevenue.map((r) => r.revenue);
+    return Math.max(...vals, 100000);
+  }, [subStats]);
+
+  const formatVND = (val: number) => {
+    return val.toLocaleString("vi-VN") + "đ";
+  };
+
   return (
     <div className="admin-stack">
       <div className="admin-heading">
@@ -487,9 +526,6 @@ function DashboardPanel({
           <h2>Dashboard</h2>
         </div>
         <div className="admin-actions">
-          <button type="button" onClick={onOpenLessons}>
-            Tạo lesson
-          </button>
           <button type="button" onClick={onOpenUsers}>
             Xem user
           </button>
@@ -508,50 +544,56 @@ function DashboardPanel({
         ))}
       </div>
 
-      <div className="admin-grid-2">
-        <div className="admin-panel">
-          <div className="admin-panel-heading">
-            <h3>Lesson mới nhất</h3>
-            <span>{lessons.length} mục</span>
+      {/* Revenue Chart Section */}
+      {subStats?.monthlyRevenue && (
+        <div className="admin-panel mt-6">
+          <div className="admin-panel-heading mb-6">
+            <h3>Doanh thu đăng ký thành viên (6 tháng qua)</h3>
+            <span>Tổng cộng: {formatVND(subStats.stats.totalRevenue)}</span>
           </div>
-          <div className="admin-mini-list">
-            {lessons.slice(0, 5).map((lesson) => (
-              <div key={lesson._id} className="admin-mini-row">
-                <div>
-                  <strong>{lesson.title}</strong>
-                  <span>{formatDate(lesson.createdAt)}</span>
-                </div>
-                <Link href={`/game?id=${lesson._id}`}>Chơi thử</Link>
-              </div>
-            ))}
-            {lessons.length === 0 && (
-              <p className="admin-empty">Chưa có lesson nào.</p>
-            )}
-          </div>
-        </div>
 
-        <div className="admin-panel">
-          <div className="admin-panel-heading">
-            <h3>User trong client</h3>
-            <span>{users.length} mục</span>
-          </div>
-          <div className="admin-mini-list">
-            {users.map((item) => (
-              <div key={item.id} className="admin-mini-row">
-                <div>
-                  <strong>{item.name}</strong>
-                  <span>{item.email}</span>
-                </div>
-                <em>{item.role}</em>
+          <div style={{ padding: "16px 8px 8px" }}>
+            <div className="flex gap-4 items-end justify-between h-48 border-b border-gold/20 pb-2 relative">
+              {/* Y Axis Guide Lines */}
+              <div className="absolute left-0 right-0 top-0 border-t border-gold/5 text-[9px] text-muted/65 pt-0.5">
+                {formatVND(maxRevenue)}
               </div>
-            ))}
-            <p className="admin-note">
-              Server hiện chưa có endpoint danh sách user, nên client chỉ hiển
-              thị dữ liệu tài khoản đang đăng nhập.
-            </p>
+              <div className="absolute left-0 right-0 top-1/2 border-t border-gold/5 text-[9px] text-muted/65 pt-0.5">
+                {formatVND(maxRevenue / 2)}
+              </div>
+
+              {subStats.monthlyRevenue.map((r, idx) => {
+                const pct = (r.revenue / maxRevenue) * 85; // Max 85% height to leave room for labels
+                return (
+                  <div key={idx} className="flex-1 flex flex-col items-center group relative z-10">
+                    {/* Tooltip on hover */}
+                    <div className="absolute bottom-full mb-2 bg-[#1a0f05] border border-gold/30 text-gold text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
+                      <div>Doanh thu: {formatVND(r.revenue)}</div>
+                      <div className="text-[10px] text-muted text-center">Giao dịch: {r.transactions}</div>
+                    </div>
+
+                    {/* Bar */}
+                    <div
+                      className="w-8 sm:w-12 rounded-t-md transition-all duration-300 group-hover:brightness-125"
+                      style={{
+                        height: `${pct}%`,
+                        background: r.revenue > 0 
+                          ? "linear-gradient(180deg, #d2a85b, #9b6b2f)" 
+                          : "rgba(210, 168, 91, 0.08)",
+                        minHeight: r.revenue > 0 ? "4px" : "1px",
+                        boxShadow: r.revenue > 0 ? "0 0 10px rgba(210, 168, 91, 0.25)" : "none"
+                      }}
+                    />
+
+                    {/* Month Label */}
+                    <span className="text-[10px] text-muted mt-2 font-mono">{r.month}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -861,12 +903,34 @@ function UsersPanel({
   allUsers,
   query,
   setQuery,
+  onUpdateRole,
+  onToggleLock,
 }: {
   users: User[];
   allUsers: User[];
   query: string;
   setQuery: (value: string) => void;
+  onUpdateRole: (id: string, role: string) => Promise<void>;
+  onToggleLock: (id: string) => Promise<void>;
 }) {
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userHistory, setUserHistory] = useState<{ transactions: any[]; subscriptions: any[] } | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const handleViewDetails = async (user: User) => {
+    setSelectedUser(user);
+    setLoadingHistory(true);
+    setUserHistory(null);
+    try {
+      const data = await adminApi.getUserTransactions(user.id);
+      setUserHistory(data);
+    } catch (err) {
+      console.error("Failed to fetch user transaction history:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   return (
     <div className="admin-stack">
       <div className="admin-heading">
@@ -897,9 +961,12 @@ function UsersPanel({
           </div>
           {users.map((item) => (
             <div key={item.id} className="admin-table-row">
-              <div className="admin-user-cell">
+              <div 
+                className="admin-user-cell cursor-pointer group"
+                onClick={() => handleViewDetails(item)}
+              >
                 <div
-                  className="admin-avatar"
+                  className="admin-avatar group-hover:scale-105 transition-transform duration-200"
                   style={
                     item.avatar
                       ? { backgroundImage: `url(${item.avatar})` }
@@ -910,30 +977,274 @@ function UsersPanel({
                   {!item.avatar && item.name.slice(0, 1).toUpperCase()}
                 </div>
                 <div>
-                  <strong>{item.name}</strong>
+                  <strong className="group-hover:text-gold transition-colors duration-200">{item.name}</strong>
+                  <span className="text-[10px] text-muted block group-hover:underline">Xem chi tiết</span>
                 </div>
               </div>
               <span className="admin-email-cell">{item.email}</span>
-              <span className="admin-role">{item.role}</span>
-              <span>Đang hoạt động</span>
+              <div>
+                <select
+                  value={item.role}
+                  onChange={(e) => {
+                    const newRole = e.target.value;
+                    if (window.confirm(`Bạn có chắc muốn đổi quyền của ${item.name} thành ${newRole.toUpperCase()}?`)) {
+                      onUpdateRole(item.id, newRole);
+                    }
+                  }}
+                  className="bg-transparent border border-gold/30 rounded px-2 py-1 text-xs text-gold font-semibold uppercase cursor-pointer"
+                >
+                  <option value="student">student</option>
+                  <option value="staff">staff</option>
+                  <option value="teacher">teacher</option>
+                  <option value="admin">admin</option>
+                </select>
+              </div>
+              <span className={item.isLocked ? "text-red-400 font-semibold" : "text-emerald-500 font-semibold"}>
+                {item.isLocked ? "Bị khóa" : "Hoạt động"}
+              </span>
               <div className="admin-row-actions">
-                <button type="button" disabled>
-                  Sửa quyền
-                </button>
-                <button type="button" disabled>
-                  Khóa
+                <button
+                  type="button"
+                  onClick={() => {
+                    const actionName = item.isLocked ? "mở khóa" : "khóa";
+                    if (window.confirm(`Bạn có chắc muốn ${actionName} tài khoản của ${item.name}?`)) {
+                      onToggleLock(item.id);
+                    }
+                  }}
+                  className={`rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
+                    item.isLocked
+                      ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30"
+                      : "bg-red-950/40 text-red-400 border border-red-800/40 hover:bg-red-950/60"
+                  }`}
+                >
+                  {item.isLocked ? "Mở khóa" : "Khóa"}
                 </button>
               </div>
             </div>
           ))}
           {users.length === 0 && <p className="admin-empty">Chưa có user.</p>}
         </div>
-        <p className="admin-note">
-          Các nút sửa quyền và khóa tài khoản đang ở trạng thái chờ API server.
-          Phần client đã chuẩn bị layout để nối endpoint sau.
-        </p>
       </div>
+
+      {/* User Transaction Details Modal */}
+      {selectedUser && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+          onClick={() => setSelectedUser(null)}
+        >
+          <div
+            style={{
+              background: "#FFFBF2",
+              border: "2px solid #8c6a34",
+              borderRadius: "12px",
+              padding: "24px",
+              width: "90%",
+              maxWidth: "800px",
+              maxHeight: "85vh",
+              overflowY: "auto",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6 border-b border-gold/30 pb-3">
+              <div>
+                <span className="text-xs uppercase tracking-widest text-[#8c6a34] font-semibold">Lịch sử giao dịch chi tiết</span>
+                <h3 className="font-serif text-xl text-[#4a1f24] font-bold mt-1">{selectedUser.name}</h3>
+                <small className="text-muted block font-mono mt-0.5">{selectedUser.email}</small>
+              </div>
+              <button
+                type="button"
+                className="text-gold hover:text-[#4a1f24] font-bold text-lg p-2"
+                onClick={() => setSelectedUser(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {loadingHistory ? (
+              <div className="py-12 text-center text-gold font-semibold">Đang tải lịch sử giao dịch...</div>
+            ) : (
+              <div className="space-y-6">
+                {/* Active Subscriptions Block */}
+                <div>
+                  <h4 className="font-serif text-sm uppercase tracking-wider text-[#8c6a34] font-bold mb-3">Thông tin đăng ký VIP</h4>
+                  {userHistory?.subscriptions && userHistory.subscriptions.length > 0 ? (
+                    <div className="overflow-x-auto w-full">
+                      <table className="admin-vip-table-new">
+                        <thead>
+                          <tr>
+                            <th>Gói VIP</th>
+                            <th>Bắt đầu</th>
+                            <th>Hết hạn</th>
+                            <th>Trạng thái</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {userHistory.subscriptions.map((sub) => {
+                            const isExpired = sub.status === "Expired" || new Date(sub.endDate) < new Date();
+                            return (
+                              <tr key={sub._id}>
+                                <td>
+                                  <span className="font-semibold text-gold">{sub.tierId?.name || "VIP"}</span>
+                                  <small className="text-[9px] uppercase tracking-wide text-muted block">{sub.billingCycle === "monthly" ? "Hàng tháng" : "Hàng năm"}</small>
+                                </td>
+                                <td className="font-mono text-xs">{formatDate(sub.startDate)}</td>
+                                <td className={`font-mono text-xs ${isExpired ? "text-red-400 font-bold" : "text-emerald-400"}`}>
+                                  {formatDate(sub.endDate)}
+                                </td>
+                                <td>
+                                  <span
+                                    style={{
+                                      display: "inline-block",
+                                      fontSize: "9px",
+                                      fontWeight: "bold",
+                                      textTransform: "uppercase",
+                                      padding: "2px 8px",
+                                      borderRadius: "9999px",
+                                      border: "1px solid",
+                                      borderColor: isExpired ? "rgba(239, 68, 68, 0.3)" : "rgba(16, 185, 129, 0.3)",
+                                      color: isExpired ? "#f87171" : "#34d399",
+                                      backgroundColor: isExpired ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)"
+                                    }}
+                                  >
+                                    {isExpired ? "Hết hạn" : "Hoạt động"}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted py-2">Chưa kích hoạt gói VIP nào.</p>
+                  )}
+                </div>
+
+                {/* Transactions Block */}
+                <div>
+                  <h4 className="font-serif text-sm uppercase tracking-wider text-[#8c6a34] font-bold mb-3">Lịch sử giao dịch mua hàng</h4>
+                  {userHistory?.transactions && userHistory.transactions.length > 0 ? (
+                    <div className="overflow-x-auto w-full">
+                      <table className="admin-vip-table-new">
+                        <thead>
+                          <tr>
+                            <th>Mã giao dịch</th>
+                            <th>Gói VIP</th>
+                            <th>Số tiền</th>
+                            <th>Thanh toán</th>
+                            <th>Ngày mua</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {userHistory.transactions.map((tx) => (
+                            <tr key={tx._id}>
+                              <td className="font-mono text-xs text-gold select-all">{tx.transactionId}</td>
+                              <td>
+                                <span className="font-semibold">{tx.tierId?.name || "VIP"}</span>
+                                {tx.isGift && (
+                                  <span className="text-[9px] bg-purple-950/40 text-purple-300 border border-purple-800 px-1.5 py-0.5 rounded ml-1 uppercase font-bold">Quà</span>
+                                )}
+                              </td>
+                              <td className="font-mono font-bold text-emerald-500">{tx.amount.toLocaleString("vi-VN")}đ</td>
+                              <td className="text-xs uppercase font-semibold text-muted">{tx.paymentMethod}</td>
+                              <td className="font-mono text-xs">{formatDate(tx.createdAt)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted py-2">Chưa có lịch sử giao dịch.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function TierRow({
+  tier,
+  onUpdatePrice,
+}: {
+  tier: SubscriptionTier;
+  onUpdatePrice: (id: string, pm: number, py: number) => Promise<void>;
+}) {
+  const [priceMonthly, setPriceMonthly] = useState(tier.priceMonthly);
+  const [priceYearly, setPriceYearly] = useState(tier.priceYearly);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (priceMonthly < 0 || priceYearly < 0) {
+      alert("Giá gói không được âm.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await onUpdatePrice(tier._id, priceMonthly, priceYearly);
+    } catch (err) {
+      console.error("Failed to save price:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <tr>
+      <td>
+        <div className="flex flex-col">
+          <strong className="text-gold font-serif text-sm">{tier.name}</strong>
+          <small className="text-[10px] text-muted font-mono">{tier.slug}</small>
+        </div>
+      </td>
+      <td>
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            value={priceMonthly}
+            onChange={(e) => setPriceMonthly(Number(e.target.value))}
+            className="bg-transparent border border-gold/30 rounded px-2 py-1 text-xs text-gold font-mono w-28"
+            min="0"
+          />
+          <span className="text-[11px] text-muted">đ</span>
+        </div>
+      </td>
+      <td>
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            value={priceYearly}
+            onChange={(e) => setPriceYearly(Number(e.target.value))}
+            className="bg-transparent border border-gold/30 rounded px-2 py-1 text-xs text-gold font-mono w-28"
+            min="0"
+          />
+          <span className="text-[11px] text-muted">đ</span>
+        </div>
+      </td>
+      <td>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="bg-[#8c6a34] text-[#FFFBF2] hover:bg-[#8c6a34]/80 disabled:opacity-50 text-xs font-semibold px-4 py-1.5 rounded transition uppercase"
+        >
+          {saving ? "Đang lưu..." : "Lưu"}
+        </button>
+      </td>
+    </tr>
   );
 }
 
@@ -942,18 +1253,16 @@ function SubscriptionsPanel({
   filteredSubs,
   query,
   setQuery,
+  tiers,
+  onUpdateTierPrice,
 }: {
   subStats: AdminSubscriptionStats | null;
   filteredSubs: any[];
   query: string;
   setQuery: (val: string) => void;
+  tiers: SubscriptionTier[];
+  onUpdateTierPrice: (id: string, priceMonthly: number, priceYearly: number) => Promise<void>;
 }) {
-  const maxRevenue = useMemo(() => {
-    if (!subStats?.monthlyRevenue) return 100000;
-    const vals = subStats.monthlyRevenue.map((r) => r.revenue);
-    return Math.max(...vals, 100000);
-  }, [subStats]);
-
   const formatVND = (val: number) => {
     return val.toLocaleString("vi-VN") + "đ";
   };
@@ -974,56 +1283,41 @@ function SubscriptionsPanel({
         />
       </div>
 
-      {/* Revenue Chart Section */}
-      {subStats?.monthlyRevenue && (
-        <div className="admin-panel mb-6">
-          <div className="admin-panel-heading mb-6">
-            <h3>Doanh thu đăng ký thành viên (6 tháng qua)</h3>
-            <span>Tổng cộng: {formatVND(subStats.stats.totalRevenue)}</span>
-          </div>
-
-          <div style={{ padding: "16px 8px 8px" }}>
-            <div className="flex gap-4 items-end justify-between h-48 border-b border-gold/20 pb-2 relative">
-              {/* Y Axis Guide Lines */}
-              <div className="absolute left-0 right-0 top-0 border-t border-gold/5 text-[9px] text-muted/65 pt-0.5">
-                {formatVND(maxRevenue)}
-              </div>
-              <div className="absolute left-0 right-0 top-1/2 border-t border-gold/5 text-[9px] text-muted/65 pt-0.5">
-                {formatVND(maxRevenue / 2)}
-              </div>
-
-              {subStats.monthlyRevenue.map((r, idx) => {
-                const pct = (r.revenue / maxRevenue) * 85; // Max 85% height to leave room for labels
-                return (
-                  <div key={idx} className="flex-1 flex flex-col items-center group relative z-10">
-                    {/* Tooltip on hover */}
-                    <div className="absolute bottom-full mb-2 bg-[#1a0f05] border border-gold/30 text-gold text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
-                      <div>Doanh thu: {formatVND(r.revenue)}</div>
-                      <div className="text-[10px] text-muted text-center">Giao dịch: {r.transactions}</div>
-                    </div>
-
-                    {/* Bar */}
-                    <div
-                      className="w-8 sm:w-12 rounded-t-md transition-all duration-300 group-hover:brightness-125"
-                      style={{
-                        height: `${pct}%`,
-                        background: r.revenue > 0 
-                          ? "linear-gradient(180deg, #d2a85b, #9b6b2f)" 
-                          : "rgba(210, 168, 91, 0.08)",
-                        minHeight: r.revenue > 0 ? "4px" : "1px",
-                        boxShadow: r.revenue > 0 ? "0 0 10px rgba(210, 168, 91, 0.25)" : "none"
-                      }}
-                    />
-
-                    {/* Month Label */}
-                    <span className="text-[10px] text-muted mt-2 font-mono">{r.month}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+      {/* Subscription Tiers List & Price Management */}
+      <div className="admin-panel mb-6">
+        <div className="admin-panel-heading">
+          <h3>Định cấu hình giá gói VIP</h3>
+          <span>{tiers.filter((t) => t.slug !== "free").length} gói</span>
         </div>
-      )}
+        <div className="overflow-x-auto w-full">
+          <table className="admin-vip-table-new">
+            <thead>
+              <tr>
+                <th style={{ width: "30%" }}>Tên gói</th>
+                <th style={{ width: "30%" }}>Giá hàng tháng</th>
+                <th style={{ width: "30%" }}>Giá hàng năm</th>
+                <th style={{ width: "10%" }}>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tiers
+                .filter((tier) => tier.slug !== "free")
+                .map((tier) => (
+                  <TierRow
+                    key={tier._id}
+                    tier={tier}
+                    onUpdatePrice={onUpdateTierPrice}
+                  />
+                ))}
+              {tiers.filter((t) => t.slug !== "free").length === 0 && (
+                <tr>
+                  <td colSpan={4} className="text-center text-muted py-4">Chưa có gói VIP nào.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Grid: Active VIP & Recent Transactions */}
       <div className="admin-grid-2 admin-grid-2--wide">
@@ -1035,68 +1329,71 @@ function SubscriptionsPanel({
             <span>{filteredSubs.length} tài khoản</span>
           </div>
 
-          <div className="admin-table admin-user-table">
-            <div className="admin-table-head">
-              <span>Học sinh</span>
-              <span>Gói VIP</span>
-              <span>Bắt đầu</span>
-              <span>Hết hạn</span>
-              <span>Trạng thái</span>
-            </div>
-            
-            {filteredSubs.map((sub) => {
-              const isExpired = sub.status === "Expired" || new Date(sub.endDate) < new Date();
-              return (
-                <div key={sub._id} className="admin-table-row">
-                  <div className="admin-user-cell">
-                    <div
-                      className="admin-avatar"
-                      style={
-                        sub.userId?.avatar
-                          ? { backgroundImage: `url(${sub.userId.avatar})` }
-                          : undefined
-                      }
-                    >
-                      {!sub.userId?.avatar && sub.userId?.name.slice(0, 1).toUpperCase()}
-                    </div>
-                    <div>
-                      <strong>{sub.userId?.name || "Người dùng"}</strong>
-                      <small className="text-[10px] text-muted font-mono">{sub.userId?.email}</small>
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="font-semibold text-gold">{sub.tierId?.name || "VIP"}</span>
-                    <small className="text-[9px] uppercase tracking-wide text-muted block">{sub.billingCycle === "monthly" ? "Hàng tháng" : "Hàng năm"}</small>
-                  </div>
-
-                  <span>{formatDate(sub.startDate)}</span>
-                  <span className={isExpired ? "text-red-400 font-bold" : "text-emerald-400"}>
-                    {formatDate(sub.endDate)}
-                  </span>
-                  
-                  <div>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        fontSize: "9px",
-                        fontWeight: "bold",
-                        textTransform: "uppercase",
-                        padding: "2px 8px",
-                        borderRadius: "9999px",
-                        border: "1px solid",
-                        borderColor: isExpired ? "rgba(239, 68, 68, 0.3)" : "rgba(16, 185, 129, 0.3)",
-                        color: isExpired ? "#f87171" : "#34d399",
-                        backgroundColor: isExpired ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)"
-                      }}
-                    >
-                      {isExpired ? "Hết hạn" : "Hoạt động"}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-
+          <div className="overflow-x-auto w-full">
+            <table className="admin-vip-table-new">
+              <thead>
+                <tr>
+                  <th style={{ width: "32%" }}>Học sinh</th>
+                  <th style={{ width: "23%" }}>Gói VIP</th>
+                  <th style={{ width: "15%" }}>Bắt đầu</th>
+                  <th style={{ width: "15%" }}>Hết hạn</th>
+                  <th style={{ width: "15%" }}>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSubs.map((sub) => {
+                  const isExpired = sub.status === "Expired" || new Date(sub.endDate) < new Date();
+                  return (
+                    <tr key={sub._id}>
+                      <td>
+                        <div className="admin-user-cell">
+                          <div
+                            className="admin-avatar"
+                            style={
+                              sub.userId?.avatar
+                                ? { backgroundImage: `url(${sub.userId.avatar})` }
+                                : undefined
+                            }
+                          >
+                            {!sub.userId?.avatar && sub.userId?.name.slice(0, 1).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <strong className="truncate block max-w-[110px] xl:max-w-none">{sub.userId?.name || "Người dùng"}</strong>
+                            <small className="text-[10px] text-muted font-mono truncate block max-w-[110px] xl:max-w-none">{sub.userId?.email}</small>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="font-semibold text-gold">{sub.tierId?.name || "VIP"}</span>
+                        <small className="text-[9px] uppercase tracking-wide text-muted block">{sub.billingCycle === "monthly" ? "Hàng tháng" : "Hàng năm"}</small>
+                      </td>
+                      <td className="font-mono text-[11px] whitespace-nowrap">{formatDate(sub.startDate)}</td>
+                      <td className={`font-mono text-[11px] whitespace-nowrap ${isExpired ? "text-red-400 font-bold" : "text-emerald-400"}`}>
+                        {formatDate(sub.endDate)}
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            fontSize: "9px",
+                            fontWeight: "bold",
+                            textTransform: "uppercase",
+                            padding: "2px 8px",
+                            borderRadius: "9999px",
+                            border: "1px solid",
+                            borderColor: isExpired ? "rgba(239, 68, 68, 0.3)" : "rgba(16, 185, 129, 0.3)",
+                            color: isExpired ? "#f87171" : "#34d399",
+                            backgroundColor: isExpired ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)"
+                          }}
+                        >
+                          {isExpired ? "Hết hạn" : "Hoạt động"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
             {filteredSubs.length === 0 && (
               <p className="admin-empty">Không có dữ liệu đăng ký VIP.</p>
             )}
@@ -1110,42 +1407,44 @@ function SubscriptionsPanel({
             <span>{subStats?.recentTransactions.length || 0} mục</span>
           </div>
 
-          <div className="admin-table admin-user-table">
-            <div className="admin-table-head">
-              <span>Mã GD / Người mua</span>
-              <span>Gói VIP</span>
-              <span>Số tiền</span>
-              <span>Thanh toán</span>
-              <span>Ngày mua</span>
-            </div>
-
-            {subStats?.recentTransactions.map((tx) => (
-              <div key={tx._id} className="admin-table-row">
-                <div>
-                  <strong className="font-mono text-xs text-gold select-all">{tx.transactionId}</strong>
-                  <small className="text-[10px] text-muted block">Mua bởi: {tx.buyerId?.name || "Ẩn danh"}</small>
-                </div>
-
-                <div>
-                  <strong>{tx.tierId?.name || "VIP"}</strong>
-                  {tx.isGift && (
-                    <span className="text-[9px] bg-purple-950/40 text-purple-300 border border-purple-800 px-1.5 py-0.5 rounded ml-1 uppercase font-bold">Quà tặng</span>
-                  )}
-                </div>
-
-                <span className="font-mono font-bold text-emerald-400">{formatVND(tx.amount)}</span>
-                
-                <div>
-                  <span className="text-xs uppercase font-semibold text-muted">{tx.paymentMethod}</span>
-                  {tx.couponCode && (
-                    <small className="text-[9px] text-emerald-300 block font-mono">Coupon: {tx.couponCode}</small>
-                  )}
-                </div>
-
-                <span>{formatDate(tx.createdAt)}</span>
-              </div>
-            ))}
-
+          <div className="overflow-x-auto w-full">
+            <table className="admin-vip-table-new">
+              <thead>
+                <tr>
+                  <th style={{ width: "35%" }}>Mã GD / Người mua</th>
+                  <th style={{ width: "23%" }}>Gói VIP</th>
+                  <th style={{ width: "14%" }}>Số tiền</th>
+                  <th style={{ width: "14%" }}>Thanh toán</th>
+                  <th style={{ width: "14%" }}>Ngày mua</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subStats?.recentTransactions.map((tx) => (
+                  <tr key={tx._id}>
+                    <td>
+                      <div className="flex flex-col min-w-0">
+                        <strong className="font-mono text-xs text-gold select-all truncate block max-w-[120px] xl:max-w-none">{tx.transactionId}</strong>
+                        <small className="text-[10px] text-muted truncate block max-w-[120px] xl:max-w-none">Mua bởi: {tx.buyerId?.name || "Ẩn danh"}</small>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="font-semibold">{tx.tierId?.name || "VIP"}</span>
+                      {tx.isGift && (
+                        <span className="text-[9px] bg-purple-950/40 text-purple-300 border border-purple-800 px-1.5 py-0.5 rounded ml-1 uppercase font-bold">Quà</span>
+                      )}
+                    </td>
+                    <td className="font-mono font-bold text-emerald-400 whitespace-nowrap">{formatVND(tx.amount)}</td>
+                    <td>
+                      <span className="text-xs uppercase font-semibold text-muted">{tx.paymentMethod}</span>
+                      {tx.couponCode && (
+                        <small className="text-[9px] text-emerald-300 block font-mono">Coupon: {tx.couponCode}</small>
+                      )}
+                    </td>
+                    <td className="font-mono text-[11px] whitespace-nowrap">{formatDate(tx.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             {(!subStats?.recentTransactions || subStats.recentTransactions.length === 0) && (
               <p className="admin-empty">Chưa có giao dịch nào.</p>
             )}

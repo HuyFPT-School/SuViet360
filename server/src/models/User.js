@@ -99,6 +99,10 @@ const userSchema = new mongoose.Schema(
       enum: ["Free", "Student Plus", "Student Pro"],
       default: "Free",
     },
+    isLocked: {
+      type: Boolean,
+      default: false,
+    },
     subscriptionExpiry: {
       type: Date,
       default: null,

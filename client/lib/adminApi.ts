@@ -159,12 +159,50 @@ export const adminApi = {
     );
     return response.data;
   },
-  getAvailableUsers: async (currentUser: User | null) => {
-    return currentUser ? [currentUser] : [];
+  getAvailableUsers: async () => {
+    const response = await api.get<{ status: string; data: User[] }>("/auth/users");
+    return response.data.data;
   },
   getSubscriptionDashboardStats: async () => {
     const response = await api.get<{ success: boolean; data: AdminSubscriptionStats }>("/subscriptions/admin/dashboard-stats");
     return response.data.data;
+  },
+  updateUserRole: async (id: string, role: string) => {
+    const token = await ensureCsrfToken();
+    const response = await api.patch<{ status: string; message: string }>(
+      `/auth/users/${id}/role`,
+      { role },
+      { headers: { "x-csrf-token": token } }
+    );
+    return response.data;
+  },
+  toggleUserLock: async (id: string) => {
+    const token = await ensureCsrfToken();
+    const response = await api.patch<{ status: string; message: string }>(
+      `/auth/users/${id}/toggle-lock`,
+      {},
+      { headers: { "x-csrf-token": token } }
+    );
+    return response.data;
+  },
+  getUserTransactions: async (userId: string) => {
+    const response = await api.get<{
+      success: boolean;
+      data: {
+        transactions: any[];
+        subscriptions: any[];
+      };
+    }>(`/subscriptions/admin/users/${userId}/transactions`);
+    return response.data.data;
+  },
+  updateTierPrice: async (id: string, priceMonthly: number, priceYearly: number) => {
+    const token = await ensureCsrfToken();
+    const response = await api.put<{ success: boolean; message: string }>(
+      `/subscriptions/admin/tiers/${id}/price`,
+      { priceMonthly, priceYearly },
+      { headers: { "x-csrf-token": token } }
+    );
+    return response.data;
   },
 };
 
