@@ -311,11 +311,18 @@ const getTransactionStatus = asyncHandler(async (req, res) => {
     throw new AppError("Bạn không có quyền truy cập thông tin giao dịch này", 403);
   }
 
+  let giftCodeObj = null;
+  if (transaction.status === "Completed" && transaction.isGift) {
+    const GiftCode = require("../models/GiftCode");
+    giftCodeObj = await GiftCode.findOne({ transactionId: transaction._id });
+  }
+
   res.status(200).json({
     success: true,
     data: {
       status: transaction.status,
       transactionId: transaction.transactionId,
+      giftCode: giftCodeObj ? { code: giftCodeObj.code } : null,
     },
   });
 });
@@ -394,24 +401,57 @@ const sepayWebhook = asyncHandler(async (req, res) => {
   const SubscriptionTier = require("../models/SubscriptionTier");
 
   if (transaction.isGift) {
-    // Generate code
-    await GiftCode.create({
-      transactionId: transaction._id,
-      tierId: transaction.tierId,
-      billingCycle: transaction.billingCycle,
-      senderId: transaction.buyerId,
-      recipientEmail: "",
-      giftMessage: transaction.giftMessage,
-    });
+    const giftMode = transaction.metadata?.giftDeliveryMode || "code";
 
-    // Notify buyer
-    await Notification.create({
-      recipient: transaction.buyerId,
-      type: "System",
-      title: "Mã quà tặng đã sẵn sàng! 🎁",
-      message: `Thanh toán thành công gói tặng. Mã quà tặng đã được tạo cho bạn gửi đi.`,
-      link: "/subscription",
-    });
+    if (giftMode === "instant") {
+      // Activate immediately for recipient
+      await subscriptionService.activateSubscription(
+        transaction.recipientId,
+        transaction.tierId,
+        transaction.billingCycle,
+        transaction.buyerId,
+        transaction.giftMessage
+      );
+
+      // Notify recipient
+      const buyer = await User.findById(transaction.buyerId);
+      const tier = await SubscriptionTier.findById(transaction.tierId);
+      await Notification.create({
+        recipient: transaction.recipientId,
+        type: "Gift_Received",
+        title: "Bạn nhận được quà tặng! 🎁",
+        message: `${buyer ? buyer.name : "Một người bạn"} đã tặng bạn gói ${tier ? tier.name : "VIP"}!${transaction.giftMessage ? " Lời nhắn: " + transaction.giftMessage : ""}`,
+        link: "/subscription",
+      });
+
+      // Notify buyer
+      await Notification.create({
+        recipient: transaction.buyerId,
+        type: "System",
+        title: "Tặng quà thành công! 🎁",
+        message: `Thanh toán thành công gói tặng. Gói VIP đã được kích hoạt trực tiếp cho người nhận.`,
+        link: "/subscription",
+      });
+    } else {
+      // Generate code
+      await GiftCode.create({
+        transactionId: transaction._id,
+        tierId: transaction.tierId,
+        billingCycle: transaction.billingCycle,
+        senderId: transaction.buyerId,
+        recipientEmail: "",
+        giftMessage: transaction.giftMessage,
+      });
+
+      // Notify buyer
+      await Notification.create({
+        recipient: transaction.buyerId,
+        type: "System",
+        title: "Mã quà tặng đã sẵn sàng! 🎁",
+        message: `Thanh toán thành công gói tặng. Mã quà tặng đã được tạo cho bạn gửi đi.`,
+        link: "/subscription",
+      });
+    }
   } else {
     // Activate subscription
     await subscriptionService.activateSubscription(

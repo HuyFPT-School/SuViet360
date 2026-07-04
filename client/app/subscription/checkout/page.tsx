@@ -168,7 +168,7 @@ function CheckoutForm() {
             setCheckoutSuccess({
               mode: "gift",
               delivery: pendingPayment.delivery,
-              data: pendingPayment.giftResultData
+              data: res
             });
           }
         }
