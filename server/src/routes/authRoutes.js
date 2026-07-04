@@ -14,6 +14,9 @@ const {
   me,
   logout,
   adminOnly,
+  getAllUsers,
+  updateUserRole,
+  toggleUserLock,
 } = require("../controllers/authController");
 const { protect, authorize } = require("../middleware/auth");
 
@@ -33,5 +36,8 @@ router.post("/logout", logout);
 router.get("/me", protect, me);
 router.post("/change-password", protect, changePassword);
 router.get("/admin", protect, authorize("admin"), adminOnly);
+router.get("/users", protect, authorize("admin"), getAllUsers);
+router.patch("/users/:id/role", protect, authorize("admin"), updateUserRole);
+router.patch("/users/:id/toggle-lock", protect, authorize("admin"), toggleUserLock);
 
 module.exports = router;

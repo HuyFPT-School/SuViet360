@@ -15,4 +15,5 @@ export interface User {
   level?: number;
   subscriptionTier?: "Free" | "Student Plus" | "Student Pro";
   subscriptionExpiry?: string | null;
+  isLocked?: boolean;
 }

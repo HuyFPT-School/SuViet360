@@ -522,6 +522,63 @@ const getAdminDashboardStats = asyncHandler(async (req, res) => {
   });
 });
 
+const getUserTransactionsForAdmin = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const transactions = await Transaction.find({ buyerId: id })
+    .populate("buyerId", "name email")
+    .populate("recipientId", "name email")
+    .populate("tierId", "name slug")
+    .sort({ createdAt: -1 });
+
+  const subscriptions = await Subscription.find({ userId: id })
+    .populate("userId", "name email avatar")
+    .populate("tierId", "name slug")
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      transactions,
+      subscriptions,
+    }
+  });
+});
+
+const updateTierPrice = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { priceMonthly, priceYearly } = req.body;
+
+  if (priceMonthly === undefined && priceYearly === undefined) {
+    throw new AppError("Vui lòng cung cấp ít nhất một giá trị giá mới", 400);
+  }
+
+  const updateFields = {};
+  if (priceMonthly !== undefined) {
+    if (isNaN(Number(priceMonthly)) || Number(priceMonthly) < 0) {
+      throw new AppError("Giá tháng không hợp lệ", 400);
+    }
+    updateFields.priceMonthly = Number(priceMonthly);
+  }
+  if (priceYearly !== undefined) {
+    if (isNaN(Number(priceYearly)) || Number(priceYearly) < 0) {
+      throw new AppError("Giá năm không hợp lệ", 400);
+    }
+    updateFields.priceYearly = Number(priceYearly);
+  }
+
+  const tier = await SubscriptionTier.findByIdAndUpdate(id, updateFields, { new: true });
+  if (!tier) {
+    throw new AppError("Không tìm thấy gói thành viên", 404);
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Cập nhật giá gói thành viên thành công",
+    data: tier,
+  });
+});
+
 module.exports = {
   getTiers,
   getMySubscription,
@@ -543,4 +600,6 @@ module.exports = {
   getTransactionStatus,
   sepayWebhook,
   getAdminDashboardStats,
+  getUserTransactionsForAdmin,
+  updateTierPrice,
 };
