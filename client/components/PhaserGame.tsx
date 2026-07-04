@@ -276,11 +276,13 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
                     } else {
                       cauHoi = valStr;
                     }
-                  } else if (nameLower.includes("dap an a") || nameLower.includes("đáp án a")) {
+                  } else if (nameLower === "cau_hoi") {
+                    cauHoi = valStr; // field kỹ thuật, KHÔNG override tiêu đề
+                  } else if (nameLower === "dap an a" || nameLower === "đáp án a" || nameLower === "dap_an_a") {
                     dapAnA = valStr;
-                  } else if (nameLower.includes("dap an b") || nameLower.includes("đáp án b")) {
+                  } else if (nameLower === "dap an b" || nameLower === "đáp án b" || nameLower === "dap_an_b") {
                     dapAnB = valStr;
-                  } else if (nameLower.includes("dap an c") || nameLower.includes("đáp án c")) {
+                  } else if (nameLower === "dap an c" || nameLower === "đáp án c" || nameLower === "dap_an_c") {
                     dapAnC = valStr;
                   } else if (nameLower.includes("dap an dung") || nameLower.includes("đáp án đúng")) {
                     dapAnDung = valStr;
@@ -315,6 +317,8 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
                       hintTitle = p.name; // Dùng tên thân thiện như "Gợi ý 1"
                     }
                     goiYVal = valStr;
+                  } else if (nameLower === "goi_y") {
+                    goiYVal = valStr; // field kỹ thuật, không override tiêu đề
                   }
                 });
               }
@@ -419,7 +423,7 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
         // Chuẩn hóa và so khớp chữ trực tiếp
         const isCorrect = selectedAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
         const questionKey = qPoint.title;
-        
+
         if (!this.answeredQuestions.has(questionKey)) {
           this.answeredQuestions.add(questionKey);
           if (isCorrect) {
