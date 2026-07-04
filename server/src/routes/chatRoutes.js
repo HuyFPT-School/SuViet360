@@ -27,10 +27,10 @@ router.get("/conversations/:conversationId/messages", getMessages);
 router.post("/conversations/:conversationId/messages", sendMessage);
 
 // GET /api/chat/teachers - List all teachers (for users to start a chat)
-router.get("/teachers", authorize("user"), getTeachers);
+router.get("/teachers", authorize("student", "admin", "staff"), getTeachers);
 
-// GET /api/chat/users - List chat users (for teachers/admins)
-router.get("/users", authorize("teacher", "admin"), getChatUsers);
+// GET /api/chat/users - List chat users (for teachers/admins/staff)
+router.get("/users", authorize("teacher", "admin", "staff"), getChatUsers);
 
 module.exports = router;
 

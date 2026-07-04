@@ -235,6 +235,7 @@ const purchaseGift = async (buyerId, recipientIdentifier, tierId, billingCycle, 
     discountAmount: discount,
     paymentMethod,
     status: (paymentMethod === "demo" || finalAmount === 0) ? "Completed" : "Pending",
+    metadata: { giftDeliveryMode: mode },
   });
 
   let giftCode = null;
