@@ -131,7 +131,6 @@ const verifyRecipient = asyncHandler(async (req, res) => {
       { email: identifier.toLowerCase() },
       { name: { $regex: new RegExp(`^${identifier}$`, "i") } },
     ],
-    role: "student",
   }).select("name email avatar");
 
   if (!user) throw new AppError("Không tìm thấy người dùng", 404);

@@ -3,13 +3,13 @@
 import Link from "next/link";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { adminApi, type Lesson, type LessonFormValues, type AdminSubscriptionStats } from "@/lib/adminApi";
+import { adminApi, type Lesson, type LessonFormValues, type AdminSubscriptionStats, type Coupon } from "@/lib/adminApi";
 import { subscriptionApi } from "@/lib/subscriptionApi";
 import type { SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
 import type { User } from "@/types/auth";
 
-type AdminTab = "dashboard" | "lessons" | "users" | "subscriptions";
+type AdminTab = "dashboard" | "lessons" | "users" | "subscriptions" | "coupons";
 
 const emptyForm: LessonFormValues = {
   title: "",
@@ -27,6 +27,7 @@ const tabs: Array<{ id: AdminTab; label: string }> = [
   { id: "dashboard", label: "Dashboard" },
   { id: "users", label: "Quản lý user" },
   { id: "subscriptions", label: "Quản lý Gói VIP" },
+  { id: "coupons", label: "Quản lý Coupon" },
 ];
 
 function formatDate(value?: string) {
@@ -68,6 +69,7 @@ export default function AdminPage() {
   // Subscription management state
   const [subStats, setSubStats] = useState<AdminSubscriptionStats | null>(null);
   const [tiers, setTiers] = useState<SubscriptionTier[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -78,10 +80,11 @@ export default function AdminPage() {
       try {
         const currentUser = await refreshUser();
         await adminApi.checkAdmin();
-        const [lessonResponse, availableUsers, loadedTiers] = await Promise.all([
+        const [lessonResponse, availableUsers, loadedTiers, loadedCoupons] = await Promise.all([
           adminApi.getLessons(),
           adminApi.getAvailableUsers(),
           subscriptionApi.getTiers(),
+          adminApi.getCoupons(),
         ]);
 
         let subscriptionDashboardStats = null;
@@ -95,6 +98,7 @@ export default function AdminPage() {
         setLessons(lessonResponse.lessons);
         setUsers(availableUsers);
         setTiers(loadedTiers);
+        setCoupons(loadedCoupons);
         if (subscriptionDashboardStats) {
           setSubStats(subscriptionDashboardStats);
         }
@@ -320,6 +324,39 @@ export default function AdminPage() {
     }
   };
 
+  const handleCreateCoupon = async (couponData: any) => {
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      await adminApi.createCoupon(couponData);
+      const updatedCoupons = await adminApi.getCoupons();
+      setCoupons(updatedCoupons);
+      setMessage("Tạo mã giảm giá thành công.");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Không thể tạo mã giảm giá.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteCoupon = async (id: string) => {
+    const confirmed = window.confirm("Bạn có chắc muốn xóa mã giảm giá này?");
+    if (!confirmed) return;
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      await adminApi.deleteCoupon(id);
+      setCoupons((items) => items.filter((item) => item._id !== id));
+      setMessage("Đã xóa mã giảm giá.");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Không thể xóa mã giảm giá.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading || isLoading) {
     return (
       <section className="admin-page admin-page--center">
@@ -424,6 +461,15 @@ export default function AdminPage() {
               setQuery={setSubQuery}
               tiers={tiers}
               onUpdateTierPrice={handleUpdateTierPrice}
+            />
+          )}
+
+          {activeTab === "coupons" && (
+            <CouponsPanel
+              coupons={coupons}
+              tiers={tiers}
+              onCreate={handleCreateCoupon}
+              onDelete={handleDeleteCoupon}
             />
           )}
         </div>
@@ -1451,6 +1497,291 @@ function SubscriptionsPanel({
           </div>
         </div>
 
+      </div>
+    </div>
+  );
+}
+
+function CouponsPanel({
+  coupons,
+  tiers,
+  onCreate,
+  onDelete,
+}: {
+  coupons: Coupon[];
+  tiers: SubscriptionTier[];
+  onCreate: (couponData: any) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}) {
+  const [code, setCode] = useState("");
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed">("percentage");
+  const [discountValue, setDiscountValue] = useState<number>(10);
+  const [maxUses, setMaxUses] = useState<number>(-1);
+  const [minPurchaseAmount, setMinPurchaseAmount] = useState<number>(0);
+  const [applicableTiers, setApplicableTiers] = useState<string[]>([]);
+  const [endDate, setEndDate] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code.trim() || !endDate) {
+      alert("Vui lòng nhập đầy đủ mã code và ngày hết hạn.");
+      return;
+    }
+    if (discountValue <= 0) {
+      alert("Giá trị giảm giá phải lớn hơn 0.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onCreate({
+        code: code.toUpperCase().trim(),
+        discountType,
+        discountValue,
+        maxUses,
+        minPurchaseAmount,
+        applicableTiers,
+        endDate: new Date(endDate).toISOString(),
+        description,
+      });
+      // Reset form
+      setCode("");
+      setDiscountType("percentage");
+      setDiscountValue(10);
+      setMaxUses(-1);
+      setMinPurchaseAmount(0);
+      setApplicableTiers([]);
+      setEndDate("");
+      setDescription("");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleTierCheck = (tierId: string, checked: boolean) => {
+    if (checked) {
+      setApplicableTiers((prev) => [...prev, tierId]);
+    } else {
+      setApplicableTiers((prev) => prev.filter((id) => id !== tierId));
+    }
+  };
+
+  const formatDiscount = (type: string, value: number) => {
+    if (type === "percentage") return `${value}%`;
+    return `${value.toLocaleString("vi-VN")}đ`;
+  };
+
+  const isCouponExpired = (coupon: Coupon) => {
+    const expired = new Date(coupon.endDate) < new Date();
+    const limitReached = coupon.maxUses !== -1 && coupon.usesCount >= coupon.maxUses;
+    return expired || limitReached;
+  };
+
+  return (
+    <div className="admin-stack">
+      <div className="admin-heading">
+        <div>
+          <p className="admin-kicker">Khuyến mãi</p>
+          <h2>Quản lý Coupon giảm giá</h2>
+        </div>
+      </div>
+
+      <div className="admin-grid-2 admin-grid-2--wide">
+        {/* List Panel */}
+        <div className="admin-panel">
+          <div className="admin-panel-heading">
+            <h3>Danh sách mã giảm giá</h3>
+            <span>{coupons.length} mã</span>
+          </div>
+
+          <div className="overflow-x-auto w-full">
+            <table className="admin-vip-table-new">
+              <thead>
+                <tr>
+                  <th style={{ width: "25%" }}>Mã Code</th>
+                  <th style={{ width: "20%" }}>Mức giảm</th>
+                  <th style={{ width: "20%" }}>Sử dụng</th>
+                  <th style={{ width: "20%" }}>Hết hạn</th>
+                  <th style={{ width: "15%" }}>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {coupons.map((coupon) => {
+                  const expired = isCouponExpired(coupon);
+                  return (
+                    <tr key={coupon._id}>
+                      <td>
+                        <div className="flex flex-col">
+                          <strong className="text-gold font-mono text-sm tracking-wider select-all">{coupon.code}</strong>
+                          <span className="text-[10px] text-muted block truncate max-w-[150px]">{coupon.description || "Không có mô tả"}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="font-semibold text-emerald-500">{formatDiscount(coupon.discountType, coupon.discountValue)}</span>
+                        {coupon.minPurchaseAmount > 0 && (
+                          <small className="text-[9px] text-muted block">Min: {coupon.minPurchaseAmount.toLocaleString("vi-VN")}đ</small>
+                        )}
+                      </td>
+                      <td className="text-xs">
+                        {coupon.maxUses === -1 ? (
+                          <span>{coupon.usesCount} / ∞ lượt</span>
+                        ) : (
+                          <span>{coupon.usesCount} / {coupon.maxUses} lượt</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`font-mono text-xs ${expired ? "text-red-400 font-bold" : "text-emerald-400"}`}>
+                          {formatDate(coupon.endDate)}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(coupon._id)}
+                          className="bg-[#FFFBF2] text-[#4a1f24] hover:bg-[#8c6a34]/10 border border-[#8c6a34]/30 text-[11px] font-bold px-4 py-1.5 rounded transition uppercase tracking-wider whitespace-nowrap shadow-sm cursor-pointer"
+                        >
+                          Xóa
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {coupons.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="text-center text-muted py-4">Chưa có mã giảm giá nào.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Create Panel */}
+        <div className="admin-panel">
+          <div className="admin-panel-heading">
+            <h3>Tạo mã giảm giá mới</h3>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-gold">Mã Coupon</label>
+              <input
+                type="text"
+                placeholder="VD: CHAOSUMMER"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                className="bg-transparent border border-gold/30 rounded px-3 py-2 text-xs text-gold font-mono uppercase"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-gold">Loại giảm giá</label>
+                <select
+                  value={discountType}
+                  onChange={(e) => setDiscountType(e.target.value as any)}
+                  className="bg-transparent border border-gold/30 rounded px-3 py-2 text-xs text-[#2a2016] font-semibold cursor-pointer outline-none"
+                >
+                  <option value="percentage" className="bg-[#FFFBF2] text-[#2a2016]">Phần trăm (%)</option>
+                  <option value="fixed" className="bg-[#FFFBF2] text-[#2a2016]">Số tiền cố định (đ)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-gold">Giá trị giảm</label>
+                <input
+                  type="number"
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(Number(e.target.value))}
+                  className="bg-transparent border border-gold/30 rounded px-3 py-2 text-xs text-gold font-mono"
+                  min="1"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-gold">Lượt dùng tối đa</label>
+                <input
+                  type="number"
+                  value={maxUses}
+                  onChange={(e) => setMaxUses(Number(e.target.value))}
+                  placeholder="-1 nếu không giới hạn"
+                  className="bg-transparent border border-gold/30 rounded px-3 py-2 text-xs text-gold font-mono"
+                  min="-1"
+                />
+                <small className="text-[9px] text-muted">-1 là không giới hạn lượt dùng</small>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-gold">Chi tiêu tối thiểu</label>
+                <input
+                  type="number"
+                  value={minPurchaseAmount}
+                  onChange={(e) => setMinPurchaseAmount(Number(e.target.value))}
+                  className="bg-transparent border border-gold/30 rounded px-3 py-2 text-xs text-gold font-mono"
+                  min="0"
+                />
+                <small className="text-[9px] text-muted">Đơn tối thiểu để áp dụng coupon</small>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-gold">Áp dụng cho gói VIP</label>
+              <div className="grid grid-cols-2 gap-2 border border-gold/20 rounded p-2.5 max-h-24 overflow-y-auto">
+                {tiers
+                  .filter((t) => t.slug !== "free")
+                  .map((tier) => (
+                    <label key={tier._id} className="flex items-center gap-2 text-xs text-[#2a2016] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={applicableTiers.includes(tier._id)}
+                        onChange={(e) => handleTierCheck(tier._id, e.target.checked)}
+                        className="accent-[#8c6a34]"
+                      />
+                      <span>{tier.name}</span>
+                    </label>
+                  ))}
+              </div>
+              <small className="text-[9px] text-muted">Bỏ trống nếu áp dụng cho mọi gói VIP</small>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-gold">Ngày hết hạn</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-transparent border border-gold/30 rounded px-3 py-2 text-xs text-gold font-mono cursor-pointer"
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-gold">Mô tả ngắn</label>
+              <input
+                type="text"
+                placeholder="VD: Giảm giá hè 10%"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="bg-transparent border border-gold/30 rounded px-3 py-2 text-xs text-[#2a2016]"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-[#8c6a34] text-[#FFFBF2] hover:bg-[#8c6a34]/90 disabled:opacity-50 font-serif text-sm font-semibold uppercase tracking-wider py-2.5 rounded transition shadow-md"
+            >
+              {submitting ? "Đang tạo..." : "Tạo mã giảm giá"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

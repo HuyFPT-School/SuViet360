@@ -192,17 +192,22 @@ const purchaseGift = async (buyerId, recipientIdentifier, tierId, billingCycle, 
   if (!tier) throw new AppError("Gói subscription không tồn tại", 404);
   if (tier.slug === "free") throw new AppError("Không thể tặng gói Free", 400);
 
-  // Find recipient by email or name
-  let recipient = await User.findOne({
-    $or: [
-      { email: recipientIdentifier.toLowerCase() },
-      { name: { $regex: new RegExp(`^${recipientIdentifier}$`, "i") } },
-    ],
-    role: "student",
-  });
+  let recipient;
+  if (mode === "code" && recipientIdentifier === "gift_code_generation") {
+    // For redeem code generation, the buyer is the initial recipient of the transaction
+    recipient = await User.findById(buyerId);
+  } else {
+    // Find recipient by email or name
+    recipient = await User.findOne({
+      $or: [
+        { email: recipientIdentifier.toLowerCase() },
+        { name: { $regex: new RegExp(`^${recipientIdentifier}$`, "i") } },
+      ],
+    });
 
-  if (!recipient) throw new AppError("Không tìm thấy người nhận. Vui lòng kiểm tra email hoặc tên.", 404);
-  if (recipient._id.toString() === buyerId.toString()) throw new AppError("Bạn không thể tặng quà cho chính mình", 400);
+    if (!recipient) throw new AppError("Không tìm thấy người nhận. Vui lòng kiểm tra email hoặc tên.", 404);
+    if (recipient._id.toString() === buyerId.toString()) throw new AppError("Bạn không thể tặng quà cho chính mình", 400);
+  }
 
   const price = billingCycle === "monthly" ? tier.priceMonthly : tier.priceYearly;
   let discount = 0;

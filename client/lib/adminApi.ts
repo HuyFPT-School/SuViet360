@@ -204,6 +204,43 @@ export const adminApi = {
     );
     return response.data;
   },
+  getCoupons: async () => {
+    const response = await api.get<{ success: boolean; data: Coupon[] }>("/subscriptions/coupons");
+    return response.data.data;
+  },
+  createCoupon: async (couponData: any) => {
+    const token = await ensureCsrfToken();
+    const response = await api.post<{ success: boolean; data: Coupon }>(
+      "/subscriptions/coupons",
+      couponData,
+      { headers: { "x-csrf-token": token } }
+    );
+    return response.data.data;
+  },
+  deleteCoupon: async (id: string) => {
+    const token = await ensureCsrfToken();
+    const response = await api.delete<{ success: boolean; message: string }>(
+      `/subscriptions/coupons/${id}`,
+      { headers: { "x-csrf-token": token } }
+    );
+    return response.data;
+  },
+};
+
+export type Coupon = {
+  _id: string;
+  code: string;
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  maxUses: number;
+  usesCount: number;
+  minPurchaseAmount: number;
+  applicableTiers: string[];
+  startDate?: string;
+  endDate: string;
+  isActive: boolean;
+  description: string;
+  createdAt: string;
 };
 
 export type AdminSubscriptionStats = {
