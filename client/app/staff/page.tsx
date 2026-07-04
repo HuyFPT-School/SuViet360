@@ -28,6 +28,7 @@ type Lesson = {
   game: LessonGame;
   createdAt: string;
   updatedAt: string;
+  pendingDraft?: any;
 };
 
 type FormMode = "create" | "edit";
@@ -71,6 +72,7 @@ type Podcast = {
   lessonId?: string | Lesson | null;
   createdAt: string;
   updatedAt: string;
+  pendingDraft?: any;
 };
 
 type PodcastFormState = {
@@ -520,7 +522,7 @@ export default function StaffPage() {
     api
       .get<{ success: boolean; lessons: Lesson[] }>("/lessons")
       .then((res) => setLessons(res.data.lessons))
-      .catch(() => setMessage({ type: "error", text: "Không thể tải danh sách bài học." }))
+      .catch(() => setMessage({ type: "error", text: "Không thể tải danh sách trò chơi." }))
       .finally(() => setLessonsLoading(false));
   }, [user]);
 
@@ -549,12 +551,15 @@ export default function StaffPage() {
   const handleSelectLesson = (lesson: Lesson) => {
     setSelectedId(lesson._id);
     setFormMode("edit");
+    const draft = lesson.pendingDraft;
     setForm({
-      title: lesson.title,
-      content: lesson.content,
-      spawnX: String(lesson.game.spawnPoint.x),
-      spawnY: String(lesson.game.spawnPoint.y),
-      tilesetNames: lesson.game.tilesets.map((ts) => ts.name),
+      title: draft?.title ?? lesson.title,
+      content: draft?.content ?? lesson.content,
+      spawnX: String(draft?.spawnPoint?.x ?? lesson.game.spawnPoint.x),
+      spawnY: String(draft?.spawnPoint?.y ?? lesson.game.spawnPoint.y),
+      tilesetNames: draft?.tilesets 
+        ? draft.tilesets.map((ts: any) => ts.name)
+        : lesson.game.tilesets.map((ts) => ts.name),
       tilemapFile: null,
       tilesetFiles: [],
       idleSprites: [],
@@ -672,14 +677,14 @@ export default function StaffPage() {
           headers: { "Content-Type": "multipart/form-data", "x-csrf-token": csrfToken },
           onUploadProgress: onProgress,
         });
-        setMessage({ type: "success", text: "Tạo bài học thành công." });
+        setMessage({ type: "success", text: "Tạo trò chơi thành công." });
         resetForm();
       } else if (selectedId) {
         await api.put(`/lessons/${selectedId}`, formData, {
           headers: { "Content-Type": "multipart/form-data", "x-csrf-token": csrfToken },
           onUploadProgress: onProgress,
         });
-        setMessage({ type: "success", text: "Cập nhật bài học thành công." });
+        setMessage({ type: "success", text: "Cập nhật trò chơi thành công." });
       }
 
       const res = await api.get<{ success: boolean; lessons: Lesson[] }>("/lessons");
@@ -687,8 +692,8 @@ export default function StaffPage() {
     } catch (error) {
       const messageText =
         error instanceof AxiosError
-          ? error.response?.data?.message || "Có lỗi xảy ra khi lưu bài học."
-          : "Có lỗi xảy ra khi lưu bài học.";
+          ? error.response?.data?.message || "Có lỗi xảy ra khi lưu trò chơi."
+          : "Có lỗi xảy ra khi lưu trò chơi.";
       setMessage({ type: "error", text: messageText });
     } finally {
       setSaving(false);
@@ -698,7 +703,7 @@ export default function StaffPage() {
 
   const handleDelete = async () => {
     if (!selectedId) return;
-    const ok = window.confirm("Bạn có chắc muốn xóa bài học này?");
+    const ok = window.confirm("Bạn có chắc muốn xóa trò chơi này?");
     if (!ok) return;
 
     try {
@@ -706,15 +711,15 @@ export default function StaffPage() {
       await api.delete(`/lessons/${selectedId}`, {
         headers: { "x-csrf-token": csrfToken },
       });
-      setMessage({ type: "success", text: "Xóa bài học thành công." });
+      setMessage({ type: "success", text: "Xóa trò chơi thành công." });
       resetForm();
       const res = await api.get<{ success: boolean; lessons: Lesson[] }>("/lessons");
       setLessons(res.data.lessons);
     } catch (error) {
       const messageText =
         error instanceof AxiosError
-          ? error.response?.data?.message || "Không thể xóa bài học."
-          : "Không thể xóa bài học.";
+          ? error.response?.data?.message || "Không thể xóa trò chơi."
+          : "Không thể xóa trò chơi.";
       setMessage({ type: "error", text: messageText });
     }
   };
@@ -743,7 +748,7 @@ export default function StaffPage() {
     return (
       <section className="px-6 py-12 text-center space-y-3">
         <h1 className="text-2xl font-semibold text-amber-900">Không có quyền truy cập</h1>
-        <p className="text-amber-700">Tài khoản của bạn không có quyền quản lý bài học.</p>
+        <p className="text-amber-700">Tài khoản của bạn không có quyền quản lý trò chơi.</p>
         <Link href="/" className="text-amber-900 font-semibold underline">
           Quay về trang chủ
         </Link>
@@ -758,14 +763,14 @@ export default function StaffPage() {
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-amber-600">Staff workspace</p>
             <h1 className="text-3xl font-display font-semibold text-amber-950">
-              Bảng điều phối bài học
+              Bảng điều phối trò chơi
             </h1>
           </div>
           <div className="flex items-center gap-3 text-sm">
             <div className="rounded-xl border border-amber-200 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-sm">
               <p className="text-amber-500 text-xs uppercase tracking-widest">
                 {activeTab === "lessons"
-                  ? "Tổng bài học"
+                  ? "Tổng trò chơi"
                   : activeTab === "podcasts"
                     ? "Tổng podcast"
                     : "Chờ duyệt / Báo cáo"}
@@ -803,7 +808,7 @@ export default function StaffPage() {
                 : "border-transparent text-amber-650 hover:text-amber-800"
               }`}
           >
-            Quản lý bài học
+            Quản lý trò chơi
           </button>
           <button
             onClick={() => { setActiveTab("podcasts"); setMessage(null); }}
@@ -841,7 +846,7 @@ export default function StaffPage() {
             <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
               <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
                 <h2 className="font-display text-lg font-semibold text-amber-900">
-                  Danh sách bài học
+                  Danh sách trò chơi
                 </h2>
                 <button
                   type="button"
@@ -884,7 +889,7 @@ export default function StaffPage() {
                   ))}
 
                   {lessons.length === 0 && (
-                    <div className="p-6 text-center text-amber-600">Chưa có bài học nào.</div>
+                    <div className="p-6 text-center text-amber-600">Chưa có trò chơi nào.</div>
                   )}
                 </div>
               )}
@@ -893,11 +898,11 @@ export default function StaffPage() {
             <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
               <div className="border-b border-amber-100 px-5 py-4">
                 <h2 className="font-display text-lg font-semibold text-amber-900">
-                  {formMode === "create" ? "Tạo bài học" : "Chỉnh sửa bài học"}
+                  {formMode === "create" ? "Tạo trò chơi" : "Chỉnh sửa trò chơi"}
                 </h2>
                 <p className="text-xs text-amber-600 mt-1">
                   {formMode === "create"
-                    ? "Điền đủ thông tin và upload assets để tạo bài học."
+                    ? "Điền đủ thông tin và upload assets để tạo trò chơi."
                     : "Có thể cập nhật nội dung và thay thế file khi cần."}
                 </p>
               </div>
@@ -909,9 +914,23 @@ export default function StaffPage() {
                       <svg className="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
-                      Bài học bị từ chối duyệt
+                      Trò chơi bị từ chối duyệt
                     </h3>
                     <p className="font-medium text-rose-700">{selectedLesson.reviewFeedback}</p>
+                  </div>
+                )}
+
+                {formMode === "edit" && selectedLesson?.pendingDraft && (
+                  <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-850">
+                    <h3 className="font-semibold text-sky-950 mb-1 flex items-center gap-1.5">
+                      <svg className="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Có chỉnh sửa đang chờ duyệt
+                    </h3>
+                    <p className="font-medium text-sky-700">
+                      Trò chơi này đã được xuất bản (Published). Các thay đổi mới nhất đang được lưu tạm chờ Giáo viên/Admin duyệt. Dưới đây là nội dung chỉnh sửa mới nhất của bạn.
+                    </p>
                   </div>
                 )}
 
@@ -924,7 +943,7 @@ export default function StaffPage() {
                     value={form.title}
                     onChange={(e) => setFormField("title", e.target.value)}
                     className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    placeholder="Nhập tiêu đề bài học"
+                    placeholder="Nhập tiêu đề trò chơi"
                   />
                 </div>
 
@@ -937,7 +956,7 @@ export default function StaffPage() {
                     onChange={(e) => setFormField("content", e.target.value)}
                     rows={4}
                     className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    placeholder="Mô tả nội dung bài học"
+                    placeholder="Mô tả nội dung trò chơi"
                   />
                 </div>
 
@@ -1135,7 +1154,7 @@ export default function StaffPage() {
                     onClick={handleSubmit}
                     className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
                   >
-                    {formMode === "create" ? "Tạo bài học" : "Lưu cập nhật"}
+                    {formMode === "create" ? "Tạo trò chơi" : "Lưu cập nhật"}
                   </button>
                   {formMode === "edit" && (
                     <button
@@ -1143,7 +1162,7 @@ export default function StaffPage() {
                       onClick={handleDelete}
                       className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
                     >
-                      Xóa bài học
+                      Xóa trò chơi
                     </button>
                   )}
                 </div>
@@ -1354,7 +1373,7 @@ export default function StaffPage() {
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
-                    Bài học liên kết (Chứa Game 2D)
+                    Trò chơi liên kết (Chứa Game 2D)
                   </label>
                   <select
                     value={podcastForm.lessonId}
@@ -1666,7 +1685,7 @@ export default function StaffPage() {
                 {uploadProgress === 100
                   ? "ĐANG XỬ LÝ DỮ LIỆU..."
                   : activeTab === "lessons"
-                    ? "ĐANG TẢI BÀI HỌC LÊN..."
+                    ? "ĐANG TẢI TRÒ CHƠI LÊN..."
                     : "ĐANG TẢI PODCAST LÊN..."}
               </h3>
               <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-3">

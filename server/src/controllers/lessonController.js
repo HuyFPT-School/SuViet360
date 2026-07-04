@@ -364,6 +364,22 @@ const deleteLesson = asyncHandler(async (req, res) => {
 });
 
 // ─── Helper: format lesson for frontend ───────────────────────────────
+const formatLessonDraft = (draft) => {
+  if (!draft) return null;
+  return {
+    title: draft.title,
+    content: draft.content,
+    spawnPoint: draft.spawnPoint,
+    tilemapJsonUrl: draft.tilemapJsonUrl,
+    tilesets: draft.tilesets ? draft.tilesets.map((ts) => ({
+      name: ts.name,
+      imageUrl: ts.imageUrl,
+    })) : undefined,
+    animations: draft.animations ? formatAnimations(draft.animations) : undefined,
+    updatedAt: draft.updatedAt,
+  };
+};
+
 const formatLessonResponse = (lesson) => ({
   _id: lesson._id,
   title: lesson.title,
@@ -371,6 +387,7 @@ const formatLessonResponse = (lesson) => ({
   status: lesson.status,
   reviewFeedback: lesson.reviewFeedback,
   hasPendingDraft: !!lesson.pendingDraft,
+  pendingDraft: formatLessonDraft(lesson.pendingDraft),
   game: {
     tilemapJsonUrl: lesson.game.tilemapJsonUrl,
     tilesets: lesson.game.tilesets.map((ts) => ({
