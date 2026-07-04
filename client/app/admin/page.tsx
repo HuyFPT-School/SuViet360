@@ -611,7 +611,7 @@ function DashboardPanel({
               {subStats.monthlyRevenue.map((r, idx) => {
                 const pct = (r.revenue / maxRevenue) * 85; // Max 85% height to leave room for labels
                 return (
-                  <div key={idx} className="flex-1 flex flex-col items-center group relative z-10">
+                  <div key={idx} className="flex-1 h-full flex flex-col justify-end items-center group relative z-10">
                     {/* Tooltip on hover */}
                     <div className="absolute bottom-full mb-2 bg-[#1a0f05] border border-gold/30 text-gold text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
                       <div>Doanh thu: {formatVND(r.revenue)}</div>
