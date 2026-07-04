@@ -257,8 +257,8 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
                   const nameLower = (p.name || "").toLowerCase().replace(/_/g, " ").trim();
                   const valStr = String(p.value || "").trim();
 
-                  if (nameLower.includes("cau hoi") || nameLower.includes("câu hỏi")) {
-                    questionTitle = p.name; // Dùng tên thân thiện như "Câu hỏi 1", "Câu hỏi 2"
+                  if (nameLower === "cau hoi" || nameLower === "câu hỏi") {
+                    // Chỉ dùng tên property làm tiêu đề nếu nó thực sự MÔ TẢ tiêu đề (không phải tên field kỹ thuật cau_hoi)
                     if (valStr.includes("|")) {
                       const parts = valStr.split("|").map((x) => x.trim());
                       if (parts.length >= 6) {
@@ -274,17 +274,18 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
                     } else {
                       cauHoi = valStr;
                     }
-                  } else if (nameLower.includes("dap an a") || nameLower.includes("đáp án a")) {
+                  } else if (nameLower === "cau_hoi") {
+                    cauHoi = valStr; // field kỹ thuật, KHÔNG override tiêu đề
+                  } else if (nameLower === "dap an a" || nameLower === "đáp án a" || nameLower === "dap_an_a") {
                     dapAnA = valStr;
-                  } else if (nameLower.includes("dap an b") || nameLower.includes("đáp án b")) {
+                  } else if (nameLower === "dap an b" || nameLower === "đáp án b" || nameLower === "dap_an_b") {
                     dapAnB = valStr;
-                  } else if (nameLower.includes("dap an c") || nameLower.includes("đáp án c")) {
+                  } else if (nameLower === "dap an c" || nameLower === "đáp án c" || nameLower === "dap_an_c") {
                     dapAnC = valStr;
-                  } else if (nameLower.includes("dap an d") || nameLower.includes("đáp án d")) {
+                  } else if (nameLower === "dap an dung" || nameLower === "đáp án đúng" || nameLower === "dap_an_dung") {
+                    dapAnDung = valStr; // ⚠️ Kiểm tra "dung" TRƯỚC "d" để tránh conflict
+                  } else if (nameLower === "dap an d" || nameLower === "đáp án d" || nameLower === "dap_an_d") {
                     dapAnD = valStr;
-                    // Hỗ trợ trường hợp đáp án đúng được lưu dưới dạng đáp án D
-                  } else if (nameLower.includes("dap an dung") || nameLower.includes("đáp án đúng")) {
-                    dapAnDung = valStr;
                   }
                 });
               }
@@ -309,9 +310,11 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
                   const nameLower = (p.name || "").toLowerCase().replace(/_/g, " ").trim();
                   const valStr = String(p.value || "").trim();
 
-                  if (nameLower.includes("goi y") || nameLower.includes("gợi ý")) {
-                    hintTitle = p.name; // Dùng tên thân thiện như "Gợi ý 1"
+                  if (nameLower === "goi y" || nameLower === "gợi ý") {
+                    hintTitle = p.name;
                     goiYVal = valStr;
+                  } else if (nameLower === "goi_y") {
+                    goiYVal = valStr; // field kỹ thuật, không override tiêu đề
                   }
                 });
               }
@@ -416,7 +419,7 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
         // Chuẩn hóa và so khớp chữ trực tiếp
         const isCorrect = selectedAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
         const questionKey = qPoint.title;
-        
+
         if (!this.answeredQuestions.has(questionKey)) {
           this.answeredQuestions.add(questionKey);
           if (isCorrect) {
