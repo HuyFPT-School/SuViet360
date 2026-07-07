@@ -664,7 +664,7 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            <a href="/lessons" className="btn-card block text-center mt-auto">Chơi Game Ngay</a>
+            <a href="#" className="btn-card block text-center mt-auto opacity-60 cursor-default pointer-events-none">Chơi trên Mobile</a>
           </div>
 
         </div>{/* end profile-bottom */}

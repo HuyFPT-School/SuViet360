@@ -128,6 +128,7 @@ const lessonSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    collection: "games",
   }
 );
 
