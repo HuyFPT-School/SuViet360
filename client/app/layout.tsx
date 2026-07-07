@@ -40,9 +40,6 @@ export default function RootLayout({
                 <Link href="/leaderboard" className="sv-menu-link">
                   Bảng Vàng 
                 </Link>
-                <Link href="/game" className="sv-menu-link">
-                  Kho Báu
-                </Link>
                 <Link href="/blog" className="sv-menu-link">
                   Diễn đàn
                 </Link>

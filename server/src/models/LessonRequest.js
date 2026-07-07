@@ -15,7 +15,7 @@ const lessonRequestSchema = new mongoose.Schema(
     teacherResponse: { type: String, default: "" },
     resultLessonId: { type: mongoose.Schema.Types.ObjectId, ref: "Lesson", default: null },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "gamerequests" }
 );
 
 lessonRequestSchema.index({ status: 1 });

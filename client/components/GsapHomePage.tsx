@@ -5,9 +5,84 @@ import Link from "next/link";
 import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { api } from "@/lib/api";
 import "./gsap-homepage.css";
 
 gsap.registerPlugin(ScrollTrigger);
+
+const MOCK_LEADERBOARD = [
+  {
+    name: "Nguyễn Minh Huy",
+    xp: 2385,
+    avatar: "",
+  },
+  {
+    name: "Lê Khánh Linh",
+    xp: 2270,
+    avatar: "",
+  },
+  {
+    name: "Trần Anh Đức",
+    xp: 2190,
+    avatar: "",
+  }
+];
+
+const getInitials = (name: string) => {
+  if (!name) return "";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[parts.length - 2][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
+
+const MOCK_PODCASTS = [
+  {
+    _id: "mock1",
+    title: "Ký sự chiến dịch Điện Biên Phủ",
+    duration: 720,
+    level: "Medium",
+  },
+  {
+    _id: "mock2",
+    title: "Bí ẩn khu lăng mộ vua Trần",
+    duration: 900,
+    level: "Easy",
+  }
+];
+
+const translateLevel = (level?: string) => {
+  if (!level) return "";
+  const mapping: Record<string, string> = {
+    Easy: "Dễ",
+    Medium: "Trung cấp",
+    Hard: "Nâng cao",
+    "Dễ": "Dễ",
+    "Trung cấp": "Trung cấp",
+    "Nâng cao": "Nâng cao"
+  };
+  return mapping[level] || level;
+};
+
+const getLessonProperties = (l: any, i: number) => {
+  const fallbackImages = [
+    "/images/hue_citadel.png",
+    "/images/trung_sisters.png",
+    "/images/bach_dang_battle.png",
+    "/images/chi_lang.png",
+    "/images/dien_bien_phu.png",
+    "/images/thang_long.png",
+    "/images/van_mieu.png"
+  ];
+  return {
+    id: l._id || `lesson-${i}`,
+    title: l.title,
+    desc: l.content || l.desc || "Khám phá chi tiết bài học lịch sử đầy hào hùng.",
+    tag: l.tag || "Bài học",
+    img: l.img || fallbackImages[i % fallbackImages.length],
+  };
+};
 
 /* ── STATIC DATA ── */
 const ERAS = [
@@ -169,13 +244,53 @@ export default function GsapHomePage() {
   const statsRef = useRef<HTMLElement>(null);
   const ctaRef = useRef<HTMLElement>(null);
   const [particlesReady, setParticlesReady] = useState(false);
+  const [lessons, setLessons] = useState<any[]>([]);
+  const [podcasts, setPodcasts] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
     setParticlesReady(true);
+    const loadData = async () => {
+      try {
+        const [lessonsRes, podcastsRes, leaderboardRes] = await Promise.all([
+          api.get("/lessons?limit=10"),
+          api.get("/podcasts?limit=3"),
+          api.get("/progress/leaderboard").catch(err => {
+            console.error("Failed to fetch leaderboard, falling back:", err);
+            return { data: { data: { leaderboard: MOCK_LEADERBOARD } } };
+          })
+        ]);
+        
+        const dbLessons = lessonsRes.data?.data || [];
+        const publishedLessons = dbLessons.filter((l: any) => l.status === "Published");
+        setLessons(publishedLessons.length > 0 ? publishedLessons : LESSONS);
+        
+        const dbPodcasts = podcastsRes.data?.data || [];
+        const publishedPodcasts = dbPodcasts.filter((p: any) => p.status === "Published");
+        setPodcasts(publishedPodcasts.length > 0 ? publishedPodcasts.slice(0, 3) : MOCK_PODCASTS.slice(0, 3));
+
+        const rawLeaderboard = leaderboardRes.data?.data?.leaderboard || [];
+        const formattedLeaderboard = rawLeaderboard.slice(0, 3).map((user: any) => ({
+          name: user.name,
+          xp: user.xp,
+          avatar: user.avatar || "",
+        }));
+        setLeaderboard(formattedLeaderboard.length > 0 ? formattedLeaderboard : MOCK_LEADERBOARD);
+      } catch (err) {
+        console.error("Failed to load home page data:", err);
+        setLessons(LESSONS);
+        setPodcasts(MOCK_PODCASTS.slice(0, 3));
+        setLeaderboard(MOCK_LEADERBOARD);
+      } finally {
+        setDataLoaded(true);
+      }
+    };
+    loadData();
   }, []);
 
   useEffect(() => {
-    if (!mainRef.current) return;
+    if (!mainRef.current || !dataLoaded) return;
 
     const ctx = gsap.context(() => {
       /* ═══════════════════════════════════════════
@@ -544,7 +659,7 @@ export default function GsapHomePage() {
     }, mainRef);
 
     return () => ctx.revert();
-  }, []);
+  }, [dataLoaded]);
 
   /* ── Render ── */
   return (
@@ -613,8 +728,8 @@ export default function GsapHomePage() {
                 <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </Link>
-            <Link href="/lessons" className="gsap-btn-secondary">
-              Khám Phá Bài Học
+            <Link href="/podcasts" className="gsap-btn-secondary">
+              Nghe Podcast
             </Link>
           </div>
 
@@ -742,28 +857,31 @@ export default function GsapHomePage() {
         </div>
 
         <div ref={horizontalInnerRef} className="gsap-hscroll-inner">
-          {LESSONS.map((l, i) => (
-            <Link key={l.title} href="/lessons" className="gsap-hscroll-card">
-              <div className="gsap-hscroll-card-visual">
-                <Image
-                  src={l.img}
-                  alt={l.title}
-                  fill
-                  sizes="340px"
-                  className="object-cover transition-transform duration-700 ease-out gsap-hscroll-img"
-                />
-                <div className="gsap-hscroll-card-overlay" />
-                <span className="gsap-hscroll-card-tag">{l.tag}</span>
-              </div>
-              <div className="gsap-hscroll-card-body">
-                <h3>{l.title}</h3>
-                <p>{l.desc}</p>
-                <span className="gsap-hscroll-card-cta">
-                  Khám phá →
-                </span>
-              </div>
-            </Link>
-          ))}
+          {lessons.map((lessonRaw, i) => {
+            const l = getLessonProperties(lessonRaw, i);
+            return (
+              <Link key={l.id} href="/podcasts" className="gsap-hscroll-card">
+                <div className="gsap-hscroll-card-visual">
+                  <Image
+                    src={l.img}
+                    alt={l.title}
+                    fill
+                    sizes="340px"
+                    className="object-cover transition-transform duration-700 ease-out gsap-hscroll-img"
+                  />
+                  <div className="gsap-hscroll-card-overlay" />
+                  <span className="gsap-hscroll-card-tag">{l.tag}</span>
+                </div>
+                <div className="gsap-hscroll-card-body">
+                  <h3>{l.title}</h3>
+                  <p>{l.desc}</p>
+                  <span className="gsap-hscroll-card-cta">
+                    Khám phá →
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -784,47 +902,14 @@ export default function GsapHomePage() {
           <div className="gsap-game-card">
             {/* Simulation of retro game */}
             <div className="gsap-game-screen">
-              {/* Retro decorative elements */}
-              <div className="gsap-game-ui-bar">
-                <div className="gsap-game-hp">
-                  <span>HP</span>
-                  <div className="gsap-game-hp-bar">
-                    <div className="gsap-game-hp-fill" />
-                  </div>
-                </div>
-                <div className="gsap-game-score">SCORE: 9380</div>
-              </div>
-
-              {/* Animated Pixel Knight Mockup */}
-              <div className="gsap-game-character-wrapper">
-                <div className="gsap-game-character">
-                  <svg className="gsap-knight-svg" viewBox="0 0 64 64" fill="none" stroke="#faf3e6" strokeWidth="2.5">
-                    {/* Helmet */}
-                    <path d="M24,20 L40,20 L40,32 L24,32 Z" fill="#c9a15a" />
-                    {/* Plume */}
-                    <path d="M32,20 Q32,10 40,8" stroke="#d4543a" strokeWidth="3" />
-                    {/* Eyes */}
-                    <rect x="28" y="24" width="8" height="3" fill="#1a0a06" />
-                    {/* Shield */}
-                    <path d="M14,30 C14,30 14,46 22,48 C22,48 30,46 30,30 Z" fill="#4a7fb5" />
-                    {/* Sword */}
-                    <path className="gsap-knight-sword" d="M42,42 L54,26 M48,34 L44,38" stroke="#faf3e6" strokeWidth="3" />
-                    {/* Armor */}
-                    <path d="M24,32 L40,32 L36,48 L28,48 Z" fill="#8b6914" />
-                    {/* Legs */}
-                    <line x1="28" y1="48" x2="28" y2="56" />
-                    <line x1="36" y1="48" x2="36" y2="56" />
-                  </svg>
-                </div>
-              </div>
-
-              {/* Fortress Wall */}
-              <div className="gsap-game-fortress">
-                <div className="gsap-fortress-crenelations">
-                  <span /><span /><span /><span /><span /><span />
-                </div>
-                <div className="gsap-fortress-body" />
-              </div>
+              <Image
+                src="/images/game_battlefield_v2.jpg"
+                alt="Chiến Trường Ảo Hóa 2D"
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 480px"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
             </div>
 
             <div className="gsap-game-content-panel">
@@ -834,8 +919,8 @@ export default function GsapHomePage() {
                 Trực tiếp điều khiển nhân vật di chuyển qua các bản đồ thành trì cổ Việt Nam,
                 vượt qua thử thách và trả lời các câu hỏi lịch sử để mở khóa các mốc thời gian vinh quang.
               </p>
-              <Link href="/game" className="gsap-btn-primary">
-                <span>Vào Trận Ngay</span>
+              <Link href="#" className="gsap-btn-primary pointer-events-none opacity-60">
+                <span>Chơi trên Mobile</span>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -871,53 +956,31 @@ export default function GsapHomePage() {
             <h3 className="gsap-plaque-title">DANH SÁCH ĐẦU BẢNG</h3>
 
             <div className="gsap-leaderboard-rows">
-              {/* Row 1 - Gold */}
-              <div className="gsap-leaderboard-row gsap-rank-1">
-                <div className="gsap-row-rank">
-                  <span className="gsap-medal gold">1</span>
-                </div>
-                <div className="gsap-row-avatar">MH</div>
-                <div className="gsap-row-info">
-                  <span className="gsap-row-name">Nguyễn Minh Huy</span>
-                  <span className="gsap-row-region">Hà Nội</span>
-                </div>
-                <div className="gsap-row-stats">
-                  <span className="gsap-row-streak">🔥 24 ngày</span>
-                  <span className="gsap-row-score">2,385 pts</span>
-                </div>
-              </div>
-
-              {/* Row 2 - Silver */}
-              <div className="gsap-leaderboard-row gsap-rank-2">
-                <div className="gsap-row-rank">
-                  <span className="gsap-medal silver">2</span>
-                </div>
-                <div className="gsap-row-avatar">KL</div>
-                <div className="gsap-row-info">
-                  <span className="gsap-row-name">Lê Khánh Linh</span>
-                  <span className="gsap-row-region">Huế</span>
-                </div>
-                <div className="gsap-row-stats">
-                  <span className="gsap-row-streak">🔥 18 ngày</span>
-                  <span className="gsap-row-score">2,270 pts</span>
-                </div>
-              </div>
-
-              {/* Row 3 - Bronze */}
-              <div className="gsap-leaderboard-row gsap-rank-3">
-                <div className="gsap-row-rank">
-                  <span className="gsap-medal bronze">3</span>
-                </div>
-                <div className="gsap-row-avatar">AD</div>
-                <div className="gsap-row-info">
-                  <span className="gsap-row-name">Trần Anh Đức</span>
-                  <span className="gsap-row-region">TP. HCM</span>
-                </div>
-                <div className="gsap-row-stats">
-                  <span className="gsap-row-streak">🔥 15 ngày</span>
-                  <span className="gsap-row-score">2,190 pts</span>
-                </div>
-              </div>
+              {leaderboard.map((item, idx) => {
+                const rankClass = idx === 0 ? "gsap-rank-1" : idx === 1 ? "gsap-rank-2" : "gsap-rank-3";
+                const medalClass = idx === 0 ? "gold" : idx === 1 ? "silver" : "bronze";
+                return (
+                  <div key={item.name + idx} className={`gsap-leaderboard-row ${rankClass}`}>
+                    <div className="gsap-row-rank">
+                      <span className={`gsap-medal ${medalClass}`}>{idx + 1}</span>
+                    </div>
+                    <div className="gsap-row-avatar">
+                      {item.avatar ? (
+                        <img src={item.avatar} alt={item.name} className="w-full h-full object-cover rounded-full" />
+                      ) : (
+                        getInitials(item.name)
+                      )}
+                    </div>
+                    <div className="gsap-row-info">
+                      <span className="gsap-row-name">{item.name}</span>
+                      <span className="gsap-row-region">Học sinh</span>
+                    </div>
+                    <div className="gsap-row-stats">
+                      <span className="gsap-row-score">{item.xp.toLocaleString()} XP</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="gsap-leaderboard-actions">
@@ -972,35 +1035,22 @@ export default function GsapHomePage() {
             <h3>Số Phát Sóng Mới Nhất</h3>
             
             <div className="gsap-podcast-tracks">
-              <Link href="/podcasts" className="gsap-podcast-track">
-                <div className="gsap-track-play">
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                    <polygon points="8,5 19,12 8,19" />
-                  </svg>
-                </div>
-                <div className="gsap-track-info">
-                  <h4>Ký sự chiến dịch Điện Biên Phủ</h4>
-                  <p>Số 08 • Thời lượng: 12 phút • Trình độ: Trung cấp</p>
-                </div>
-                <div className="gsap-track-wave">
-                  <span /><span /><span /><span />
-                </div>
-              </Link>
-
-              <Link href="/podcasts" className="gsap-podcast-track">
-                <div className="gsap-track-play">
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                    <polygon points="8,5 19,12 8,19" />
-                  </svg>
-                </div>
-                <div className="gsap-track-info">
-                  <h4>Bí ẩn khu lăng mộ vua Trần</h4>
-                  <p>Số 07 • Thời lượng: 15 phút • Trình độ: Cơ bản</p>
-                </div>
-                <div className="gsap-track-wave">
-                  <span /><span /><span /><span />
-                </div>
-              </Link>
+              {podcasts.map((p, idx) => (
+                <Link key={p._id} href={p._id.startsWith("mock") ? "/podcasts" : `/podcasts/${p._id}`} className="gsap-podcast-track">
+                  <div className="gsap-track-play">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                      <polygon points="8,5 19,12 8,19" />
+                    </svg>
+                  </div>
+                  <div className="gsap-track-info">
+                    <h4>{p.title}</h4>
+                    <p>Số {(idx + 1).toString().padStart(2, '0')} • Thời lượng: {Math.round(p.duration / 60) || 1} phút • Trình độ: {translateLevel(p.level)}</p>
+                  </div>
+                  <div className="gsap-track-wave">
+                    <span /><span /><span /><span />
+                  </div>
+                </Link>
+              ))}
             </div>
 
             <div className="gsap-podcast-actions">

@@ -12,6 +12,16 @@ import {
   type TeacherReviewItem,
   type ReviewContentType,
 } from "@/lib/teacherReviewApi";
+import dynamic from "next/dynamic";
+
+const PhaserGame = dynamic(() => import("@/components/PhaserGame"), {
+  ssr: false,
+  loading: () => (
+    <p className="text-center p-6 text-amber-800 font-medium">
+      Đang tải game...
+    </p>
+  ),
+});
 
 const statusOptions: Array<{ value: ReviewStatus | "All"; label: string }> = [
   { value: "Pending_Review", label: "Chờ duyệt" },
@@ -134,7 +144,7 @@ export default function TeacherPage() {
 
   const handleApprove = async (item: TeacherReviewItem) => {
     const ok = window.confirm(
-      `Duyệt ${item.type === "Lesson" ? "bài học" : "podcast"} "${item.title}" và cho phép hiển thị với học sinh?`
+      `Duyệt ${item.type === "Lesson" ? "game" : "podcast"} "${item.title}" và cho phép hiển thị với học sinh?`
     );
     if (!ok) return;
 
@@ -144,9 +154,9 @@ export default function TeacherPage() {
     try {
       await teacherReviewApi.approveContent(item.id, item.type);
       await loadItems();
-      setMessage(`Đã duyệt ${item.type === "Lesson" ? "bài học" : "podcast"} và cập nhật trạng thái Published.`);
+      setMessage(`Đã duyệt ${item.type === "Lesson" ? "game" : "podcast"} và cập nhật trạng thái Published.`);
     } catch {
-      setError(`Không thể duyệt ${item.type === "Lesson" ? "bài học" : "podcast"} này.`);
+      setError(`Không thể duyệt ${item.type === "Lesson" ? "game" : "podcast"} này.`);
     } finally {
       setSaving(false);
     }
@@ -176,9 +186,9 @@ export default function TeacherPage() {
       await loadItems();
       setRejectingItem(null);
       setFeedback("");
-      setMessage(`Đã từ chối ${rejectingItem.type === "Lesson" ? "bài học" : "podcast"} và lưu feedback cho Staff.`);
+      setMessage(`Đã từ chối ${rejectingItem.type === "Lesson" ? "game" : "podcast"} và lưu feedback cho Staff.`);
     } catch {
-      setError(`Không thể từ chối ${rejectingItem.type === "Lesson" ? "bài học" : "podcast"} này.`);
+      setError(`Không thể từ chối ${rejectingItem.type === "Lesson" ? "game" : "podcast"} này.`);
     } finally {
       setSaving(false);
     }
@@ -211,7 +221,7 @@ export default function TeacherPage() {
       <section className="admin-page admin-page--center">
         <div className="admin-access-card">
           <h1>Không có quyền truy cập</h1>
-          <p>Trang này chỉ dành cho Teacher duyệt lesson Staff gửi lên.</p>
+          <p>Trang này chỉ dành cho Teacher duyệt game & podcast Staff gửi lên.</p>
           <Link href="/" className="admin-primary-link">
             Về trang chủ
           </Link>
@@ -235,7 +245,7 @@ export default function TeacherPage() {
           </div>
           <div className="teacher-review-rules">
             <strong>Quyền Teacher</strong>
-            <span>Xem chi tiết lesson/podcast</span>
+            <span>Xem chi tiết game/podcast</span>
             <span>Kiểm tra nội dung, game & audio</span>
             <span>Approve hoặc Reject kèm feedback</span>
           </div>
@@ -255,7 +265,7 @@ export default function TeacherPage() {
           <div className="admin-stack">
             <div className="admin-heading">
               <div>
-                <p className="admin-kicker">Duyệt lesson & podcast</p>
+                <p className="admin-kicker">Duyệt game & podcast</p>
                 <h2>Teacher Review Dashboard</h2>
               </div>
             </div>
@@ -291,7 +301,7 @@ export default function TeacherPage() {
               </div>
 
               <div className="admin-panel-heading teacher-list-heading">
-                <h3>Danh sách bài học & podcast</h3>
+                <h3>Danh sách game & podcast</h3>
                 <span>{filteredItems.length} mục</span>
               </div>
 
@@ -311,7 +321,7 @@ export default function TeacherPage() {
                       <small className="line-clamp-2">{item.summary}</small>
                     </div>
                     <span className={`teacher-type-badge ${item.type === "Podcast" ? "teacher-type-badge--podcast" : ""}`}>
-                      {item.type}
+                      {item.type === "Lesson" ? "Game" : item.type}
                     </span>
                     <span className="flex flex-col min-w-0 justify-center">
                       <span className="font-semibold text-amber-900 truncate block text-sm" title={formatCreatorDisplay(item.createdBy).name}>
@@ -334,7 +344,7 @@ export default function TeacherPage() {
                 ))}
                 {filteredItems.length === 0 && (
                   <p className="admin-empty">
-                    Không có lesson/podcast phù hợp với bộ lọc hiện tại.
+                    Không có game/podcast phù hợp với bộ lọc hiện tại.
                   </p>
                 )}
               </div>
@@ -448,11 +458,11 @@ function PodcastPreview({
 
       {podcastDetails.lessonId && (
         <div className="teacher-section teacher-section--tight">
-          <h3>Bài học liên kết</h3>
+          <h3>Game liên kết</h3>
           <p style={{ fontWeight: "600", color: "#451a03" }}>
             {typeof podcastDetails.lessonId === "object"
               ? podcastDetails.lessonId.title
-              : "Đã liên kết với Bài học"}
+              : "Đã liên kết với Game"}
           </p>
         </div>
       )}
@@ -480,7 +490,7 @@ function ContentDetailModal({
       <div className="teacher-modal teacher-detail-modal">
         <div className="teacher-modal-header">
           <div>
-            <p className="admin-kicker">Chi tiết {item.type === "Lesson" ? "lesson" : "podcast"}</p>
+            <p className="admin-kicker">Chi tiết {item.type === "Lesson" ? "game" : "podcast"}</p>
             <h2>{item.title}</h2>
           </div>
           <button type="button" onClick={onClose} className="teacher-close-button">
@@ -490,7 +500,7 @@ function ContentDetailModal({
 
         <div className="teacher-detail-grid">
           <div className="teacher-detail-main">
-            <InfoRow label="Loại nội dung" value={item.type} />
+            <InfoRow label="Loại nội dung" value={item.type === "Lesson" ? "Game" : item.type} />
             <InfoRow label="Người tạo" value={item.createdBy} />
             <InfoRow label="Ngày gửi duyệt" value={formatDate(item.submittedAt)} />
             <div className="teacher-info-row">
@@ -579,6 +589,7 @@ function LessonGamePreview({
   game: LessonGame;
   lessonTitle: string;
 }) {
+  const [isZoomed, setIsZoomed] = useState(false);
   const animationEntries = Object.entries(game.character.animations || {});
 
   return (
@@ -587,6 +598,111 @@ function LessonGamePreview({
         <h3>Game trong lesson</h3>
         <span>Tilemap + assets</span>
       </div>
+
+      <div className="teacher-section">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+          <h3 style={{ margin: 0 }}>Màn hình chơi thử</h3>
+          <button
+            type="button"
+            onClick={() => setIsZoomed(true)}
+            style={{
+              padding: "4px 8px",
+              fontSize: "11px",
+              fontFamily: "Cinzel, serif",
+              background: "rgba(244, 231, 201, 0.6)",
+              border: "1px solid #c9a15a",
+              borderRadius: "4px",
+              cursor: "pointer",
+              color: "#5c3300",
+              fontWeight: "600",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px"
+            }}
+          >
+            <span>Phóng to ⛶</span>
+          </button>
+        </div>
+        <div className="teacher-game-wrapper" style={{ width: "100%", aspectRatio: "4/3", position: "relative", borderRadius: "8px", overflow: "hidden", border: "1px solid #d1c2a5", backgroundColor: "#000" }}>
+          <style>{`
+            .teacher-game-wrapper > div {
+              height: 100% !important;
+              min-height: unset !important;
+            }
+            .teacher-game-wrapper canvas {
+              max-width: 100% !important;
+              max-height: 100% !important;
+              object-fit: contain;
+            }
+            /* Thu nhỏ hộp thoại câu hỏi và chữ trên màn hình chơi thử của giáo viên */
+            .teacher-game-wrapper > div > div {
+              bottom: 8px !important;
+              padding: 8px 10px !important;
+              border-width: 1.5px !important;
+              border-radius: 6px !important;
+              max-width: 90% !important;
+              width: 90% !important;
+            }
+            .teacher-game-wrapper > div > div div {
+              font-size: 10px !important;
+              line-height: 1.2 !important;
+              margin-bottom: 4px !important;
+              padding-bottom: 4px !important;
+            }
+            .teacher-game-wrapper > div > div div:nth-child(2) {
+              font-size: 9px !important;
+              margin-bottom: 4px !important;
+            }
+            .teacher-game-wrapper > div > div > div:last-child {
+              gap: 3px !important;
+              margin-top: 4px !important;
+            }
+            .teacher-game-wrapper .quiz-opt-btn {
+              padding: 4px 6px !important;
+              font-size: 9px !important;
+              border-width: 1px !important;
+              border-radius: 4px !important;
+              line-height: 1.1 !important;
+            }
+          `}</style>
+          {!isZoomed ? (
+            <PhaserGame lessonGame={game} />
+          ) : (
+            <div style={{ height: "100%", display: "flex", justifyContent: "center", alignItems: "center", color: "#bba476", fontWeight: "600", fontSize: "11px", fontFamily: "Cinzel, serif" }}>
+              Đang chơi ở chế độ phóng to...
+            </div>
+          )}
+        </div>
+      </div>
+
+      {isZoomed && (
+        <div className="teacher-modal-backdrop" style={{ zIndex: 1000 }}>
+          <div className="teacher-modal" style={{ width: "min(900px, 95vw)", maxHeight: "95vh", display: "flex", flexDirection: "column", padding: "20px" }}>
+            <div className="teacher-modal-header" style={{ borderBottom: "1px solid #c9a15a", paddingBottom: "10px", marginBottom: "15px" }}>
+              <div>
+                <p className="admin-kicker">Chế độ phóng to</p>
+                <h2 style={{ fontSize: "20px", color: "#5c3300", fontFamily: "Cinzel, serif", margin: 0 }}>{lessonTitle}</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsZoomed(false)}
+                className="teacher-close-button"
+                style={{ padding: "6px 12px" }}
+              >
+                Thu nhỏ ⛶
+              </button>
+            </div>
+            
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden", aspectRatio: "4/3", border: "2px solid #8B6914", padding: "10px" }}>
+              <PhaserGame lessonGame={game} />
+            </div>
+            
+            <div style={{ marginTop: "12px", fontSize: "12px", color: "#92400e", fontWeight: "500", textAlign: "center", fontFamily: "sans-serif" }}>
+              * Sử dụng các phím mũi tên để di chuyển nhân vật. Đến gần dấu hỏi chấm để hiển thị câu hỏi trắc nghiệm đầy đủ.
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="teacher-section teacher-section--tight">
         <h3>Spawn point</h3>
@@ -676,7 +792,7 @@ function RejectModal({
       <form className="teacher-modal teacher-reject-modal" onSubmit={onSubmit}>
         <div className="teacher-modal-header">
           <div>
-            <p className="admin-kicker">Reject {item.type === "Lesson" ? "lesson" : "podcast"}</p>
+            <p className="admin-kicker">Reject {item.type === "Lesson" ? "game" : "podcast"}</p>
             <h2>{item.title}</h2>
           </div>
           <button type="button" onClick={onClose} className="teacher-close-button">
@@ -690,7 +806,7 @@ function RejectModal({
             value={feedback}
             onChange={(event) => onFeedbackChange(event.target.value)}
             rows={5}
-            placeholder={`Nhập feedback cụ thể để Staff chỉnh sửa ${item.type === "Lesson" ? "lesson" : "podcast"}...`}
+            placeholder={`Nhập feedback cụ thể để Staff chỉnh sửa ${item.type === "Lesson" ? "game" : "podcast"}...`}
           />
         </label>
         {feedbackError && <p className="teacher-field-error">{feedbackError}</p>}

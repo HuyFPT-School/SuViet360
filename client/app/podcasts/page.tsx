@@ -268,25 +268,35 @@ export default function PodcastListingPage() {
             />
           </form>
           
-          <div className="flex gap-4 flex-wrap flex-1 min-w-[300px]">
-             <select 
-                className="bg-white border border-[#e8d5b5] rounded-lg px-4 py-2 text-sm text-[#3a2312] outline-none flex-1 appearance-none cursor-pointer"
+          <div className="flex gap-4 flex-wrap items-center flex-1 min-w-[280px]">
+            <div className="relative flex-1 min-w-[140px] max-w-[260px]">
+              <select 
+                className="w-full bg-white border border-[#e8d5b5] rounded-lg pl-4 pr-10 py-2 text-sm text-[#3a2312] outline-none appearance-none cursor-pointer truncate"
                 value={category}
                 onChange={e => setCategory(e.target.value)}
-             >
+              >
                 <option value="">Chủ đề</option>
                 {Object.keys(stats.categories).map(c => <option key={c} value={c}>{c}</option>)}
-             </select>
-             
-             <select 
-                className="bg-white border border-[#e8d5b5] rounded-lg px-4 py-2 text-sm text-[#3a2312] outline-none flex-1 appearance-none cursor-pointer"
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#8c6a34]">
+                <ChevronDownIcon />
+              </div>
+            </div>
+            
+            <div className="relative flex-1 min-w-[140px] max-w-[200px]">
+              <select 
+                className="w-full bg-white border border-[#e8d5b5] rounded-lg pl-4 pr-10 py-2 text-sm text-[#3a2312] outline-none appearance-none cursor-pointer truncate"
                 value={sort}
                 onChange={e => setSort(e.target.value)}
-             >
+              >
                 <option value="">Sắp xếp: Mới nhất</option>
                 <option value="oldest">Sắp xếp: Cũ nhất</option>
                 <option value="views">Lượt nghe nhiều</option>
-             </select>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#8c6a34]">
+                <ChevronDownIcon />
+              </div>
+            </div>
           </div>
 
           <button 
@@ -307,7 +317,7 @@ export default function PodcastListingPage() {
               <div className="flex flex-col gap-4">
                 {Object.entries(groupedPodcasts).map(([cat, epList], idx) => {
                   const isExpanded = expandedChapters[cat];
-                  const chapterLabel = cat.toUpperCase().includes("CHƯƠNG") ? cat.toUpperCase() : `CHỦ ĐỀ: ${cat.toUpperCase()}`;
+                  const chapterLabel = cat.toUpperCase().includes("CHƯƠNG") ? "CHƯƠNG TRÌNH HỌC" : "CHỦ ĐỀ LỊCH SỬ";
                   
                   return (
                     <div key={cat} className="bg-[#fcf8ef] border border-[#e8d5b5] rounded-xl overflow-hidden shadow-sm transition-all">
