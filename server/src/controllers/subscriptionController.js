@@ -1,7 +1,7 @@
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const subscriptionService = require("../services/subscriptionService");
-const LessonRequest = require("../models/LessonRequest");
+const PodcastRequest = require("../models/PodcastRequest");
 const Notification = require("../models/Notification");
 const User = require("../models/User");
 const GiftCode = require("../models/GiftCode");
@@ -170,7 +170,7 @@ const createLessonRequest = asyncHandler(async (req, res) => {
   const { title, description, historicalPeriod } = req.body;
   if (!title || !description) throw new AppError("Tiêu đề và mô tả là bắt buộc", 400);
 
-  const request = await LessonRequest.create({
+  const request = await PodcastRequest.create({
     requesterId: req.user._id,
     title,
     description,
@@ -195,9 +195,9 @@ const createLessonRequest = asyncHandler(async (req, res) => {
 
 // GET /api/subscriptions/lesson-requests
 const getMyLessonRequests = asyncHandler(async (req, res) => {
-  const requests = await LessonRequest.find({ requesterId: req.user._id })
+  const requests = await PodcastRequest.find({ requesterId: req.user._id })
     .populate("assignedTeacherId", "name avatar")
-    .populate("resultLessonId", "title")
+    .populate("resultPodcastId", "title")
     .sort({ createdAt: -1 });
 
   res.status(200).json({ success: true, data: requests });
@@ -205,7 +205,7 @@ const getMyLessonRequests = asyncHandler(async (req, res) => {
 
 // GET /api/subscriptions/lesson-requests/teacher (for teachers)
 const getTeacherLessonRequests = asyncHandler(async (req, res) => {
-  const requests = await LessonRequest.find({
+  const requests = await PodcastRequest.find({
     $or: [
       { status: "Pending" },
       { assignedTeacherId: req.user._id },
@@ -220,7 +220,7 @@ const getTeacherLessonRequests = asyncHandler(async (req, res) => {
 
 // PUT /api/subscriptions/lesson-requests/:id/accept
 const acceptLessonRequest = asyncHandler(async (req, res) => {
-  const request = await LessonRequest.findById(req.params.id);
+  const request = await PodcastRequest.findById(req.params.id);
   if (!request) throw new AppError("Yêu cầu không tồn tại", 404);
   if (request.status !== "Pending") throw new AppError("Yêu cầu đã được xử lý", 400);
 
@@ -242,7 +242,7 @@ const acceptLessonRequest = asyncHandler(async (req, res) => {
 
 // PUT /api/subscriptions/lesson-requests/:id/reject
 const rejectLessonRequest = asyncHandler(async (req, res) => {
-  const request = await LessonRequest.findById(req.params.id);
+  const request = await PodcastRequest.findById(req.params.id);
   if (!request) throw new AppError("Yêu cầu không tồn tại", 404);
   if (request.status !== "Pending") throw new AppError("Yêu cầu đã được xử lý", 400);
 
@@ -259,6 +259,67 @@ const rejectLessonRequest = asyncHandler(async (req, res) => {
   });
 
   res.status(200).json({ success: true, data: request });
+});
+
+// PUT /api/subscriptions/lesson-requests/:id/in-progress
+const startLessonRequest = asyncHandler(async (req, res) => {
+  const request = await PodcastRequest.findById(req.params.id);
+  if (!request) throw new AppError("Yêu cầu không tồn tại", 404);
+  if (request.status !== "Accepted") throw new AppError("Chỉ có thể chuyển sang Đang tiến hành sau khi đã Chấp nhận", 400);
+  if (request.assignedTeacherId.toString() !== req.user._id.toString()) {
+    throw new AppError("Bạn không được phân công xử lý yêu cầu này", 403);
+  }
+
+  request.status = "InProgress";
+  await request.save();
+
+  await Notification.create({
+    recipient: request.requesterId,
+    type: "System",
+    title: "Bài học đang được soạn thảo!",
+    message: `Yêu cầu bài học "${request.title}" của bạn đang được soạn thảo bởi Giáo viên ${req.user.name}.`,
+    link: "/subscription?tab=requests",
+  });
+
+  res.status(200).json({ success: true, data: request });
+});
+
+// PUT /api/subscriptions/lesson-requests/:id/complete
+const completeLessonRequest = asyncHandler(async (req, res) => {
+  const { resultPodcastId } = req.body;
+  if (!resultPodcastId) throw new AppError("Mã podcast đã tạo là bắt buộc để hoàn thành", 400);
+
+  const request = await PodcastRequest.findById(req.params.id);
+  if (!request) throw new AppError("Yêu cầu không tồn tại", 404);
+  if (request.status !== "InProgress") throw new AppError("Chỉ có thể chuyển sang Hoàn thành khi đang ở trạng thái Đang tiến hành", 400);
+  if (request.assignedTeacherId.toString() !== req.user._id.toString()) {
+    throw new AppError("Bạn không được phân công xử lý yêu cầu này", 403);
+  }
+
+  request.status = "Completed";
+  request.resultPodcastId = resultPodcastId;
+  await request.save();
+
+  await Notification.create({
+    recipient: request.requesterId,
+    type: "System",
+    title: "Yêu cầu bài học đã hoàn thành!",
+    message: `Yêu cầu bài học (podcast) "${request.title}" của bạn đã hoàn thành. Hãy vào nghe ngay!`,
+    link: `/podcasts/${resultPodcastId}`,
+  });
+
+  res.status(200).json({ success: true, data: request });
+});
+
+// GET /api/subscriptions/admin/lesson-requests
+const getAllLessonRequestsForAdmin = asyncHandler(async (req, res) => {
+  const requests = await PodcastRequest.find()
+    .populate("requesterId", "name email avatar")
+    .populate("assignedTeacherId", "name email avatar")
+    .populate("resultPodcastId", "title")
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({ success: true, data: requests });
 });
 
 // ─── Admin: Coupon Management ──────────────────────────────────────────
@@ -419,7 +480,7 @@ const sepayWebhook = asyncHandler(async (req, res) => {
       await Notification.create({
         recipient: transaction.recipientId,
         type: "Gift_Received",
-        title: "Bạn nhận được quà tặng! 🎁",
+        title: "Bạn nhận được quà tặng!",
         message: `${buyer ? buyer.name : "Một người bạn"} đã tặng bạn gói ${tier ? tier.name : "VIP"}!${transaction.giftMessage ? " Lời nhắn: " + transaction.giftMessage : ""}`,
         link: "/subscription",
       });
@@ -428,7 +489,7 @@ const sepayWebhook = asyncHandler(async (req, res) => {
       await Notification.create({
         recipient: transaction.buyerId,
         type: "System",
-        title: "Tặng quà thành công! 🎁",
+        title: "Tặng quà thành công!",
         message: `Thanh toán thành công gói tặng. Gói VIP đã được kích hoạt trực tiếp cho người nhận.`,
         link: "/subscription",
       });
@@ -447,7 +508,7 @@ const sepayWebhook = asyncHandler(async (req, res) => {
       await Notification.create({
         recipient: transaction.buyerId,
         type: "System",
-        title: "Mã quà tặng đã sẵn sàng! 🎁",
+        title: "Mã quà tặng đã sẵn sàng!",
         message: `Thanh toán thành công gói tặng. Mã quà tặng đã được tạo cho bạn gửi đi.`,
         link: "/subscription",
       });
@@ -465,7 +526,7 @@ const sepayWebhook = asyncHandler(async (req, res) => {
     await Notification.create({
       recipient: transaction.buyerId,
       type: "Subscription_Activated",
-      title: "Nâng cấp tài khoản thành công! 💎",
+      title: "Nâng cấp tài khoản thành công!",
       message: `Tài khoản của bạn đã được nâng cấp lên gói ${tier ? tier.name : "VIP"}.`,
       link: "/subscription",
     });
@@ -618,6 +679,133 @@ const updateTierPrice = asyncHandler(async (req, res) => {
   });
 });
 
+// POST /api/subscriptions/admin/gift-codes/bulk (Admin only)
+const generateBulkGiftCodes = asyncHandler(async (req, res) => {
+  const { tierId, billingCycle, giftMessage, quantity, expiresInDays } = req.body;
+
+  if (!tierId || !billingCycle || !quantity) {
+    throw new AppError("Vui lòng cung cấp gói thành viên, chu kỳ và số lượng", 400);
+  }
+
+  const qty = Number(quantity);
+  if (isNaN(qty) || qty < 1 || qty > 1000) {
+    throw new AppError("Số lượng mã không hợp lệ (từ 1 đến 1000)", 400);
+  }
+
+  const tier = await SubscriptionTier.findById(tierId);
+  if (!tier) throw new AppError("Gói subscription không tồn tại", 404);
+
+  const days = Number(expiresInDays) || 30;
+  const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+
+  const crypto = require("crypto");
+  const generatedCodeStrings = new Set();
+
+  // Try to generate unique codes
+  let attempts = 0;
+  const maxAttempts = qty * 5;
+
+  while (generatedCodeStrings.size < qty && attempts < maxAttempts) {
+    attempts++;
+    const parts = [];
+    for (let i = 0; i < 3; i++) {
+      parts.push(crypto.randomBytes(2).toString("hex").toUpperCase());
+    }
+    const codeStr = `GIFT-${parts.join("-")}`;
+
+    if (!generatedCodeStrings.has(codeStr)) {
+      // Check if it already exists in DB
+      const existing = await GiftCode.findOne({ code: codeStr });
+      if (!existing) {
+        generatedCodeStrings.add(codeStr);
+      }
+    }
+  }
+
+  if (generatedCodeStrings.size < qty) {
+    throw new AppError("Không thể tạo đủ số lượng mã duy nhất. Vui lòng thử lại.", 500);
+  }
+
+  const bulkData = Array.from(generatedCodeStrings).map(code => ({
+    code,
+    tierId,
+    billingCycle,
+    senderId: req.user._id,
+    recipientEmail: "",
+    giftMessage: giftMessage || "Mã quà tặng do Admin tạo hàng loạt",
+    status: "Pending",
+    expiresAt,
+  }));
+
+  const createdCodes = await GiftCode.insertMany(bulkData);
+
+  res.status(201).json({
+    success: true,
+    message: `Đã tạo thành công ${qty} mã quà tặng`,
+    data: createdCodes,
+  });
+});
+
+// GET /api/subscriptions/admin/gift-codes (Admin only)
+const getGiftCodesForAdmin = asyncHandler(async (req, res) => {
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  const filter = {};
+
+  if (req.query.status) {
+    filter.status = req.query.status;
+  }
+
+  if (req.query.search) {
+    const searchRegex = new RegExp(req.query.search, "i");
+    filter.$or = [
+      { code: searchRegex },
+      { giftMessage: searchRegex },
+    ];
+  }
+
+  const total = await GiftCode.countDocuments(filter);
+  const giftCodes = await GiftCode.find(filter)
+    .populate("tierId", "name slug")
+    .populate("senderId", "name email")
+    .populate("redeemedBy", "name email")
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  res.status(200).json({
+    success: true,
+    data: giftCodes,
+    pagination: {
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
+    },
+  });
+});
+
+// DELETE /api/subscriptions/admin/gift-codes/:id (Admin only)
+const deleteGiftCodeForAdmin = asyncHandler(async (req, res) => {
+  const giftCode = await GiftCode.findById(req.params.id);
+  if (!giftCode) {
+    throw new AppError("Mã quà tặng không tồn tại", 404);
+  }
+
+  if (giftCode.status === "Redeemed") {
+    throw new AppError("Không thể xóa mã quà tặng đã được kích hoạt sử dụng", 400);
+  }
+
+  await GiftCode.findByIdAndDelete(req.params.id);
+
+  res.status(200).json({
+    success: true,
+    message: "Đã xóa mã quà tặng thành công",
+  });
+});
+
 module.exports = {
   getTiers,
   getMySubscription,
@@ -633,6 +821,9 @@ module.exports = {
   getTeacherLessonRequests,
   acceptLessonRequest,
   rejectLessonRequest,
+  startLessonRequest,
+  completeLessonRequest,
+  getAllLessonRequestsForAdmin,
   createCoupon,
   getCoupons,
   deleteCoupon,
@@ -641,4 +832,7 @@ module.exports = {
   getAdminDashboardStats,
   getUserTransactionsForAdmin,
   updateTierPrice,
+  generateBulkGiftCodes,
+  getGiftCodesForAdmin,
+  deleteGiftCodeForAdmin,
 };

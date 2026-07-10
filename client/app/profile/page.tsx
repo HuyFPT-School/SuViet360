@@ -452,7 +452,11 @@ export default function ProfilePage() {
                     className="mb-4 p-3 bg-red-950/60 border border-red-500/40 text-red-200 text-sm rounded-lg flex items-start gap-2"
                     style={{ fontFamily: "sans-serif" }}
                   >
-                    <span className="text-lg">⚠️</span>
+                    <svg className="w-5 h-5 text-red-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                      <line x1="12" x2="12" y1="9" y2="13" />
+                      <line x1="12" x2="12.01" y1="17" y2="17" />
+                    </svg>
                     <div>
                       <strong className="text-red-400">Cảnh báo hết hạn!</strong> Gói <span className="text-amber-300 font-semibold">{user.subscriptionTier}</span> của bạn sẽ hết hạn trong {daysRemaining <= 0 ? "hôm nay" : `${daysRemaining} ngày`} nữa. Vui lòng gia hạn để không bị gián đoạn quyền lợi.
                     </div>

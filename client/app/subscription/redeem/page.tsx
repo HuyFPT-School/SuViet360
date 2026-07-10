@@ -79,8 +79,13 @@ export default function RedeemPage() {
             </p>
 
             {error && (
-              <div className="mb-6 p-4 bg-rose-950/60 border border-rose-500 rounded text-rose-200 text-sm">
-                ⚠️ {error}
+              <div className="mb-6 p-4 bg-rose-950/60 border border-rose-500 rounded text-rose-200 text-sm flex items-start gap-2">
+                <svg className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                  <line x1="12" x2="12" y1="9" y2="13" />
+                  <line x1="12" x2="12.01" y1="17" y2="17" />
+                </svg>
+                <span>{error}</span>
               </div>
             )}
 
@@ -153,8 +158,10 @@ export default function RedeemPage() {
 
         {stage === "success" && giftData && (
           <div className="gift-details-card">
-            <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full border border-emerald-500 flex items-center justify-center mx-auto text-3xl mb-6">
-              ✓
+            <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full border border-emerald-500 flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
             </div>
 
             <h2 className="sub-title" style={{ fontSize: "1.5rem" }}>

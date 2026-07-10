@@ -67,7 +67,7 @@ export interface LessonRequest {
   status: "Pending" | "Accepted" | "InProgress" | "Completed" | "Rejected";
   assignedTeacherId?: { _id: string; name: string; avatar?: string };
   teacherResponse: string;
-  resultLessonId?: { _id: string; title: string };
+  resultPodcastId?: { _id: string; title: string };
   createdAt: string;
 }
 

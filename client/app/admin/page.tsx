@@ -3,13 +3,13 @@
 import Link from "next/link";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { adminApi, type Lesson, type LessonFormValues, type AdminSubscriptionStats, type Coupon } from "@/lib/adminApi";
+import { adminApi, type Lesson, type LessonFormValues, type AdminSubscriptionStats, type Coupon, type AdminGiftCode } from "@/lib/adminApi";
 import { subscriptionApi } from "@/lib/subscriptionApi";
 import type { SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
 import type { User } from "@/types/auth";
 
-type AdminTab = "dashboard" | "lessons" | "users" | "subscriptions" | "coupons";
+type AdminTab = "dashboard" | "lessons" | "users" | "subscriptions" | "coupons" | "gift-codes" | "lesson-requests";
 
 const emptyForm: LessonFormValues = {
   title: "",
@@ -28,6 +28,8 @@ const tabs: Array<{ id: AdminTab; label: string }> = [
   { id: "users", label: "Quản lý user" },
   { id: "subscriptions", label: "Quản lý Gói VIP" },
   { id: "coupons", label: "Quản lý Coupon" },
+  { id: "gift-codes", label: "Quản lý Mã quà tặng" },
+  { id: "lesson-requests", label: "Yêu cầu bài học" },
 ];
 
 function formatDate(value?: string) {
@@ -70,6 +72,28 @@ export default function AdminPage() {
   const [subStats, setSubStats] = useState<AdminSubscriptionStats | null>(null);
   const [tiers, setTiers] = useState<SubscriptionTier[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+
+  // Lesson request states
+  const [lessonRequests, setLessonRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "lesson-requests") {
+      const fetchRequests = async () => {
+        setLoadingRequests(true);
+        setError("");
+        try {
+          const data = await subscriptionApi.getAllLessonRequestsForAdmin();
+          setLessonRequests(data);
+        } catch (err) {
+          setError("Không thể tải danh sách yêu cầu bài học.");
+        } finally {
+          setLoadingRequests(false);
+        }
+      };
+      fetchRequests();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     let mounted = true;
@@ -470,6 +494,19 @@ export default function AdminPage() {
               tiers={tiers}
               onCreate={handleCreateCoupon}
               onDelete={handleDeleteCoupon}
+            />
+          )}
+
+          {activeTab === "gift-codes" && (
+            <GiftCodesPanel
+              tiers={tiers}
+            />
+          )}
+
+          {activeTab === "lesson-requests" && (
+            <LessonRequestsAdminPanel
+              requests={lessonRequests}
+              loading={loadingRequests}
             />
           )}
         </div>
@@ -1782,6 +1819,624 @@ function CouponsPanel({
             </button>
           </form>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function GiftCodesPanel({
+  tiers,
+}: {
+  tiers: SubscriptionTier[];
+}) {
+  const [giftCodes, setGiftCodes] = useState<AdminGiftCode[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [status, setStatus] = useState("");
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+
+  // Create form states
+  const [selectedTierId, setSelectedTierId] = useState("");
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [quantity, setQuantity] = useState<number>(10);
+  const [giftMessage, setGiftMessage] = useState("Mã quà tặng do Admin tạo hàng loạt");
+  const [expiresInDays, setExpiresInDays] = useState<number>(30);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Success state for newly generated codes
+  const [generatedCodes, setGeneratedCodes] = useState<AdminGiftCode[]>([]);
+
+  // Fetch gift codes
+  const fetchCodes = async () => {
+    setLoading(true);
+    try {
+      const res = await adminApi.getAdminGiftCodes({
+        page,
+        limit: 15,
+        status: status || undefined,
+        search: search || undefined,
+      });
+      if (res.success) {
+        setGiftCodes(res.data);
+        setTotalPages(res.pagination.pages || 1);
+      }
+    } catch (err) {
+      console.error("Error fetching gift codes:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCodes();
+  }, [page, status, search]);
+
+  // Set default tier ID when tiers load
+  useEffect(() => {
+    const paidTiers = tiers.filter(t => t.slug !== "free");
+    if (paidTiers.length > 0 && !selectedTierId) {
+      setSelectedTierId(paidTiers[0]._id);
+    }
+  }, [tiers]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+    setSearch(searchInput.trim());
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    setPage(1);
+    setStatus(newStatus);
+  };
+
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTierId || quantity < 1 || quantity > 1000) {
+      alert("Vui lòng chọn gói VIP và nhập số lượng từ 1 đến 1000.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await adminApi.generateBulkGiftCodes({
+        tierId: selectedTierId,
+        billingCycle,
+        giftMessage,
+        quantity,
+        expiresInDays,
+      });
+      if (res.success) {
+        setGeneratedCodes(res.data);
+        fetchCodes(); // Refresh current list
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || "Đã xảy ra lỗi khi tạo mã.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa mã quà tặng này?")) return;
+    try {
+      const res = await adminApi.deleteGiftCode(id);
+      if (res.success) {
+        fetchCodes();
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || "Đã xảy ra lỗi khi xóa.");
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    alert("Đã copy vào clipboard!");
+  };
+
+  const copyAllGenerated = () => {
+    const allCodes = generatedCodes.map(c => c.code).join("\n");
+    navigator.clipboard.writeText(allCodes);
+    alert("Đã copy toàn bộ mã!");
+  };
+
+  const downloadTextFile = () => {
+    const allCodes = generatedCodes.map(c => c.code).join("\n");
+    const blob = new Blob([allCodes], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ma-qua-tang-${billingCycle}-${quantity}-codes.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadCsvFile = () => {
+    const headers = "STT,Mã Code,Gói VIP,Chu kỳ,Ngày hết hạn,Lời nhắn\n";
+    const rows = generatedCodes.map((c, index) => {
+      const tierName = tiers.find(t => t._id === c.tierId._id)?.name || c.tierId.name || "VIP";
+      const cycle = c.billingCycle === "monthly" ? "Hàng tháng" : "Hàng năm";
+      const expDate = formatDate(c.expiresAt);
+      return `${index + 1},${c.code},"${tierName}",${cycle},${expDate},"${c.giftMessage || ""}"`;
+    }).join("\n");
+    
+    const blob = new Blob(["\uFEFF" + headers + rows], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ma-qua-tang-${billingCycle}-${quantity}-codes.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "Redeemed":
+        return "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+      case "Expired":
+        return "bg-red-500/20 text-red-400 border border-red-500/30";
+      default:
+        return "bg-amber-500/20 text-amber-400 border border-amber-500/30";
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "Redeemed":
+        return "Đã dùng";
+      case "Expired":
+        return "Hết hạn";
+      default:
+        return "Chưa dùng";
+    }
+  };
+
+  const paidTiers = tiers.filter(t => t.slug !== "free");
+
+  return (
+    <div className="admin-stack">
+      <div className="admin-heading">
+        <div>
+          <p className="admin-kicker">Gói VIP & Quà tặng</p>
+          <h2>Quản lý Mã quà tặng</h2>
+        </div>
+      </div>
+
+      <div className="admin-grid-2 admin-grid-2--wide">
+        {/* List Panel */}
+        <div className="admin-panel">
+          <div className="admin-panel-heading flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h3>Danh sách mã quà tặng</h3>
+              <span>Tổng số: {giftCodes.length} mã trang này</span>
+            </div>
+            
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              <form onSubmit={handleSearchSubmit} className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  placeholder="Tìm mã, lời nhắn..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="bg-transparent border border-gold/30 rounded px-2.5 py-1 text-xs text-[#2a2016] placeholder:text-[#2a2016]/40 focus:border-gold outline-none"
+                />
+                <button
+                  type="submit"
+                  className="bg-[#8c6a34] text-xs text-[#FFFBF2] hover:bg-[#8c6a34]/90 px-3 py-1 rounded transition uppercase font-semibold cursor-pointer"
+                >
+                  Tìm
+                </button>
+              </form>
+
+              <select
+                value={status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="bg-transparent border border-gold/30 rounded px-2.5 py-1 text-xs text-[#2a2016] font-semibold cursor-pointer outline-none"
+              >
+                <option value="" className="bg-[#FFFBF2] text-[#2a2016]">Tất cả trạng thái</option>
+                <option value="Pending" className="bg-[#FFFBF2] text-[#2a2016]">Chưa dùng</option>
+                <option value="Redeemed" className="bg-[#FFFBF2] text-[#2a2016]">Đã dùng</option>
+                <option value="Expired" className="bg-[#FFFBF2] text-[#2a2016]">Hết hạn</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto w-full">
+            {loading ? (
+              <div className="text-center text-gold py-8 font-serif">Đang tải dữ liệu...</div>
+            ) : (
+              <table className="admin-vip-table-new">
+                <thead>
+                  <tr>
+                    <th style={{ width: "25%" }}>Mã Code</th>
+                    <th style={{ width: "20%" }}>Gói VIP</th>
+                    <th style={{ width: "15%" }}>Trạng thái</th>
+                    <th style={{ width: "20%" }}>Chi tiết kích hoạt</th>
+                    <th style={{ width: "20%" }}>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {giftCodes.map((code) => (
+                    <tr key={code._id}>
+                      <td>
+                        <div className="flex flex-col">
+                          <strong 
+                            className="text-gold font-mono text-xs tracking-wider select-all cursor-pointer hover:underline"
+                            onClick={() => copyToClipboard(code.code)}
+                            title="Bấm để copy mã"
+                          >
+                            {code.code}
+                          </strong>
+                          <span className="text-[10px] text-muted block truncate max-w-[180px]" title={code.giftMessage}>
+                            {code.giftMessage || "Mã quà tặng do Admin tạo"}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="font-semibold text-gold block text-xs">
+                          {code.tierId?.name || "VIP Package"}
+                        </span>
+                        <small className="text-[9px] text-muted font-mono block">
+                          {code.billingCycle === "monthly" ? "Hàng tháng" : "Hàng năm"}
+                        </small>
+                      </td>
+                      <td>
+                        <span className={`inline-block text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${getStatusBadgeClass(code.status)}`}>
+                          {getStatusText(code.status)}
+                        </span>
+                        <small className="text-[9px] text-muted block mt-1">
+                          Hạn: {formatDate(code.expiresAt)}
+                        </small>
+                      </td>
+                      <td>
+                        {code.status === "Redeemed" && code.redeemedBy ? (
+                          <div className="text-xs">
+                            <strong className="text-[#2a2016] block">{code.redeemedBy.name}</strong>
+                            <small className="text-muted block text-[9px] truncate max-w-[130px]">{code.redeemedBy.email}</small>
+                            <small className="text-emerald-500 block text-[9px] font-mono">{formatDate(code.redeemedAt || undefined)}</small>
+                          </div>
+                        ) : (
+                          <span className="text-muted text-[10px] italic">Chưa kích hoạt</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(code.code)}
+                            className="bg-[#FFFBF2] text-[#8c6a34] hover:bg-[#8c6a34]/10 border border-[#8c6a34]/30 text-[9px] font-bold px-2 py-1.5 rounded transition uppercase tracking-wider whitespace-nowrap shadow-sm cursor-pointer"
+                          >
+                            Copy
+                          </button>
+                          {code.status !== "Redeemed" && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(code._id)}
+                              className="bg-[#FFFBF2] text-[#4a1f24] hover:bg-[#8c6a34]/10 border border-[#8c6a34]/30 text-[9px] font-bold px-2 py-1.5 rounded transition uppercase tracking-wider whitespace-nowrap shadow-sm cursor-pointer"
+                            >
+                              Xóa
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {giftCodes.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="text-center text-muted py-4">Chưa có mã quà tặng nào.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <button
+                type="button"
+                disabled={page === 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                className="bg-[#FFFBF2] disabled:opacity-50 text-[#8c6a34] hover:bg-[#8c6a34]/10 border border-[#8c6a34]/30 text-xs px-3 py-1.5 rounded transition font-semibold cursor-pointer"
+              >
+                Trước
+              </button>
+              <span className="text-xs text-[#2a2016] font-medium">Trang {page} / {totalPages}</span>
+              <button
+                type="button"
+                disabled={page === totalPages}
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                className="bg-[#FFFBF2] disabled:opacity-50 text-[#8c6a34] hover:bg-[#8c6a34]/10 border border-[#8c6a34]/30 text-xs px-3 py-1.5 rounded transition font-semibold cursor-pointer"
+              >
+                Sau
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Create Panel */}
+        <div className="admin-panel">
+          <div className="admin-panel-heading">
+            <h3>Tạo mã quà tặng hàng loạt</h3>
+          </div>
+
+          <form onSubmit={handleGenerate} className="space-y-4 pt-2">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-gold">Gói VIP áp dụng</label>
+              {paidTiers.length === 0 ? (
+                <div className="text-xs text-muted">Không tìm thấy gói VIP có phí nào.</div>
+              ) : (
+                <select
+                  value={selectedTierId}
+                  onChange={(e) => setSelectedTierId(e.target.value)}
+                  className="bg-transparent border border-gold/30 rounded px-3 py-2 text-xs text-[#2a2016] font-semibold cursor-pointer outline-none"
+                >
+                  {paidTiers.map((tier) => (
+                    <option key={tier._id} value={tier._id} className="bg-[#FFFBF2] text-[#2a2016]">
+                      {tier.name} - ({tier.priceMonthly.toLocaleString("vi-VN")}đ/tháng)
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-gold">Chu kỳ thành viên</label>
+                <select
+                  value={billingCycle}
+                  onChange={(e) => setBillingCycle(e.target.value as any)}
+                  className="bg-transparent border border-gold/30 rounded px-3 py-2 text-xs text-[#2a2016] font-semibold cursor-pointer outline-none"
+                >
+                  <option value="monthly" className="bg-[#FFFBF2] text-[#2a2016]">Hàng tháng (Monthly)</option>
+                  <option value="yearly" className="bg-[#FFFBF2] text-[#2a2016]">Hàng năm (Yearly)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-gold">Hạn dùng mã (ngày)</label>
+                <input
+                  type="number"
+                  value={expiresInDays}
+                  onChange={(e) => setExpiresInDays(Number(e.target.value))}
+                  className="bg-transparent border border-gold/30 rounded px-3 py-2 text-xs text-gold font-mono"
+                  min="1"
+                  max="365"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-gold">Số lượng mã</label>
+                <input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Number(e.target.value))}
+                  className="bg-transparent border border-gold/30 rounded px-3 py-2 text-xs text-gold font-mono"
+                  min="1"
+                  max="1000"
+                  required
+                />
+                <small className="text-[9px] text-muted">Tối đa 1000 mã một lần</small>
+              </div>
+
+              <div className="flex flex-col gap-1.5 justify-end">
+                <div className="flex flex-wrap gap-1 mb-1">
+                  {[10, 50, 100, 500].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setQuantity(preset)}
+                      className={`text-[10px] px-2 py-1 border rounded transition font-mono cursor-pointer ${quantity === preset ? "bg-[#8c6a34] text-white border-[#8c6a34]" : "bg-transparent text-[#8c6a34] border-[#8c6a34]/30 hover:bg-[#8c6a34]/10"}`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-gold">Lời nhắn / Ghi chú</label>
+              <input
+                type="text"
+                placeholder="VD: Mã quà tặng do Admin tạo hàng loạt"
+                value={giftMessage}
+                onChange={(e) => setGiftMessage(e.target.value)}
+                className="bg-transparent border border-gold/30 rounded px-3 py-2 text-xs text-[#2a2016]"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-[#8c6a34] text-[#FFFBF2] hover:bg-[#8c6a34]/90 disabled:opacity-50 font-serif text-sm font-semibold uppercase tracking-wider py-2.5 rounded transition shadow-md cursor-pointer"
+            >
+              {submitting ? "Đang tạo mã..." : "Tạo mã hàng loạt"}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Success Modal / Overlays for newly generated codes */}
+      {generatedCodes.length > 0 && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+        }}>
+          <div style={{
+            background: "#FFFBF2",
+            border: "2px solid #8c6a34",
+            borderRadius: "12px",
+            padding: "24px",
+            width: "90%",
+            maxWidth: "600px",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
+          }} className="flex flex-col gap-4">
+            <div className="text-center">
+              <h3 className="font-serif text-xl text-[#8c6a34] font-bold uppercase">Tạo mã thành công! 🎁</h3>
+              <p className="text-xs text-muted mt-1">Đã tạo thành công {generatedCodes.length} mã quà tặng mới.</p>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold uppercase tracking-wider text-gold">Danh sách mã quà tặng:</label>
+              <textarea
+                readOnly
+                value={generatedCodes.map(c => c.code).join("\n")}
+                onClick={(e) => (e.target as any).select()}
+                className="w-full h-48 bg-transparent border border-gold/30 rounded p-3 text-sm text-[#2a2016] font-mono focus:border-gold outline-none resize-none"
+              />
+              <small className="text-[10px] text-muted">Bấm vào ô trên để chọn toàn bộ mã.</small>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={copyAllGenerated}
+                className="bg-[#8c6a34] text-white hover:bg-[#8c6a34]/90 text-xs font-semibold py-2.5 rounded transition uppercase tracking-wider cursor-pointer"
+              >
+                Copy tất cả
+              </button>
+              <button
+                type="button"
+                onClick={downloadTextFile}
+                className="bg-[#FFFBF2] text-[#8c6a34] border border-[#8c6a34]/50 hover:bg-[#8c6a34]/10 text-xs font-semibold py-2.5 rounded transition uppercase tracking-wider cursor-pointer"
+              >
+                Tải file .TXT
+              </button>
+              <button
+                type="button"
+                onClick={downloadCsvFile}
+                className="bg-[#FFFBF2] text-[#8c6a34] border border-[#8c6a34]/50 hover:bg-[#8c6a34]/10 text-xs font-semibold py-2.5 rounded transition uppercase tracking-wider cursor-pointer"
+              >
+                Tải file .CSV
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setGeneratedCodes([])}
+              className="w-full border border-dashed border-[#8c6a34]/50 hover:bg-[#8c6a34]/10 text-xs text-[#2a2016] font-bold py-2.5 rounded transition uppercase tracking-wider mt-2 cursor-pointer"
+            >
+              Đóng và Quay lại
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LessonRequestsAdminPanel({
+  requests,
+  loading,
+}: {
+  requests: any[];
+  loading: boolean;
+}) {
+  return (
+    <div className="admin-stack">
+      <div className="admin-heading">
+        <div>
+          <p className="admin-kicker">Tổng quan hệ thống</p>
+          <h2>Quản lý Yêu cầu bài học</h2>
+        </div>
+      </div>
+
+      <div className="admin-panel">
+        <div className="admin-panel-heading">
+          <h3>Tất cả yêu cầu soạn thảo từ học sinh Pro</h3>
+          <span>{requests.length} yêu cầu</span>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-20">
+            <div className="inline-block w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-gold italic">Đang tải danh sách yêu cầu...</p>
+          </div>
+        ) : (
+          <div className="admin-table">
+            <div className="admin-table-head">
+              <span>Học sinh</span>
+              <span>Chi tiết yêu cầu</span>
+              <span>Thời kỳ</span>
+              <span>Giáo viên</span>
+              <span>Trạng thái</span>
+              <span>Ngày gửi</span>
+            </div>
+            {requests.map((req) => (
+              <div key={req._id} className="admin-table-row">
+                <span className="flex flex-col justify-center">
+                  <span className="font-semibold text-amber-900 text-sm">
+                    {req.requesterId?.name || "Học viên Pro"}
+                  </span>
+                  <span className="text-[10px] text-stone-500">
+                    {req.requesterId?.email || ""}
+                  </span>
+                </span>
+                <div>
+                  <strong className="text-stone-800 text-sm">{req.title}</strong>
+                  <p className="text-stone-600 text-xs mt-1 line-clamp-3">{req.description}</p>
+                  {req.teacherResponse && (
+                    <div className="mt-2 text-rose-700 bg-rose-50 p-2 rounded border border-rose-200 text-xs">
+                      <strong>Lý do từ chối:</strong> {req.teacherResponse}
+                    </div>
+                  )}
+                  {req.resultPodcastId && (
+                    <div className="mt-2 text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200 text-xs">
+                      <strong>Podcast xuất bản:</strong> {typeof req.resultPodcastId === "object" ? req.resultPodcastId.title : req.resultPodcastId}
+                    </div>
+                  )}
+                </div>
+                <span className="text-stone-700 text-sm">{req.historicalPeriod || "Chưa rõ"}</span>
+                <span className="flex flex-col justify-center">
+                  <span className="font-medium text-stone-800 text-sm">
+                    {req.assignedTeacherId?.name || "Chưa nhận"}
+                  </span>
+                  <span className="text-[10px] text-stone-500">
+                    {req.assignedTeacherId?.email || ""}
+                  </span>
+                </span>
+                <span>
+                  <span className={`inline-block px-2.5 py-1 rounded text-xs font-semibold ${
+                    req.status === "Pending" ? "bg-amber-100 text-amber-800" :
+                    req.status === "Accepted" ? "bg-blue-100 text-blue-800" :
+                    req.status === "InProgress" ? "bg-purple-100 text-purple-800" :
+                    req.status === "Completed" ? "bg-emerald-100 text-emerald-800" :
+                    "bg-rose-100 text-rose-800"
+                  }`}>
+                    {req.status === "Pending" ? "Chờ duyệt" :
+                     req.status === "Accepted" ? "Đã nhận" :
+                     req.status === "InProgress" ? "Đang soạn" :
+                     req.status === "Completed" ? "Hoàn thành" :
+                     "Từ chối"}
+                  </span>
+                </span>
+                <span className="text-stone-500 text-xs">
+                  {new Date(req.createdAt).toLocaleDateString("vi-VN")}
+                </span>
+              </div>
+            ))}
+            {requests.length === 0 && (
+              <p className="admin-empty">
+                Chưa có yêu cầu bài học nào trên hệ thống.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
