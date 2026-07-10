@@ -31,6 +31,21 @@ export const podcastApi = {
     };
   },
 
+  completePodcast: async (podcastId: string) => {
+    const token = await ensureCsrfToken();
+    const response = await api.post(
+      `/progress/podcast/${podcastId}/complete`,
+      {},
+      { headers: { 'x-csrf-token': token } }
+    );
+    return response.data;
+  },
+
+  getProgressDashboard: async () => {
+    const response = await api.get('/progress/dashboard');
+    return response.data;
+  },
+
   // Notes
   getNotes: async (podcastId: string) => {
     const response = await api.get<{ data: PodcastNote[] }>(`/podcast-notes/${podcastId}`);
