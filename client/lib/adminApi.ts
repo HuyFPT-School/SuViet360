@@ -225,6 +225,59 @@ export const adminApi = {
     );
     return response.data;
   },
+  getAdminGiftCodes: async (params: { page?: number; limit?: number; status?: string; search?: string }) => {
+    const response = await api.get<GiftCodesResponse>("/subscriptions/admin/gift-codes", { params });
+    return response.data;
+  },
+  generateBulkGiftCodes: async (data: {
+    tierId: string;
+    billingCycle: "monthly" | "yearly";
+    giftMessage: string;
+    quantity: number;
+    expiresInDays: number;
+  }) => {
+    const token = await ensureCsrfToken();
+    const response = await api.post<{ success: boolean; message: string; data: AdminGiftCode[] }>(
+      "/subscriptions/admin/gift-codes/bulk",
+      data,
+      { headers: { "x-csrf-token": token } }
+    );
+    return response.data;
+  },
+  deleteGiftCode: async (id: string) => {
+    const token = await ensureCsrfToken();
+    const response = await api.delete<{ success: boolean; message: string }>(
+      `/subscriptions/admin/gift-codes/${id}`,
+      { headers: { "x-csrf-token": token } }
+    );
+    return response.data;
+  },
+};
+
+export type AdminGiftCode = {
+  _id: string;
+  code: string;
+  tierId: { _id: string; name: string; slug: string };
+  billingCycle: "monthly" | "yearly";
+  senderId: { _id: string; name: string; email: string };
+  recipientEmail?: string;
+  giftMessage?: string;
+  status: "Pending" | "Redeemed" | "Expired";
+  redeemedBy?: { name: string; email: string } | null;
+  redeemedAt?: string | null;
+  expiresAt: string;
+  createdAt: string;
+};
+
+export type GiftCodesResponse = {
+  success: boolean;
+  data: AdminGiftCode[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
 };
 
 export type Coupon = {

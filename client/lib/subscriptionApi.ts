@@ -121,6 +121,56 @@ export const subscriptionApi = {
     return res.data.data;
   },
 
+  getTeacherLessonRequests: async () => {
+    const res = await api.get<{ success: boolean; data: LessonRequest[] }>("/subscriptions/lesson-requests/teacher");
+    return res.data.data;
+  },
+
+  acceptLessonRequest: async (id: string) => {
+    const token = await getCsrfToken();
+    const res = await api.put<{ success: boolean; data: LessonRequest }>(
+      `/subscriptions/lesson-requests/${id}/accept`,
+      {},
+      { headers: { "x-csrf-token": token } }
+    );
+    return res.data.data;
+  },
+
+  rejectLessonRequest: async (id: string, reason: string) => {
+    const token = await getCsrfToken();
+    const res = await api.put<{ success: boolean; data: LessonRequest }>(
+      `/subscriptions/lesson-requests/${id}/reject`,
+      { reason },
+      { headers: { "x-csrf-token": token } }
+    );
+    return res.data.data;
+  },
+
+  startLessonRequest: async (id: string) => {
+    const token = await getCsrfToken();
+    const res = await api.put<{ success: boolean; data: LessonRequest }>(
+      `/subscriptions/lesson-requests/${id}/in-progress`,
+      {},
+      { headers: { "x-csrf-token": token } }
+    );
+    return res.data.data;
+  },
+
+  completeLessonRequest: async (id: string, resultPodcastId: string) => {
+    const token = await getCsrfToken();
+    const res = await api.put<{ success: boolean; data: LessonRequest }>(
+      `/subscriptions/lesson-requests/${id}/complete`,
+      { resultPodcastId },
+      { headers: { "x-csrf-token": token } }
+    );
+    return res.data.data;
+  },
+
+  getAllLessonRequestsForAdmin: async () => {
+    const res = await api.get<{ success: boolean; data: LessonRequest[] }>("/subscriptions/admin/lesson-requests");
+    return res.data.data;
+  },
+
   // ─── Transaction Status Polling ───────────────────
   getTransactionStatus: async (id: string) => {
     const res = await api.get<{ success: boolean; data: { status: string; transactionId: string } }>(

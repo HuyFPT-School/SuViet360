@@ -266,7 +266,7 @@ const purchaseGift = async (buyerId, recipientIdentifier, tierId, billingCycle, 
       await Notification.create({
         recipient: recipient._id,
         type: "Gift_Received",
-        title: "Bạn nhận được quà tặng! 🎁",
+        title: "Bạn nhận được quà tặng!",
         message: `${buyer.name} đã tặng bạn gói ${tier.name}!${giftMessage ? " Lời nhắn: " + giftMessage : ""}`,
         link: "/subscription",
       });
@@ -323,7 +323,7 @@ const redeemGiftCode = async (userId, code) => {
   await Notification.create({
     recipient: userId,
     type: "Gift_Received",
-    title: "Quà tặng đã được kích hoạt! 🎁",
+    title: "Quà tặng đã được kích hoạt!",
     message: `${giftCode.senderId.name} đã tặng bạn gói ${giftCode.tierId.name}!${giftCode.giftMessage ? " Lời nhắn: " + giftCode.giftMessage : ""}`,
     link: "/subscription",
   });
