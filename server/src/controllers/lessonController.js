@@ -289,6 +289,12 @@ const getLessonById = asyncHandler(async (req, res) => {
 // ─── PUT /api/lessons/:id ─────────────────────────────────────────────
 const updateLesson = asyncHandler(async (req, res) => {
   const lesson = await lessonService.getLessonById(req.params.id);
+
+  // Ownership check (Issue #16)
+  if (lesson.createdBy.toString() !== req.user.id && req.user.role !== "admin") {
+    throw new AppError("You are not authorized to update this lesson", 403);
+  }
+
   const updates = {};
   // Only change status to Pending_Review for non-Published lessons
   // For Published lessons, the service layer saves to pendingDraft instead
@@ -365,6 +371,13 @@ const updateLesson = asyncHandler(async (req, res) => {
 
 // ─── DELETE /api/lessons/:id ──────────────────────────────────────────
 const deleteLesson = asyncHandler(async (req, res) => {
+  const lesson = await lessonService.getLessonById(req.params.id);
+
+  // Ownership check (Issue #16)
+  if (lesson.createdBy.toString() !== req.user.id && req.user.role !== "admin") {
+    throw new AppError("You are not authorized to delete this lesson", 403);
+  }
+
   await lessonService.deleteLesson(req.params.id);
 
   // Invalidate cache

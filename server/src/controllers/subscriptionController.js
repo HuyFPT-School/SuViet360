@@ -126,10 +126,11 @@ const verifyRecipient = asyncHandler(async (req, res) => {
   const { identifier } = req.body;
   if (!identifier) throw new AppError("Vui lòng nhập email hoặc tên người nhận", 400);
 
+  const escapedIdentifier = identifier.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
   const user = await User.findOne({
     $or: [
       { email: identifier.toLowerCase() },
-      { name: { $regex: new RegExp(`^${identifier}$`, "i") } },
+      { name: { $regex: new RegExp(`^${escapedIdentifier}$`, "i") } },
     ],
   }).select("name email avatar");
 

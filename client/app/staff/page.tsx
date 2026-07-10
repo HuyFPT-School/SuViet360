@@ -426,15 +426,18 @@ export default function StaffPage() {
     setPodcastFormMode("edit");
     setIsAddingNewCategory(false);
     setNewCategoryName("");
+    const draft = podcast.pendingDraft;
     setPodcastForm({
-      title: podcast.title,
-      description: podcast.description || "",
-      content: podcast.content || "",
-      level: podcast.level || "Medium",
-      category: podcast.category || "",
-      lessonId: typeof podcast.lessonId === "object" && podcast.lessonId !== null
-        ? (podcast.lessonId as any)._id || ""
-        : (podcast.lessonId as string) || "",
+      title: draft?.title ?? podcast.title,
+      description: draft?.description ?? podcast.description ?? "",
+      content: draft?.content ?? podcast.content ?? "",
+      level: draft?.level ?? podcast.level ?? "Medium",
+      category: draft?.category ?? podcast.category ?? "",
+      lessonId: draft?.lessonId
+        ? (typeof draft.lessonId === "object" ? draft.lessonId._id : draft.lessonId)
+        : (typeof podcast.lessonId === "object" && podcast.lessonId !== null
+          ? (podcast.lessonId as any)._id || ""
+          : (podcast.lessonId as string) || ""),
       thumbnailFile: null,
       audioFile: null,
     });
@@ -1277,6 +1280,20 @@ export default function StaffPage() {
                       Podcast bị từ chối duyệt
                     </h3>
                     <p className="font-medium text-rose-700">{selectedPodcast.reviewFeedback}</p>
+                  </div>
+                )}
+
+                {podcastFormMode === "edit" && selectedPodcast?.pendingDraft && (
+                  <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
+                    <h3 className="font-semibold text-sky-950 mb-1 flex items-center gap-1.5">
+                      <svg className="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Có bản chỉnh sửa đang chờ duyệt
+                    </h3>
+                    <p className="font-medium text-sky-700">
+                      Podcast này đã được xuất bản. Bản sửa đổi của bạn đang ở trạng thái nháp chờ Giáo viên duyệt trước khi áp dụng.
+                    </p>
                   </div>
                 )}
 

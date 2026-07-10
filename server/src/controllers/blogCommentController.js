@@ -64,19 +64,34 @@ const getCommentsByPost = asyncHandler(async (req, res) => {
     throw new AppError("Blog post not found", 404);
   }
 
-  // Fetch root comments
+  // Pagination for comments (Issue #12)
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const skip = (page - 1) * limit;
+
+  // Fetch root comments with pagination
   const rootComments = await BlogComment.find({
     post: postId,
     parentComment: null,
     status: { $ne: "Removed" },
   })
     .populate("author", "name avatar role")
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
 
-  // Fetch replies
+  const totalRootComments = await BlogComment.countDocuments({
+    post: postId,
+    parentComment: null,
+    status: { $ne: "Removed" },
+  });
+
+  const rootCommentIds = rootComments.map(rc => rc._id);
+
+  // Fetch replies only for the current page's root comments
   const replies = await BlogComment.find({
     post: postId,
-    parentComment: { $ne: null },
+    parentComment: { $in: rootCommentIds },
     status: { $ne: "Removed" },
   })
     .populate("author", "name avatar role")
@@ -101,6 +116,12 @@ const getCommentsByPost = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
+    pagination: {
+      total: totalRootComments,
+      page,
+      limit,
+      pages: Math.ceil(totalRootComments / limit),
+    },
     data,
   });
 });

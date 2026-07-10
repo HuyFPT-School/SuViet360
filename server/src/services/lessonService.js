@@ -381,6 +381,51 @@ const deleteLesson = async (id) => {
     }
   }
 
+  // Delete pending draft assets from Cloudinary (Issue #3)
+  if (lesson.pendingDraft) {
+    const draft = lesson.pendingDraft;
+    if (draft.tilemapJsonPublicId) {
+      await deleteCloudinaryResource(draft.tilemapJsonPublicId, "raw");
+    }
+    if (draft.tilesets) {
+      for (const ts of draft.tilesets) {
+        if (ts.publicId) {
+          await deleteCloudinaryResource(ts.publicId, "image");
+        }
+      }
+    }
+    if (draft.animations) {
+      for (const group of draft.animations) {
+        if (group.frames) {
+          for (const frame of group.frames) {
+            if (frame.publicId) {
+              await deleteCloudinaryResource(frame.publicId, "image");
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Clean UserProgress references (Issue #15)
+  const UserProgress = require("../models/UserProgress");
+  await UserProgress.updateMany(
+    {},
+    {
+      $pull: { completedLessons: id, unlockedLessons: id },
+    }
+  );
+  await UserProgress.updateMany(
+    {},
+    {
+      $pull: { quizPerformances: { lessonId: id } }
+    }
+  );
+
+  // Clean XP History (Issue #15)
+  const XPHistory = require("../models/XPHistory");
+  await XPHistory.deleteMany({ source: { $in: ["Lesson", "Quiz"] }, sourceId: id });
+
   await Lesson.findByIdAndDelete(id);
 };
 

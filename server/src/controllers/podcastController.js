@@ -270,10 +270,35 @@ const deletePodcast = asyncHandler(async (req, res) => {
     await deleteCloudinaryResource(podcast.audioPublicId, "video");
   }
 
+  // Delete pending draft assets from Cloudinary (Issue #4)
+  if (podcast.pendingDraft) {
+    if (podcast.pendingDraft.thumbnailPublicId) {
+      await deleteCloudinaryResource(podcast.pendingDraft.thumbnailPublicId, "image");
+    }
+    if (podcast.pendingDraft.audioPublicId) {
+      await deleteCloudinaryResource(podcast.pendingDraft.audioPublicId, "video");
+    }
+  }
+
+  // Clean UserProgress references
+  const UserProgress = require("../models/UserProgress");
+  await UserProgress.updateMany(
+    {},
+    {
+      $pull: { completedPodcasts: req.params.id },
+    }
+  );
+
+  // Clean XP History
+  const XPHistory = require("../models/XPHistory");
+  await XPHistory.deleteMany({ source: "Podcast", sourceId: req.params.id });
+
   // Delete from DB
   await Podcast.findByIdAndDelete(req.params.id);
 
   // Also delete associated notes and comments
+  const PodcastNote = require("../models/PodcastNote");
+  const PodcastComment = require("../models/PodcastComment");
   await PodcastNote.deleteMany({ podcastId: req.params.id });
   await PodcastComment.deleteMany({ podcastId: req.params.id });
 
@@ -571,6 +596,12 @@ const getComments = asyncHandler(async (req, res) => {
   });
 });
 
+// Helper to sanitize html tags (Issue #17)
+const sanitizeInput = (text) => {
+  if (typeof text !== "string") return text;
+  return text.replace(/<[^>]*>/g, "");
+};
+
 // Create Comment (Authenticated)
 const createComment = asyncHandler(async (req, res) => {
   const { podcastId, content } = req.body;
@@ -579,10 +610,12 @@ const createComment = asyncHandler(async (req, res) => {
     throw new AppError("Podcast ID and content are required", 400);
   }
 
+  const sanitizedContent = sanitizeInput(content.trim());
+
   let comment = await PodcastComment.create({
     podcastId,
     userId: req.user.id,
-    content,
+    content: sanitizedContent,
   });
 
   // Populate user details for response
@@ -665,7 +698,7 @@ const updateComment = asyncHandler(async (req, res) => {
     throw new AppError("Not authorized to update this comment", 403);
   }
 
-  comment.content = content;
+  comment.content = sanitizeInput(content.trim());
   await comment.save();
 
   // Populate user info for frontend response consistency
@@ -736,18 +769,26 @@ const approvePodcast = asyncHandler(async (req, res) => {
 
     const followers = await User.find({ followedCategories: podcast.category }).select("_id");
     
-    if (followers.length > 0) {
-      // 1. Tạo các bản ghi thông báo trong Database
-      const notificationPromises = followers.map((follower) =>
-        Notification.create({
+      // 1. Kiểm tra và lọc người dùng đã được thông báo trước đó để tránh trùng lặp (Issue #5)
+      const existing = await Notification.find({
+        type: "New_Podcast",
+        link: `/podcasts/${podcast._id}`
+      }).select("recipient").lean();
+      const existingRecipients = new Set(existing.map(n => n.recipient.toString()));
+
+      const newFollowers = followers.filter(f => !existingRecipients.has(f._id.toString()));
+
+      if (newFollowers.length > 0) {
+        // 2. Batch insert thông báo bằng insertMany để tăng tốc độ (Issue #23)
+        const docs = newFollowers.map((follower) => ({
           recipient: follower._id,
           type: "New_Podcast",
           title: "Bài học âm thanh mới!",
           message: `Chủ đề "${podcast.category}" vừa có podcast mới: "${podcast.title}"`,
           link: `/podcasts/${podcast._id}`,
-        })
-      );
-      await Promise.all(notificationPromises);
+        }));
+        await Notification.insertMany(docs);
+      }
 
       // 2. Publish tín hiệu sang Redis Pub/Sub để Socket Server truyền tải thời gian thực
       if (isRedisReady()) {

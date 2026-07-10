@@ -71,18 +71,23 @@ const deleteRefreshToken = async (token) => {
 
 const revokeAllRefreshTokensForUser = async (userId) => {
   const client = ensureRedisClient();
-  const keys = await client.keys("refresh:*");
-  if (!keys || keys.length === 0) return;
-
-  for (const k of keys) {
-    try {
-      const v = await client.get(k);
-      if (v === String(userId)) {
-        await client.del(k);
+  try {
+    for await (const key of client.scanIterator({
+      MATCH: "refresh:*",
+      COUNT: 100,
+    })) {
+      try {
+        const v = await client.get(key);
+        if (v === String(userId)) {
+          await client.del(key);
+        }
+      } catch (err) {
+        // ignore per-key errors
       }
-    } catch (e) {
-      // ignore per-key errors
     }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("Redis scan failed:", error.message);
   }
 };
 
