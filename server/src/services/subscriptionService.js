@@ -73,7 +73,15 @@ const activateSubscription = async (userId, tierId, billingCycle, giftedBy = nul
 
   // Calculate end date
   const now = new Date();
-  const endDate = new Date(now);
+  let baseDate = new Date();
+
+  // Check if user already has an active subscription of the SAME tier to extend the period
+  const userObj = await User.findById(userId);
+  if (userObj && userObj.subscriptionTier === tier.name && userObj.subscriptionExpiry && userObj.subscriptionExpiry > now) {
+    baseDate = new Date(userObj.subscriptionExpiry);
+  }
+
+  const endDate = new Date(baseDate);
   if (billingCycle === "monthly") {
     endDate.setMonth(endDate.getMonth() + 1);
   } else {

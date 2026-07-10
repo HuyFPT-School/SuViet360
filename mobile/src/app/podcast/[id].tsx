@@ -31,6 +31,7 @@ export default function PodcastDetailScreen() {
   const [commentText, setCommentText] = useState('');
   const [noteText, setNoteText] = useState('');
   const [audioReady, setAudioReady] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   const player = useAudioPlayer(
     podcast?.audioUrl ? { uri: podcast.audioUrl } : null,
@@ -51,12 +52,45 @@ export default function PodcastDetailScreen() {
     return () => {
       player?.pause();
     };
-  }, [id]);
+  }, [id, user]);
+
+  useEffect(() => {
+    if (status?.didJustFinish && podcast) {
+      handleAudioEnded();
+    }
+  }, [status?.didJustFinish, podcast]);
+
+  const handleAudioEnded = async () => {
+    if (!user || !id) return;
+    try {
+      const res = await podcastApi.completePodcast(id);
+      if (res.success) {
+        setIsCompleted(true);
+        if (res.data?.xpGained && res.data.xpGained > 0) {
+          Alert.alert(
+            'Chúc mừng!',
+            `Bạn đã nghe xong podcast và nhận được +${res.data.xpGained} XP tích lũy.`
+          );
+        }
+      }
+    } catch (err) {
+      console.error('Error completing podcast on mobile:', err);
+    }
+  };
 
   const loadPodcast = async () => {
     try {
       const data = await podcastApi.getById(id!);
       setPodcast(data.podcast);
+      if (user) {
+        try {
+          const progData = await podcastApi.getProgressDashboard();
+          const completedPodcasts = progData.data?.completedPodcasts || [];
+          setIsCompleted(completedPodcasts.includes(id!));
+        } catch {
+          // Silent progress check fail
+        }
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -135,7 +169,15 @@ export default function PodcastDetailScreen() {
           <View style={styles.podcastIconLarge}>
             <Ionicons name="headset-outline" size={40} color={Colors.light.goldLight} />
           </View>
-          <Text style={styles.podcastTitle}>{podcast.title}</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.podcastTitle}>{podcast.title}</Text>
+            {isCompleted && (
+              <View style={styles.completedBadge}>
+                <Ionicons name="checkmark-circle" size={14} color="#065f46" />
+                <Text style={styles.completedBadgeText}>Đã nghe xong</Text>
+              </View>
+            )}
+          </View>
           {podcast.description ? (
             <Text style={styles.podcastDesc}>{podcast.description}</Text>
           ) : null}
@@ -248,6 +290,28 @@ export default function PodcastDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  titleRow: {
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+  },
+  completedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#d1fae5',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+  },
+  completedBadgeText: {
+    fontSize: FontSizes.xs - 2,
+    fontWeight: '700',
+    color: '#065f46',
+    textTransform: 'uppercase',
+  },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   errorText: { fontFamily: 'Cormorant Garamond', fontSize: FontSizes.md, color: Colors.light.error },
   scrollContent: { paddingBottom: 40 },

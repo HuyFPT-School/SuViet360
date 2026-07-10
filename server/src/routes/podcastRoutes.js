@@ -47,6 +47,7 @@ router.use(protect);
 // Teacher/Admin review routes
 router.put("/podcasts/:id/approve", authorize("admin", "teacher"), approvePodcast);
 router.put("/podcasts/:id/reject", authorize("admin", "teacher"), rejectPodcast);
+router.get("/staff/podcasts/:id", authorize("admin", "staff", "teacher"), getStaffPodcastById);
 
 // Notes (User specific)
 router.get("/podcast-notes/:podcastId", getNotes);
@@ -68,7 +69,6 @@ router.post("/upload/audio", upload.single("audio"), uploadAudioOnly);
 
 // Podcast CRUD
 router.get("/staff/podcasts", getStaffPodcasts);
-router.get("/staff/podcasts/:id", getStaffPodcastById);
 
 router.post(
   "/staff/podcasts",

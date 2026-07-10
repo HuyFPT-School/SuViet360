@@ -94,10 +94,16 @@ const createLesson = asyncHandler(async (req, res) => {
     throw new AppError("Title and content are required", 400);
   }
 
-  const spawnX =
-    spawnPoint?.x !== undefined ? Number(spawnPoint.x) : NaN;
-  const spawnY =
-    spawnPoint?.y !== undefined ? Number(spawnPoint.y) : NaN;
+  let spawnX = spawnPoint?.x !== undefined ? Number(spawnPoint.x) : NaN;
+  let spawnY = spawnPoint?.y !== undefined ? Number(spawnPoint.y) : NaN;
+
+  // Fallback for flat fields from multipart form-data (e.g. spawnPoint[x])
+  if (isNaN(spawnX) && req.body["spawnPoint[x]"] !== undefined) {
+    spawnX = Number(req.body["spawnPoint[x]"]);
+  }
+  if (isNaN(spawnY) && req.body["spawnPoint[y]"] !== undefined) {
+    spawnY = Number(req.body["spawnPoint[y]"]);
+  }
 
   if (isNaN(spawnX) || isNaN(spawnY)) {
     throw new AppError("Valid spawnPoint.x and spawnPoint.y are required", 400);
@@ -296,12 +302,19 @@ const updateLesson = asyncHandler(async (req, res) => {
   if (req.body.content !== undefined) updates.content = req.body.content;
 
   // Spawn point
-  if (req.body.spawnPoint?.x !== undefined) {
-    updates.spawnX = Number(req.body.spawnPoint.x);
+  let spawnX = req.body.spawnPoint?.x !== undefined ? Number(req.body.spawnPoint.x) : undefined;
+  let spawnY = req.body.spawnPoint?.y !== undefined ? Number(req.body.spawnPoint.y) : undefined;
+
+  // Fallback for flat fields from multipart form-data (e.g. spawnPoint[x])
+  if (spawnX === undefined && req.body["spawnPoint[x]"] !== undefined) {
+    spawnX = Number(req.body["spawnPoint[x]"]);
   }
-  if (req.body.spawnPoint?.y !== undefined) {
-    updates.spawnY = Number(req.body.spawnPoint.y);
+  if (spawnY === undefined && req.body["spawnPoint[y]"] !== undefined) {
+    spawnY = Number(req.body["spawnPoint[y]"]);
   }
+
+  if (spawnX !== undefined && !isNaN(spawnX)) updates.spawnX = spawnX;
+  if (spawnY !== undefined && !isNaN(spawnY)) updates.spawnY = spawnY;
 
   // Tilemap JSON replacement
   if (req.files?.tilemapJson?.[0]) {

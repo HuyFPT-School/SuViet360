@@ -118,9 +118,18 @@ const resolveReport = asyncHandler(async (req, res) => {
         await BlogPost.findByIdAndDelete(post._id);
         // Delete all comments
         await BlogComment.deleteMany({ post: post._id });
-        // Delete likes/reports
+        // Delete likes
         await BlogLike.deleteMany({ targetType: "Post", targetId: post._id });
-        await BlogReport.deleteMany({ targetType: "Post", targetId: post._id });
+        
+        // Resolve all other pending reports for this post in the audit logs
+        await BlogReport.updateMany(
+          { targetType: "Post", targetId: post._id, _id: { $ne: report._id } },
+          {
+            status: "Resolved_Deleted",
+            resolvedBy: req.user.id,
+            resolvedAt: new Date()
+          }
+        );
       }
     } else {
       const comment = await BlogComment.findById(report.targetId);
@@ -138,14 +147,32 @@ const resolveReport = asyncHandler(async (req, res) => {
           });
 
           await BlogLike.deleteMany({ targetType: "Comment", targetId: { $in: [comment._id, ...replyIds] } });
-          await BlogReport.deleteMany({ targetType: "Comment", targetId: { $in: [comment._id, ...replyIds] } });
+          
+          // Resolve all other pending reports for this comment and its replies in the audit logs
+          await BlogReport.updateMany(
+            { targetType: "Comment", targetId: { $in: [comment._id, ...replyIds] }, _id: { $ne: report._id } },
+            {
+              status: "Resolved_Deleted",
+              resolvedBy: req.user.id,
+              resolvedAt: new Date()
+            }
+          );
 
           deletedCount = 1 + replies.length;
         } else {
           // Delete single reply
           await BlogComment.findByIdAndDelete(comment._id);
           await BlogLike.deleteMany({ targetType: "Comment", targetId: comment._id });
-          await BlogReport.deleteMany({ targetType: "Comment", targetId: comment._id });
+          
+          // Resolve all other pending reports for this single reply in the audit logs
+          await BlogReport.updateMany(
+            { targetType: "Comment", targetId: comment._id, _id: { $ne: report._id } },
+            {
+              status: "Resolved_Deleted",
+              resolvedBy: req.user.id,
+              resolvedAt: new Date()
+            }
+          );
           deletedCount = 1;
         }
 
