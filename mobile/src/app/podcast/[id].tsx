@@ -543,35 +543,12 @@ export default function PodcastDetailScreen() {
               (hasGame ? (
                 <View style={S.gs}>
                   <Text style={S.gd}>
-                    Trò chơi 2D tương tác đi kèm bài học. Di chuyển nhân vật để
-                    vượt qua thử thách.
+                    Trò chơi 2D tương tác đi kèm bài học. Nhấn để chơi ngay!
                   </Text>
                   <View style={S.gp}>
-                    <Ionicons
-                      name="game-controller"
-                      size={48}
-                      color={Colors.light.gold}
-                    />
-                    <Text style={S.gpt}>
-                      {linkedLesson?.title || "Trò chơi"}
-                    </Text>
-                    {linkedLesson?.game?.tilemapJsonUrl ? (
-                      <>
-                        <Text style={S.gi}>
-                          Bản đồ:{" "}
-                          {linkedLesson.game.tilemapJsonUrl.split("/").pop()}
-                        </Text>
-                        <Text style={S.gi}>
-                          Tilesets: {linkedLesson.game.tilesets?.length || 0}
-                        </Text>
-                        <Text style={S.gn}>
-                          Tính năng trò chơi đang được tối ưu cho mobile. Vui
-                          lòng sử dụng web để trải nghiệm đầy đủ.
-                        </Text>
-                      </>
-                    ) : (
-                      <Text style={S.gn}>Dữ liệu trò chơi chưa sẵn sàng.</Text>
-                    )}
+                    <Ionicons name="game-controller" size={48} color={Colors.light.gold} />
+                    <Text style={S.gpt}>{linkedLesson?.title || "Trò chơi"}</Text>
+                    <GoldButton title="🎮 Chơi ngay" onPress={() => router.push(`/game/${linkedLesson?._id}` as any)} style={{ marginTop: 12 }} />
                   </View>
                 </View>
               ) : (

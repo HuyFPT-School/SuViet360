@@ -163,7 +163,7 @@ export default function AdminScreen() {
     );
   }
 
-  const formatMoney = (n: number) => n.toLocaleString('vi-VN') + '₫';
+  const formatMoney = (n?: number | null) => (n ?? 0).toLocaleString('vi-VN') + '₫';
 
   return (
     <PageBackground style={styles.container}>

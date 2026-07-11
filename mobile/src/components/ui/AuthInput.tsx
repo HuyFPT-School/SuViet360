@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, TextInputProps } from 'react-native';
-import { Colors, BorderRadius, FontSizes } from '@/constants/theme';
+import { Colors, BorderRadius, FontSizes, Spacing } from '@/constants/theme';
 
 interface AuthInputProps extends TextInputProps {
   label: string;
@@ -28,14 +28,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    width: '70%',
-    fontSize: FontSizes.md,
-    fontWeight: '600',
-    color: Colors.light.authLabel,
-    fontFamily: 'Cinzel',
+    width: '100%',
+    color: Colors.light.textMain,
+    fontSize: FontSizes.sm, 
+    fontWeight: '600', 
+    marginTop: Spacing.sm, 
+    marginBottom: 4 
   },
+  
   input: {
-    width: '70%',
+    width: '100%',
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
     borderColor: Colors.light.authBorder,
@@ -49,7 +51,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.error,
   },
   error: {
-    width: '70%',
+    width: '100%',
     fontSize: FontSizes.sm,
     color: Colors.light.error,
   },

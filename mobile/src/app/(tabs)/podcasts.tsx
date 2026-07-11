@@ -13,10 +13,8 @@ import { useRouter } from 'expo-router';
 import { PageBackground } from '@/components/PageBackground';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { podcastApi } from '@/services/podcastApi';
-import { lessonApi } from '@/services/lessonApi';
 import { notificationApi } from '@/services/notificationApi';
 import type { Podcast } from '@/types/podcast';
-import type { Lesson } from '@/types/lesson';
 import { useAuth } from '@/hooks/useAuth';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
 import { formatDuration, formatDate } from '@/utils/format';
@@ -25,12 +23,11 @@ type JourneyItem = {
   _id: string;
   title: string;
   description: string;
-  type: 'podcast' | 'lesson';
+  type: 'podcast';
   category: string;
   level: string;
   duration: number;
   createdAt: string;
-  hasGame: boolean;
   audioUrl?: string;
 };
 
@@ -51,19 +48,13 @@ export default function HanhTrinhScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const [pd, ld] = await Promise.all([podcastApi.getAll(), lessonApi.getAll()]);
+        const pd = await podcastApi.getAll();
         const pItems: JourneyItem[] = (pd.podcasts || []).map((p: Podcast) => ({
           _id: p._id, title: p.title, description: p.description || p.content || '',
           type: 'podcast' as const, category: p.category || 'Khác', level: p.level || '',
-          duration: p.duration || 0, createdAt: p.createdAt, hasGame: false, audioUrl: p.audioUrl,
+          duration: p.duration || 0, createdAt: p.createdAt, audioUrl: p.audioUrl,
         }));
-        const lItems: JourneyItem[] = (ld.lessons || []).map((l: Lesson) => ({
-          _id: l._id, title: l.title, description: l.content || '',
-          type: 'lesson' as const, category: 'Bài Học Tương Tác', level: '',
-          duration: 0, createdAt: l.createdAt, hasGame: !!l.game,
-        }));
-        const merged = [...pItems, ...lItems];
-        setItems(merged);
+        setItems(pItems);
       } catch (err: any) { setError(err.message); }
       finally { setLoading(false); setRefreshing(false); }
     })();
@@ -126,10 +117,10 @@ export default function HanhTrinhScreen() {
                 </View>
               </TouchableOpacity>
               {isOpen && <View style={S.el}>{eps.map((ep) => (
-                <TouchableOpacity key={`${ep.type}-${ep._id}`} style={S.ec} onPress={() => router.push(ep.type === 'podcast' ? `/podcast/${ep._id}` as any : `/lesson/${ep._id}` as any)}>
-                  <View style={S.eic}><Ionicons name={ep.type === 'podcast' ? 'headset-outline' : 'game-controller-outline'} size={18} color={Colors.light.goldDark} /></View>
+                <TouchableOpacity key={ep._id} style={S.ec} onPress={() => router.push(`/podcast/${ep._id}` as any)}>
+                  <View style={S.eic}><Ionicons name="headset-outline" size={18} color={Colors.light.goldDark} /></View>
                   <View style={S.ebd}>
-                    <View style={S.eto}><Text style={S.etn} numberOfLines={2}>{ep.title}</Text><View style={[S.etb, ep.type === 'podcast' ? S.etbp : S.etbl]}><Text style={S.etbt}>{ep.type === 'podcast' ? 'Podcast' : 'Game'}</Text></View></View>
+                    <View style={S.eto}><Text style={S.etn} numberOfLines={2}>{ep.title}</Text><View style={[S.etb, S.etbp]}><Text style={S.etbt}>Podcast</Text></View></View>
                     {!!ep.description && <Text style={S.edsc} numberOfLines={2}>{ep.description}</Text>}
                     <View style={S.em}><Text style={S.eml}>{ep.level ? tl(ep.level) : ''}</Text>{ep.duration > 0 && <Text style={S.emd}>{formatDuration(ep.duration)}</Text>}<Text style={S.emdt}>{formatDate(ep.createdAt)}</Text></View>
                   </View>

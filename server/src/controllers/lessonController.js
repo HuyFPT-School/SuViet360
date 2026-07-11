@@ -150,8 +150,16 @@ const createLesson = asyncHandler(async (req, res) => {
 // ─── GET /api/lessons ─────────────────────────────────────────────────
 const getAllLessons = asyncHandler(async (req, res) => {
   let showAll = false;
-  const token = getCookie(req, "token");
-  if (token) {
+  // 1. If protect middleware already ran, req.user is set
+  if (req.user && ["admin", "staff", "teacher"].includes(req.user.role)) {
+    showAll = true;
+  } else {
+    // 2. Fallback: check cookie or Authorization header
+    let token = getCookie(req, "token");
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+    if (token) {
     try {
       const decoded = jwt.verify(token, env.jwtSecret);
       const user = await User.findById(decoded.id);
@@ -160,6 +168,7 @@ const getAllLessons = asyncHandler(async (req, res) => {
       }
     } catch (err) {
       // Ignore
+    }
     }
   }
 

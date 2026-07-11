@@ -56,6 +56,20 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
+  const ADMIN_LINKS: Array<{
+    label: string;
+    route: string;
+    icon: IoniconName;
+    roles: string[];
+  }> = [
+    { label: 'Kiểm duyệt', route: '/teacher', icon: 'shield-checkmark-outline', roles: ['teacher', 'admin'] },
+    { label: 'Quản lý', route: '/staff', icon: 'settings-outline', roles: ['staff', 'admin'] },
+  ];
+
+  const visibleAdminLinks = ADMIN_LINKS.filter(
+    (link) => user && link.roles.includes(user.role)
+  );
+
   return (
     <PageBackground style={styles.container}>
       {/* Header */}
@@ -156,6 +170,27 @@ export default function HomeScreen() {
             ))}
           </View>
         </View>
+
+        {/* Admin Links (role-based) */}
+        {visibleAdminLinks.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quản Trị</Text>
+            <View style={styles.quickLinks}>
+              {visibleAdminLinks.map((link) => (
+                <TouchableOpacity
+                  key={link.route}
+                  style={styles.quickLink}
+                  onPress={() => router.push(link.route as any)}
+                >
+                  <View style={[styles.quickLinkIcon, styles.adminQuickLinkIcon]}>
+                    <Ionicons name={link.icon} size={32} color={Colors.light.goldDark} />
+                  </View>
+                  <Text style={styles.quickLinkText}>{link.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
       </ScrollView>
     </PageBackground>
   );
@@ -357,6 +392,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(201, 161, 90, 0.14)',
+  },
+  adminQuickLinkIcon: {
+    backgroundColor: 'rgba(139, 105, 20, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 161, 90, 0.3)',
   },
   quickLinkText: {
     fontFamily: 'Cinzel',

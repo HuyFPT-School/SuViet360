@@ -60,8 +60,13 @@ export const adminApi = {
 
   // ─── Lessons ───────────────────────────────────────
   getLessons: async (): Promise<AdminLesson[]> => {
-    const res = await api.get<{ success: boolean; lessons: AdminLesson[] }>('/lessons');
+    const res = await api.get<{ success: boolean; lessons: AdminLesson[] }>('/lessons/staff');
     return res.data.lessons;
+  },
+
+  getLessonById: async (id: string): Promise<AdminLesson> => {
+    const res = await api.get<{ success: boolean; lesson: AdminLesson }>(`/lessons/${id}`);
+    return res.data.lesson;
   },
 
   createLesson: async (formData: FormData, onUploadProgress?: (e: any) => void) => {
@@ -92,13 +97,18 @@ export const adminApi = {
 
   // ─── Podcasts ──────────────────────────────────────
   getPodcasts: async () => {
-    const res = await api.get('/podcasts');
+    const res = await api.get('/staff/podcasts');
     return res.data.data || res.data.podcasts || [];
+  },
+
+  getPodcastById: async (id: string) => {
+    const res = await api.get(`/staff/podcasts/${id}`);
+    return res.data.data;
   },
 
   createPodcast: async (formData: FormData, onUploadProgress?: (e: any) => void) => {
     const token = await ensureCsrfToken();
-    const res = await api.post('/podcasts', formData, {
+    const res = await api.post('/staff/podcasts', formData, {
       headers: { 'x-csrf-token': token, 'Content-Type': 'multipart/form-data' },
       onUploadProgress,
     });
@@ -107,7 +117,7 @@ export const adminApi = {
 
   updatePodcast: async (id: string, formData: FormData, onUploadProgress?: (e: any) => void) => {
     const token = await ensureCsrfToken();
-    const res = await api.put(`/podcasts/${id}`, formData, {
+    const res = await api.put(`/staff/podcasts/${id}`, formData, {
       headers: { 'x-csrf-token': token, 'Content-Type': 'multipart/form-data' },
       onUploadProgress,
     });
@@ -116,7 +126,7 @@ export const adminApi = {
 
   deletePodcast: async (id: string) => {
     const token = await ensureCsrfToken();
-    const res = await api.delete(`/podcasts/${id}`, {
+    const res = await api.delete(`/staff/podcasts/${id}`, {
       headers: { 'x-csrf-token': token },
     });
     return res.data;
