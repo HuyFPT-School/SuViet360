@@ -671,7 +671,31 @@ export default function SubscriptionPage() {
                           <div className="request-meta">
                             <span>Thời kỳ: <strong>{req.historicalPeriod}</strong></span>
                             <span>Ngày gửi: {new Date(req.createdAt).toLocaleDateString("vi-VN")}</span>
+                            {req.estimatedCompletionDate && (
+                              <span className="block mt-1 text-gold">
+                                Dự kiến hoàn tất: <strong>{new Date(req.estimatedCompletionDate).toLocaleDateString("vi-VN")}</strong>
+                              </span>
+                            )}
                           </div>
+
+                          {req.pedagogicalNotes && (
+                            <div className="mt-3 p-2.5 bg-blue-950/40 border border-blue-900/60 rounded text-xs">
+                              <p className="text-blue-400 font-semibold uppercase mb-0.5">Nhận định sư phạm của Giáo viên:</p>
+                              <p className="text-blue-100/95 italic">{req.pedagogicalNotes}</p>
+                            </div>
+                          )}
+
+                          {req.needsGameCreation && (
+                            <div className="mt-3 p-2.5 bg-purple-950/40 border border-purple-900/60 rounded text-xs flex justify-between items-center">
+                              <span className="text-purple-300 font-semibold">Thiết kế Game/Bài học đi kèm:</span>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                req.gameCreationStatus === "Completed" ? "bg-emerald-800 text-emerald-100" : "bg-purple-800 text-purple-100"
+                              }`}>
+                                {req.gameCreationStatus === "Completed" ? "Đã thiết kế" : "Đang yêu cầu Staff"}
+                              </span>
+                            </div>
+                          )}
+
                           {req.teacherResponse && (
                             <div className="mt-4 p-3 bg-amber-950/40 border border-amber-900 rounded text-sm">
                               <p className="text-gold font-semibold text-xs uppercase mb-1">
@@ -680,10 +704,11 @@ export default function SubscriptionPage() {
                               <p className="text-amber-100/90 italic">{req.teacherResponse}</p>
                             </div>
                           )}
-                          {req.resultPodcastId && (
+
+                          {req.status === "Completed" && req.resultPodcastId && (
                             <div className="mt-4 p-3 bg-emerald-950/40 border border-emerald-900 rounded text-sm">
                               <p className="text-emerald-400 font-semibold text-xs uppercase mb-1">
-                                Podcast đã xuất bản:
+                                Podcast riêng tư của bạn (Chỉ duy nhất tài khoản bạn được nghe):
                               </p>
                               <a
                                 href={`/podcasts/${typeof req.resultPodcastId === "object" ? req.resultPodcastId._id : req.resultPodcastId}`}

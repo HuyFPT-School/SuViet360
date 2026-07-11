@@ -113,9 +113,9 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-userSchema.pre("save", async function preSave(next) {
+userSchema.pre("save", async function preSave() {
   if (!this.isModified("password")) {
-    return next();
+    return;
   }
 
   try {
@@ -123,9 +123,8 @@ userSchema.pre("save", async function preSave(next) {
     if (!this.isNew) {
       this.passwordChangedAt = Date.now() - 1000;
     }
-    next();
   } catch (err) {
-    next(err);
+    throw err;
   }
 });
 

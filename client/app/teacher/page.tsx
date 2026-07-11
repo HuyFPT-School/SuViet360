@@ -81,7 +81,7 @@ export default function TeacherPage() {
   const [feedbackError, setFeedbackError] = useState("");
 
   // New LessonRequest states
-  const [activeDashboardTab, setActiveDashboardTab] = useState<"reviews" | "requests">("reviews");
+  const [activeDashboardTab, setActiveDashboardTab] = useState<"reviews" | "requests" | "podcasts">("reviews");
   const [requests, setRequests] = useState<LessonRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [rejectingRequestId, setRejectingRequestId] = useState<string | null>(null);
@@ -89,6 +89,32 @@ export default function TeacherPage() {
   const [completingRequestId, setCompletingRequestId] = useState<string | null>(null);
   const [selectedPodcastId, setSelectedPodcastId] = useState("");
   const [availablePodcasts, setAvailablePodcasts] = useState<any[]>([]);
+
+  // Refined Request parameters
+  const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
+  const [needsGameCreation, setNeedsGameCreation] = useState(false);
+  const [pedagogicalNotes, setPedagogicalNotes] = useState("");
+  const [estimatedCompletionDate, setEstimatedCompletionDate] = useState("");
+
+  // Podcast CRUD states (used for accept and edit modals)
+  const [editingPodcastId, setEditingPodcastId] = useState<string | null>(null);
+  const [lessons, setLessons] = useState<any[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [podcasts, setPodcasts] = useState<any[]>([]);
+  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
+  const emptyPodcastForm = {
+    title: "",
+    description: "",
+    content: "",
+    level: "Medium",
+    category: "",
+    lessonId: "",
+    thumbnailFile: null as File | null,
+    audioFile: null as File | null,
+  };
+  const [podcastForm, setPodcastForm] = useState(emptyPodcastForm);
 
   const selectedItem = useMemo(
     () => items.find((item) => item.id === selectedId) ?? null,
@@ -153,6 +179,8 @@ export default function TeacherPage() {
         await loadItems();
       } else {
         await loadRequests();
+        await loadLessonsList();
+        await loadPodcasts();
       }
     };
 
@@ -162,18 +190,68 @@ export default function TeacherPage() {
     };
   }, [refreshUser, activeDashboardTab]);
 
-  const handleAcceptRequest = async (requestId: string) => {
+  const handleAcceptRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFeedbackError("");
+
+    if (!podcastForm.title.trim()) {
+      setFeedbackError("Vui lòng nhập tiêu đề podcast.");
+      return;
+    }
+    if (!podcastForm.thumbnailFile || !podcastForm.audioFile) {
+      setFeedbackError("Vui lòng tải lên đầy đủ tệp ảnh và âm thanh cho podcast.");
+      return;
+    }
+
     setSaving(true);
     setMessage("");
     setError("");
+    setUploadProgress(0);
     try {
-      await subscriptionApi.acceptLessonRequest(requestId);
-      setMessage("Đã nhận yêu cầu soạn bài thành công!");
+      const formData = new FormData();
+      formData.append("title", podcastForm.title.trim());
+      formData.append("description", podcastForm.description.trim());
+      formData.append("content", podcastForm.content.trim());
+      formData.append("level", podcastForm.level);
+      formData.append("category", podcastForm.category.trim() || "Yêu cầu VIP");
+      formData.append("thumbnail", podcastForm.thumbnailFile);
+      formData.append("audio", podcastForm.audioFile);
+
+      const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+      const csrfToken = csrfRes.data.data.csrfToken;
+
+      const uploadRes = await api.post<{ success: boolean; data: { _id: string } }>(
+        "/staff/podcasts",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data", "x-csrf-token": csrfToken },
+          onUploadProgress: (progressEvent: any) => {
+            if (progressEvent.total) {
+              const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              setUploadProgress(percent);
+            }
+          }
+        }
+      );
+
+      const newPodcastId = uploadRes.data.data._id;
+
+      await subscriptionApi.acceptLessonRequest(acceptingRequestId!, {
+        needsGameCreation,
+        pedagogicalNotes: pedagogicalNotes.trim(),
+        estimatedCompletionDate: estimatedCompletionDate || undefined,
+        resultPodcastId: newPodcastId,
+      });
+
+      setMessage("Đã nhận yêu cầu soạn bài và tạo podcast thành công!");
+      setAcceptingRequestId(null);
+      resetPodcastForm();
       await loadRequests();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Lỗi khi nhận yêu cầu.");
+      setFeedbackError(err.response?.data?.message || "Lỗi khi nhận yêu cầu và tải lên podcast.");
     } finally {
       setSaving(false);
+      setUploadProgress(null);
     }
   };
 
@@ -216,6 +294,8 @@ export default function TeacherPage() {
 
   const handleCompleteRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFeedbackError("");
+
     if (!selectedPodcastId) {
       setFeedbackError("Vui lòng chọn podcast liên kết.");
       return;
@@ -230,9 +310,198 @@ export default function TeacherPage() {
       setSelectedPodcastId("");
       await loadRequests();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Lỗi khi hoàn thành yêu cầu.");
+      setFeedbackError(err.response?.data?.message || "Lỗi khi hoàn thành yêu cầu.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ─── Podcast CRUD Methods for Teacher ────────────────────────────────
+  const loadPodcasts = async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: any[] }>("/podcasts");
+      setPodcasts(res.data.data || []);
+    } catch {
+      // Ignore
+    }
+  };
+
+  const loadLessonsList = async () => {
+    try {
+      const res = await api.get<{ success: boolean; lessons: any[] }>("/lessons");
+      setLessons(res.data.lessons || []);
+    } catch {
+      // Ignore
+    }
+  };
+
+  const categoriesList = useMemo(() => {
+    const set = new Set<string>();
+    podcasts.forEach((p) => {
+      if (p.category && p.category.trim()) {
+        set.add(p.category.trim());
+      }
+    });
+    return Array.from(set);
+  }, [podcasts]);
+
+  const handleRenameCategoryPrompt = async () => {
+    const oldCat = podcastForm.category;
+    if (!oldCat) return;
+
+    const newCat = window.prompt(`Nhập tên mới cho chủ đề "${oldCat}":`, oldCat);
+    if (!newCat || newCat.trim() === "" || newCat.trim() === oldCat) return;
+
+    if (window.confirm(`Bạn có chắc chắn muốn đổi tên chủ đề từ "${oldCat}" thành "${newCat.trim()}" cho TẤT CẢ các podcast liên quan?`)) {
+      setSaving(true);
+      setFeedbackError("");
+      try {
+        const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+        const csrfToken = csrfRes.data.data.csrfToken;
+
+        await api.put(
+          "/staff/categories/rename",
+          { oldCategory: oldCat, newCategory: newCat.trim() },
+          { headers: { "x-csrf-token": csrfToken } }
+        );
+
+        setPodcastFormField("category", newCat.trim());
+        await loadPodcasts();
+      } catch (err: any) {
+        setFeedbackError("Lỗi đổi tên chủ đề: " + (err.response?.data?.message || err.message));
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
+  const handleDeleteCategoryPrompt = async () => {
+    const catToDelete = podcastForm.category;
+    if (!catToDelete) return;
+
+    if (
+      window.confirm(
+        `Bạn có chắc chắn muốn xóa chủ đề "${catToDelete}"? Tất cả các podcast thuộc chủ đề này sẽ được chuyển sang chủ đề mặc định "Chủ đề chung".`
+      )
+    ) {
+      setSaving(true);
+      setFeedbackError("");
+      try {
+        const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+        const csrfToken = csrfRes.data.data.csrfToken;
+
+        await api.delete(
+          "/staff/categories/delete",
+          {
+            headers: { "x-csrf-token": csrfToken },
+            data: { category: catToDelete }
+          }
+        );
+
+        setPodcastFormField("category", "");
+        await loadPodcasts();
+      } catch (err: any) {
+        setFeedbackError("Không thể xóa chủ đề: " + (err.response?.data?.message || err.message));
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
+  const setPodcastFormField = (field: string, value: any) => {
+    setPodcastForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const resetPodcastForm = () => {
+    setPodcastForm(emptyPodcastForm);
+    setUploadProgress(null);
+    setIsAddingNewCategory(false);
+    setNewCategoryName("");
+  };
+
+  const openEditPodcastModal = async (podcastId: string) => {
+    setSaving(true);
+    setFeedbackError("");
+    try {
+      // Fetch details of this podcast
+      const res = await api.get<{ success: boolean; data: any }>(`/staff/podcasts/${podcastId}`);
+      const podcast = res.data.data;
+      if (podcast) {
+        setEditingPodcastId(podcastId);
+        const draft = podcast.pendingDraft;
+        setPodcastForm({
+          title: draft?.title ?? podcast.title,
+          description: draft?.description ?? podcast.description ?? "",
+          content: draft?.content ?? podcast.content ?? "",
+          level: draft?.level ?? podcast.level ?? "Medium",
+          category: draft?.category ?? podcast.category ?? "",
+          lessonId: draft?.lessonId
+            ? (typeof draft.lessonId === "object" ? draft.lessonId._id : draft.lessonId)
+            : (typeof podcast.lessonId === "object" && podcast.lessonId !== null
+              ? (podcast.lessonId as any)._id || ""
+              : (podcast.lessonId as string) || ""),
+          thumbnailFile: null,
+          audioFile: null,
+        });
+        await loadLessonsList();
+      }
+    } catch (err: any) {
+      setError("Không thể tải thông tin podcast để chỉnh sửa.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditPodcastSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFeedbackError("");
+
+    if (!podcastForm.title.trim()) {
+      setFeedbackError("Vui lòng nhập tiêu đề podcast.");
+      return;
+    }
+
+    setSaving(true);
+    setUploadProgress(0);
+    try {
+      const formData = new FormData();
+      formData.append("title", podcastForm.title.trim());
+      formData.append("description", podcastForm.description.trim());
+      formData.append("content", podcastForm.content.trim());
+      formData.append("level", podcastForm.level);
+      formData.append("category", podcastForm.category.trim() || "Yêu cầu VIP");
+      if (podcastForm.lessonId) {
+        formData.append("lessonId", podcastForm.lessonId);
+      }
+      if (podcastForm.thumbnailFile) {
+        formData.append("thumbnail", podcastForm.thumbnailFile);
+      }
+      if (podcastForm.audioFile) {
+        formData.append("audio", podcastForm.audioFile);
+      }
+
+      const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
+      const csrfToken = csrfRes.data.data.csrfToken;
+
+      await api.put(`/staff/podcasts/${editingPodcastId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data", "x-csrf-token": csrfToken },
+        onUploadProgress: (progressEvent: any) => {
+          if (progressEvent.total) {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percent);
+          }
+        }
+      });
+
+      setMessage("Cập nhật podcast thành công!");
+      setEditingPodcastId(null);
+      resetPodcastForm();
+      await loadRequests();
+    } catch (err: any) {
+      setFeedbackError(err.response?.data?.message || "Lỗi khi cập nhật podcast.");
+    } finally {
+      setSaving(false);
+      setUploadProgress(null);
     }
   };
 
@@ -396,6 +665,7 @@ export default function TeacherPage() {
             >
               Yêu cầu bài học (Pro)
             </button>
+
           </div>
 
           <div className="teacher-review-rules">
@@ -543,6 +813,26 @@ export default function TeacherPage() {
                               <strong>Lý do từ chối:</strong> {req.teacherResponse}
                             </div>
                           )}
+                          {req.pedagogicalNotes && (
+                            <div className="mt-2 text-sky-700 bg-sky-50 p-2 rounded border border-sky-200 text-xs">
+                              <strong>Nhận định sư phạm:</strong> {req.pedagogicalNotes}
+                            </div>
+                          )}
+                          {req.needsGameCreation && (
+                            <div className="mt-2 text-purple-700 bg-purple-50 p-2 rounded border border-purple-200 text-xs">
+                              <strong>Yêu cầu thiết kế Game:</strong>{" "}
+                              <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                req.gameCreationStatus === "Completed" ? "bg-emerald-100 text-emerald-800" : "bg-purple-100 text-purple-800"
+                              }`}>
+                                {req.gameCreationStatus === "Completed" ? "Đã hoàn thành" : "Đang yêu cầu Staff"}
+                              </span>
+                            </div>
+                          )}
+                          {req.estimatedCompletionDate && (
+                            <div className="mt-1.5 text-stone-600 text-xs">
+                              Dự kiến hoàn thành: <strong>{new Date(req.estimatedCompletionDate).toLocaleDateString("vi-VN")}</strong>
+                            </div>
+                          )}
                           {req.resultPodcastId && (
                             <div className="mt-2 text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200 text-xs">
                               <strong>Podcast xuất bản:</strong> {typeof req.resultPodcastId === "object" ? req.resultPodcastId.title : req.resultPodcastId}
@@ -578,7 +868,12 @@ export default function TeacherPage() {
                             <>
                               <button
                                 type="button"
-                                onClick={() => handleAcceptRequest(req._id)}
+                                onClick={() => {
+                                  setAcceptingRequestId(req._id);
+                                  setNeedsGameCreation(false);
+                                  setPedagogicalNotes("");
+                                  setEstimatedCompletionDate("");
+                                }}
                                 className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700"
                               >
                                 Nhận soạn
@@ -610,7 +905,9 @@ export default function TeacherPage() {
                               type="button"
                               onClick={() => {
                                 setCompletingRequestId(req._id);
-                                setSelectedPodcastId("");
+                                // Pre-fill resultPodcastId from the request itself
+                                const pId = typeof req.resultPodcastId === "object" ? req.resultPodcastId._id : req.resultPodcastId;
+                                setSelectedPodcastId(pId || "");
                                 setFeedbackError("");
                               }}
                               className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700"
@@ -618,7 +915,21 @@ export default function TeacherPage() {
                               Hoàn thành
                             </button>
                           )}
-                          {req.status !== "Pending" && !isMyAssignment && (
+                          {isMyAssignment && req.resultPodcastId && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const podcastId = typeof req.resultPodcastId === "object" ? req.resultPodcastId?._id : req.resultPodcastId;
+                                if (podcastId) {
+                                  openEditPodcastModal(podcastId);
+                                }
+                              }}
+                              className="px-2 py-1 bg-amber-600 text-white rounded text-xs font-semibold hover:bg-amber-700"
+                            >
+                              Chỉnh sửa Podcast
+                            </button>
+                          )}
+                          {req.status === "Completed" && !isMyAssignment && (
                             <span className="text-[10px] text-stone-400 italic">Không có thao tác</span>
                           )}
                         </div>
@@ -634,6 +945,8 @@ export default function TeacherPage() {
               </div>
             </div>
           )}
+
+
         </div>
       </div>
 
@@ -703,6 +1016,282 @@ export default function TeacherPage() {
         </div>
       )}
 
+      {acceptingRequestId && (
+        <div className="teacher-modal-backdrop" role="dialog" aria-modal="true" style={{ zIndex: 100 }}>
+          <div className="teacher-modal teacher-modal--compact" style={{ width: "520px", maxHeight: "90vh", overflowY: "auto" }}>
+            <div className="teacher-modal-header" style={{ borderBottom: "1px solid #c9a15a", paddingBottom: "10px", marginBottom: "15px" }}>
+              <h3>Đồng ý nhận soạn & Tạo Podcast</h3>
+              <button type="button" onClick={() => setAcceptingRequestId(null)} className="teacher-close-button">✕</button>
+            </div>
+            <form onSubmit={handleAcceptRequestSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              
+              {/* Nhận định sư phạm */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Nhận định sư phạm của bạn</span>
+                <textarea
+                  value={pedagogicalNotes}
+                  onChange={(e) => setPedagogicalNotes(e.target.value)}
+                  placeholder="Ghi chú về nội dung, hướng tiếp cận bài học..."
+                  rows={2}
+                  style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", resize: "none" }}
+                />
+              </div>
+
+              {/* Ngày dự kiến hoàn thành */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Ngày dự kiến hoàn thành</span>
+                <input
+                  type="date"
+                  value={estimatedCompletionDate}
+                  onChange={(e) => setEstimatedCompletionDate(e.target.value)}
+                  style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none" }}
+                />
+              </div>
+
+              {/* Yêu cầu Staff thiết kế Game */}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                <input
+                  type="checkbox"
+                  id="needsGameCreation"
+                  checked={needsGameCreation}
+                  onChange={(e) => setNeedsGameCreation(e.target.checked)}
+                  style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                />
+                <label htmlFor="needsGameCreation" style={{ fontSize: "12px", fontWeight: "600", color: "#78350f", cursor: "pointer" }}>
+                  Yêu cầu Staff thiết kế Game (Lesson) đi kèm
+                </label>
+              </div>
+
+              <hr style={{ border: "none", borderTop: "1px dashed #d1c2a5", margin: "10px 0" }} />
+              <h4 style={{ margin: "0 0 5px", color: "#78350f", fontSize: "13px" }}>Thông tin chi tiết Podcast</h4>
+
+              {/* Podcast Title */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Tiêu đề Podcast *</span>
+                <input
+                  type="text"
+                  placeholder="Tiêu đề bài học/podcast..."
+                  value={podcastForm.title}
+                  onChange={(e) => setPodcastFormField("title", e.target.value)}
+                  required
+                  style={{ padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none" }}
+                />
+              </div>
+
+              {/* Podcast Description */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Mô tả ngắn *</span>
+                <textarea
+                  placeholder="Tóm tắt nội dung..."
+                  value={podcastForm.description}
+                  onChange={(e) => setPodcastFormField("description", e.target.value)}
+                  required
+                  rows={2}
+                  style={{ padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", resize: "none" }}
+                />
+              </div>
+
+              {/* Podcast Content */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Nội dung chi tiết</span>
+                <textarea
+                  placeholder="Kịch bản / nội dung bài học..."
+                  value={podcastForm.content}
+                  onChange={(e) => setPodcastFormField("content", e.target.value)}
+                  rows={3}
+                  style={{ padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", resize: "none" }}
+                />
+              </div>
+
+              {/* Level & Category */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", minWidth: 0 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
+                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Độ khó</span>
+                  <select
+                    value={podcastForm.level}
+                    onChange={(e) => setPodcastFormField("level", e.target.value)}
+                    style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", background: "white" }}
+                  >
+                    <option value="Easy">Dễ</option>
+                    <option value="Medium">Trung bình</option>
+                    <option value="Hard">Khó</option>
+                  </select>
+                </div>
+                
+                {/* Category selection */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Thể loại/Chủ đề *</span>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      {podcastForm.category && !isAddingNewCategory && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleRenameCategoryPrompt}
+                            style={{ fontSize: "10px", color: "#2563eb", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+                          >
+                            Đổi tên
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDeleteCategoryPrompt}
+                            style={{ fontSize: "10px", color: "#dc2626", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+                          >
+                            Xóa
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingNewCategory(!isAddingNewCategory);
+                          setNewCategoryName("");
+                          setPodcastFormField("category", "");
+                        }}
+                        style={{ fontSize: "10px", color: "#b45309", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+                      >
+                        {isAddingNewCategory ? "Hủy" : "Tạo mới"}
+                      </button>
+                    </div>
+                  </div>
+                  {isAddingNewCategory ? (
+                    <input
+                      type="text"
+                      placeholder="Tên chủ đề mới..."
+                      value={newCategoryName}
+                      onChange={(e) => {
+                        setNewCategoryName(e.target.value);
+                        setPodcastFormField("category", e.target.value);
+                      }}
+                      required
+                      style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none" }}
+                    />
+                  ) : (
+                    <select
+                      value={podcastForm.category}
+                      onChange={(e) => setPodcastFormField("category", e.target.value)}
+                      required
+                      style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", background: "white" }}
+                    >
+                      <option value="">-- Chọn chủ đề --</option>
+                      {categoriesList.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              {/* Premium Thumbnail Upload */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>
+                  Hình ảnh đại diện (Thumbnail) *
+                </span>
+                <label
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "12px",
+                    border: "2px dashed #d1c2a5",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    background: "#fffdf9",
+                    transition: "border-color 0.2s, background 0.2s",
+                    textAlign: "center"
+                  }}
+                  className="hover:border-amber-500 hover:bg-amber-50/30"
+                >
+                  <svg className="w-6 h-6 mb-1 text-amber-700" style={{ width: "24px", height: "24px", color: "#b45309" }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#78350f" }}>
+                    {podcastForm.thumbnailFile ? (podcastForm.thumbnailFile as File).name : "Chọn hoặc kéo thả ảnh vào đây"}
+                  </span>
+                  <span style={{ fontSize: "10px", color: "#a1a1aa" }}>
+                    Chấp nhận PNG, JPG, JPEG (Tối đa 5MB)
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setPodcastFormField("thumbnailFile", e.target.files?.[0] || null)}
+                    required
+                    style={{ display: "none" }}
+                  />
+                </label>
+              </div>
+
+              {/* Premium Audio Upload */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>
+                  Tệp âm thanh (Audio) *
+                </span>
+                <label
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "12px",
+                    border: "2px dashed #d1c2a5",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    background: "#fffdf9",
+                    transition: "border-color 0.2s, background 0.2s",
+                    textAlign: "center"
+                  }}
+                  className="hover:border-amber-500 hover:bg-amber-50/30"
+                >
+                  <svg className="w-6 h-6 mb-1 text-amber-700" style={{ width: "24px", height: "24px", color: "#b45309" }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
+                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#78350f" }}>
+                    {podcastForm.audioFile ? (podcastForm.audioFile as File).name : "Chọn hoặc kéo thả tệp âm thanh vào đây"}
+                  </span>
+                  <span style={{ fontSize: "10px", color: "#a1a1aa" }}>
+                    Chấp nhận MP3, WAV, M4A (Tối đa 100MB)
+                  </span>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={(e) => setPodcastFormField("audioFile", e.target.files?.[0] || null)}
+                    required
+                    style={{ display: "none" }}
+                  />
+                </label>
+              </div>
+
+              {uploadProgress !== null && (
+                <div style={{ width: "100%", background: "#f3f4f6", borderRadius: "4px", height: "8px", overflow: "hidden", marginTop: "4px" }}>
+                  <div style={{ width: `${uploadProgress}%`, background: "#b45309", height: "100%", transition: "width 0.2s" }} />
+                </div>
+              )}
+
+              {feedbackError && <p style={{ fontSize: "11px", color: "#e11d48", margin: 0 }}>{feedbackError}</p>}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => setAcceptingRequestId(null)}
+                  style={{ padding: "6px 12px", fontSize: "12px", background: "#f5f5f4", border: "1px solid #e7e5e4", borderRadius: "4px", cursor: "pointer" }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{ padding: "6px 12px", fontSize: "12px", background: "#15803d", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "600" }}
+                >
+                  {saving ? "Đang tải lên..." : "Nhận soạn & Tạo Podcast"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {completingRequestId && (
         <div className="teacher-modal-backdrop" role="dialog" aria-modal="true" style={{ zIndex: 100 }}>
           <div className="teacher-modal teacher-modal--compact" style={{ width: "450px" }}>
@@ -710,9 +1299,10 @@ export default function TeacherPage() {
               <h3>Hoàn thành bài soạn</h3>
               <button type="button" onClick={() => setCompletingRequestId(null)} className="teacher-close-button">✕</button>
             </div>
+            
             <form onSubmit={handleCompleteRequestSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Chọn podcast đã xuất bản *</span>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Chọn podcast liên kết *</span>
                 <select
                   value={selectedPodcastId}
                   onChange={(e) => setSelectedPodcastId(e.target.value)}
@@ -720,14 +1310,30 @@ export default function TeacherPage() {
                   style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", background: "white" }}
                 >
                   <option value="">-- Chọn podcast liên kết --</option>
-                  {availablePodcasts.map((podcast) => (
-                    <option key={podcast._id} value={podcast._id}>
-                      {podcast.title} ({podcast._id})
-                    </option>
-                  ))}
+                  {/* Show teacher's own podcasts first */}
+                  {availablePodcasts
+                    .filter((p) => p.createdBy === user?.id || p.createdBy?._id === user?.id)
+                    .map((podcast) => (
+                      <option key={podcast._id} value={podcast._id}>
+                        [Của tôi] {podcast.title}
+                      </option>
+                    ))}
+                  {/* Show other podcasts */}
+                  {availablePodcasts
+                    .filter((p) => p.createdBy !== user?.id && p.createdBy?._id !== user?.id)
+                    .map((podcast) => (
+                      <option key={podcast._id} value={podcast._id}>
+                        {podcast.title} ({podcast.createdBy && typeof podcast.createdBy === "object" ? podcast.createdBy.name : "Hệ thống"})
+                      </option>
+                    ))}
                 </select>
+                <small style={{ color: "#64748b", fontSize: "11px", marginTop: "2px" }}>
+                  * Lưu ý: Podcast sau khi liên kết sẽ được đổi sang chế độ riêng tư (Chỉ học sinh Pro gửi yêu cầu mới có quyền truy cập).
+                </small>
               </div>
+
               {feedbackError && <p style={{ fontSize: "11px", color: "#e11d48", margin: 0 }}>{feedbackError}</p>}
+              
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
                 <button
                   type="button"
@@ -742,6 +1348,271 @@ export default function TeacherPage() {
                   style={{ padding: "6px 12px", fontSize: "12px", background: "#15803d", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "600" }}
                 >
                   {saving ? "Đang xử lý..." : "Hoàn thành & Liên kết"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingPodcastId && (
+        <div className="teacher-modal-backdrop" role="dialog" aria-modal="true" style={{ zIndex: 100 }}>
+          <div className="teacher-modal teacher-modal--compact" style={{ width: "520px", maxHeight: "90vh", overflowY: "auto" }}>
+            <div className="teacher-modal-header" style={{ borderBottom: "1px solid #c9a15a", paddingBottom: "10px", marginBottom: "15px" }}>
+              <h3>Chỉnh sửa Podcast</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingPodcastId(null);
+                  resetPodcastForm();
+                }}
+                className="teacher-close-button"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditPodcastSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              
+              {/* Podcast Title */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Tiêu đề Podcast *</span>
+                <input
+                  type="text"
+                  placeholder="Tiêu đề podcast..."
+                  value={podcastForm.title}
+                  onChange={(e) => setPodcastFormField("title", e.target.value)}
+                  required
+                  style={{ padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none" }}
+                />
+              </div>
+
+              {/* Podcast Description */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Mô tả ngắn *</span>
+                <textarea
+                  placeholder="Mô tả tóm tắt..."
+                  value={podcastForm.description}
+                  onChange={(e) => setPodcastFormField("description", e.target.value)}
+                  required
+                  rows={2}
+                  style={{ padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", resize: "none" }}
+                />
+              </div>
+
+              {/* Podcast Content */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Nội dung chi tiết</span>
+                <textarea
+                  placeholder="Kịch bản / nội dung..."
+                  value={podcastForm.content}
+                  onChange={(e) => setPodcastFormField("content", e.target.value)}
+                  rows={3}
+                  style={{ padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", resize: "none" }}
+                />
+              </div>
+
+              {/* Difficulty & Category */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", minWidth: 0 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
+                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Độ khó</span>
+                  <select
+                    value={podcastForm.level}
+                    onChange={(e) => setPodcastFormField("level", e.target.value)}
+                    style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", background: "white" }}
+                  >
+                    <option value="Easy">Dễ</option>
+                    <option value="Medium">Trung bình</option>
+                    <option value="Hard">Khó</option>
+                  </select>
+                </div>
+                
+                {/* Category selection */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Thể loại/Chủ đề *</span>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      {podcastForm.category && !isAddingNewCategory && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleRenameCategoryPrompt}
+                            style={{ fontSize: "10px", color: "#2563eb", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+                          >
+                            Đổi tên
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDeleteCategoryPrompt}
+                            style={{ fontSize: "10px", color: "#dc2626", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+                          >
+                            Xóa
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingNewCategory(!isAddingNewCategory);
+                          setNewCategoryName("");
+                          setPodcastFormField("category", "");
+                        }}
+                        style={{ fontSize: "10px", color: "#b45309", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+                      >
+                        {isAddingNewCategory ? "Hủy" : "Tạo mới"}
+                      </button>
+                    </div>
+                  </div>
+                  {isAddingNewCategory ? (
+                    <input
+                      type="text"
+                      placeholder="Tên chủ đề mới..."
+                      value={newCategoryName}
+                      onChange={(e) => {
+                        setNewCategoryName(e.target.value);
+                        setPodcastFormField("category", e.target.value);
+                      }}
+                      required
+                      style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none" }}
+                    />
+                  ) : (
+                    <select
+                      value={podcastForm.category}
+                      onChange={(e) => setPodcastFormField("category", e.target.value)}
+                      required
+                      style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", background: "white" }}
+                    >
+                      <option value="">-- Chọn chủ đề --</option>
+                      {categoriesList.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              {/* Linked Lesson */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Liên kết Bài học/Trò chơi (Lesson)</span>
+                <select
+                  value={podcastForm.lessonId}
+                  onChange={(e) => setPodcastFormField("lessonId", e.target.value)}
+                  style={{ padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", background: "white" }}
+                >
+                  <option value="">-- Không liên kết --</option>
+                  {lessons.map((lesson) => (
+                    <option key={lesson._id} value={lesson._id}>
+                      {lesson.title} ({lesson._id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Premium Thumbnail Upload (optional in edit mode) */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>
+                  Hình ảnh đại diện (Thumbnail) (Tải lên để thay thế)
+                </span>
+                <label
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "12px",
+                    border: "2px dashed #d1c2a5",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    background: "#fffdf9",
+                    transition: "border-color 0.2s, background 0.2s",
+                    textAlign: "center"
+                  }}
+                  className="hover:border-amber-500 hover:bg-amber-50/30"
+                >
+                  <svg className="w-6 h-6 mb-1 text-amber-700" style={{ width: "24px", height: "24px", color: "#b45309" }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#78350f" }}>
+                    {podcastForm.thumbnailFile ? (podcastForm.thumbnailFile as File).name : "Chọn hoặc kéo thả ảnh mới vào đây"}
+                  </span>
+                  <span style={{ fontSize: "10px", color: "#a1a1aa" }}>
+                    Chấp nhận PNG, JPG, JPEG (Tối đa 5MB)
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setPodcastFormField("thumbnailFile", e.target.files?.[0] || null)}
+                    style={{ display: "none" }}
+                  />
+                </label>
+              </div>
+
+              {/* Premium Audio Upload (optional in edit mode) */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>
+                  Tệp âm thanh (Audio) (Tải lên để thay thế)
+                </span>
+                <label
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "12px",
+                    border: "2px dashed #d1c2a5",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    background: "#fffdf9",
+                    transition: "border-color 0.2s, background 0.2s",
+                    textAlign: "center"
+                  }}
+                  className="hover:border-amber-500 hover:bg-amber-50/30"
+                >
+                  <svg className="w-6 h-6 mb-1 text-amber-700" style={{ width: "24px", height: "24px", color: "#b45309" }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
+                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#78350f" }}>
+                    {podcastForm.audioFile ? (podcastForm.audioFile as File).name : "Chọn hoặc kéo thả tệp âm thanh mới vào đây"}
+                  </span>
+                  <span style={{ fontSize: "10px", color: "#a1a1aa" }}>
+                    Chấp nhận MP3, WAV, M4A (Tối đa 100MB)
+                  </span>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={(e) => setPodcastFormField("audioFile", e.target.files?.[0] || null)}
+                    style={{ display: "none" }}
+                  />
+                </label>
+              </div>
+
+              {uploadProgress !== null && (
+                <div style={{ width: "100%", background: "#f3f4f6", borderRadius: "4px", height: "8px", overflow: "hidden", marginTop: "4px" }}>
+                  <div style={{ width: `${uploadProgress}%`, background: "#b45309", height: "100%", transition: "width 0.2s" }} />
+                </div>
+              )}
+
+              {feedbackError && <p style={{ fontSize: "11px", color: "#e11d48", margin: 0 }}>{feedbackError}</p>}
+              
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingPodcastId(null);
+                    resetPodcastForm();
+                  }}
+                  style={{ padding: "6px 12px", fontSize: "12px", background: "#f5f5f4", border: "1px solid #e7e5e4", borderRadius: "4px", cursor: "pointer" }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{ padding: "6px 12px", fontSize: "12px", background: "#b45309", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "600" }}
+                >
+                  {saving ? "Đang lưu..." : "Cập nhật Podcast"}
                 </button>
               </div>
             </form>

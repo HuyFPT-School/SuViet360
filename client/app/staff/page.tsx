@@ -1725,7 +1725,7 @@ export default function StaffPage() {
                 </p>
               </div>
               <span className="bg-amber-100 text-amber-900 px-3 py-1 rounded text-xs font-bold border border-amber-200">
-                {lessonRequests.length} Yêu cầu
+                {lessonRequests.filter((req) => req.needsGameCreation).length} Yêu cầu
               </span>
             </div>
 
@@ -1742,12 +1742,13 @@ export default function StaffPage() {
                       <th className="py-2.5 px-3">Chi tiết yêu cầu</th>
                       <th className="py-2.5 px-3">Thời kỳ</th>
                       <th className="py-2.5 px-3">Giáo viên phụ trách</th>
+                      <th className="py-2.5 px-3">Yêu cầu Game</th>
                       <th className="py-2.5 px-3">Trạng thái</th>
                       <th className="py-2.5 px-3">Ngày gửi</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {lessonRequests.map((req) => (
+                    {lessonRequests.filter((req) => req.needsGameCreation).map((req) => (
                       <tr key={req._id} className="border-b border-amber-200 hover:bg-amber-50/50">
                         <td className="py-3 px-3">
                           <strong className="text-amber-950 block">{req.requesterId?.name || "Học viên Pro"}</strong>
@@ -1756,6 +1757,16 @@ export default function StaffPage() {
                         <td className="py-3 px-3" style={{ maxWidth: "350px" }}>
                           <strong className="text-amber-900">{req.title}</strong>
                           <p className="text-stone-600 text-xs mt-1 line-clamp-3">{req.description}</p>
+                          {req.pedagogicalNotes && (
+                            <div className="mt-2 text-sky-700 bg-sky-50 p-2 rounded border border-sky-200 text-xs">
+                              <strong>Nhận định sư phạm:</strong> {req.pedagogicalNotes}
+                            </div>
+                          )}
+                          {req.estimatedCompletionDate && (
+                            <div className="mt-1 text-stone-500 text-xs">
+                              Dự kiến hoàn tất: <strong>{new Date(req.estimatedCompletionDate).toLocaleDateString("vi-VN")}</strong>
+                            </div>
+                          )}
                           {req.teacherResponse && (
                             <div className="mt-2 text-rose-700 bg-rose-50 p-2 rounded border border-rose-200 text-xs">
                               <strong>Lý do từ chối:</strong> {req.teacherResponse}
@@ -1771,6 +1782,43 @@ export default function StaffPage() {
                         <td className="py-3 px-3">
                           <strong className="text-amber-950 block">{req.assignedTeacherId?.name || "Chưa nhận"}</strong>
                           <span className="text-[10px] text-stone-500">{req.assignedTeacherId?.email || ""}</span>
+                        </td>
+                        <td className="py-3 px-3">
+                          {req.needsGameCreation ? (
+                            <div className="flex flex-col gap-1.5">
+                              <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold text-center ${
+                                req.gameCreationStatus === "Completed" ? "bg-emerald-100 text-emerald-800" : "bg-purple-100 text-purple-800"
+                              }`}>
+                                {req.gameCreationStatus === "Completed" ? "Đã thiết kế" : "Cần thiết kế"}
+                              </span>
+                              {req.gameCreationStatus !== "Completed" && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveTab("lessons");
+                                    setFormMode("create");
+                                    setForm({
+                                      title: `Game cho: ${req.title}`,
+                                      content: `Thiết kế game đồng hành cùng podcast "${req.title}" thuộc thời kỳ ${req.historicalPeriod || "Yêu cầu VIP"}.`,
+                                      spawnX: "400",
+                                      spawnY: "300",
+                                      tilesetNames: [],
+                                      tilemapFile: null,
+                                      tilesetFiles: [],
+                                      idleSprites: [],
+                                      runSprites: [],
+                                    });
+                                    setMessage({ type: "success", text: `Đang tạo Game liên kết cho yêu cầu: "${req.title}"` });
+                                  }}
+                                  className="text-[10px] bg-amber-600 hover:bg-amber-700 text-white font-bold py-1 px-1.5 rounded transition block text-center"
+                                >
+                                  Thiết kế ngay
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-stone-400 italic">Không yêu cầu</span>
+                          )}
                         </td>
                         <td className="py-3 px-3">
                           <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -1792,9 +1840,9 @@ export default function StaffPage() {
                         </td>
                       </tr>
                     ))}
-                    {lessonRequests.length === 0 && (
+                    {lessonRequests.filter((req) => req.needsGameCreation).length === 0 && (
                       <tr>
-                        <td colSpan={6} className="py-6 text-center text-stone-500 italic">
+                        <td colSpan={7} className="py-6 text-center text-stone-500 italic">
                           Chưa có yêu cầu bài học nào trên hệ thống.
                         </td>
                       </tr>

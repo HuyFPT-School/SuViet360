@@ -171,9 +171,21 @@ const createLessonRequest = asyncHandler(async (req, res) => {
   const { title, description, historicalPeriod } = req.body;
   if (!title || !description) throw new AppError("Tiêu đề và mô tả là bắt buộc", 400);
 
+  const cleanTitle = title.trim();
+  const Podcast = require("../models/Podcast");
+  const existingPodcast = await Podcast.findOne({
+    status: "Published",
+    isPrivate: { $ne: true },
+    title: { $regex: new RegExp(cleanTitle.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), "i") }
+  });
+
+  if (existingPodcast) {
+    throw new AppError(`Chủ đề "${cleanTitle}" đã có podcast trên hệ thống: "${existingPodcast.title}". Bạn có thể nghe ngay mà không cần gửi yêu cầu.`, 400);
+  }
+
   const request = await PodcastRequest.create({
     requesterId: req.user._id,
-    title,
+    title: cleanTitle,
     description,
     historicalPeriod: historicalPeriod || "",
   });
@@ -221,12 +233,32 @@ const getTeacherLessonRequests = asyncHandler(async (req, res) => {
 
 // PUT /api/subscriptions/lesson-requests/:id/accept
 const acceptLessonRequest = asyncHandler(async (req, res) => {
+  const { needsGameCreation, pedagogicalNotes, estimatedCompletionDate, resultPodcastId } = req.body;
+
   const request = await PodcastRequest.findById(req.params.id);
   if (!request) throw new AppError("Yêu cầu không tồn tại", 404);
   if (request.status !== "Pending") throw new AppError("Yêu cầu đã được xử lý", 400);
 
   request.status = "Accepted";
   request.assignedTeacherId = req.user._id;
+
+  if (resultPodcastId) {
+    request.resultPodcastId = resultPodcastId;
+  }
+
+  if (needsGameCreation !== undefined) {
+    request.needsGameCreation = !!needsGameCreation;
+    if (needsGameCreation) {
+      request.gameCreationStatus = "Requested";
+    }
+  }
+  if (pedagogicalNotes !== undefined) {
+    request.pedagogicalNotes = pedagogicalNotes;
+  }
+  if (estimatedCompletionDate) {
+    request.estimatedCompletionDate = new Date(estimatedCompletionDate);
+  }
+
   await request.save();
 
   // Notify requester
@@ -287,9 +319,6 @@ const startLessonRequest = asyncHandler(async (req, res) => {
 
 // PUT /api/subscriptions/lesson-requests/:id/complete
 const completeLessonRequest = asyncHandler(async (req, res) => {
-  const { resultPodcastId } = req.body;
-  if (!resultPodcastId) throw new AppError("Mã podcast đã tạo là bắt buộc để hoàn thành", 400);
-
   const request = await PodcastRequest.findById(req.params.id);
   if (!request) throw new AppError("Yêu cầu không tồn tại", 404);
   if (request.status !== "InProgress") throw new AppError("Chỉ có thể chuyển sang Hoàn thành khi đang ở trạng thái Đang tiến hành", 400);
@@ -297,8 +326,28 @@ const completeLessonRequest = asyncHandler(async (req, res) => {
     throw new AppError("Bạn không được phân công xử lý yêu cầu này", 403);
   }
 
+  const finalPodcastId = req.body.resultPodcastId || request.resultPodcastId;
+  if (!finalPodcastId) throw new AppError("Mã podcast đã tạo là bắt buộc để hoàn thành", 400);
+
   request.status = "Completed";
-  request.resultPodcastId = resultPodcastId;
+  request.resultPodcastId = finalPodcastId;
+
+  // Retrieve the linked podcast and make it private to this Student Pro (Issue #3 upgrade)
+  const Podcast = require("../models/Podcast");
+  const linkedPodcast = await Podcast.findById(resultPodcastId);
+  if (linkedPodcast) {
+    linkedPodcast.isPrivate = true;
+    if (!linkedPodcast.allowedUsers.includes(request.requesterId)) {
+      linkedPodcast.allowedUsers.push(request.requesterId);
+    }
+    await linkedPodcast.save();
+
+    // If the podcast has a game (lessonId) linked, mark the request's gameCreationStatus as Completed
+    if (linkedPodcast.lessonId) {
+      request.gameCreationStatus = "Completed";
+    }
+  }
+
   await request.save();
 
   await Notification.create({
