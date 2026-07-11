@@ -340,7 +340,12 @@ const verifyEmail = asyncHandler(async (req, res) => {
 </head>
 <body>
 <div class="card">
-  <div class="icon">✅</div>
+  <div class="icon" style="color: #10b981; display: inline-flex; align-items: center; justify-content: center; width: 100%;">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  </div>
   <h1>Email đã được xác thực!</h1>
   <p>${user.email} đã sẵn sàng.<br>Bạn có thể quay lại app để đăng nhập.</p>
 </div>

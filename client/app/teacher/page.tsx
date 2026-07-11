@@ -13,6 +13,9 @@ import {
   type ReviewContentType,
 } from "@/lib/teacherReviewApi";
 import dynamic from "next/dynamic";
+import { subscriptionApi } from "@/lib/subscriptionApi";
+import type { LessonRequest } from "@/types/subscription";
+import { api } from "@/lib/api";
 
 const PhaserGame = dynamic(() => import("@/components/PhaserGame"), {
   ssr: false,
@@ -77,6 +80,16 @@ export default function TeacherPage() {
   const [feedback, setFeedback] = useState("");
   const [feedbackError, setFeedbackError] = useState("");
 
+  // New LessonRequest states
+  const [activeDashboardTab, setActiveDashboardTab] = useState<"reviews" | "requests">("reviews");
+  const [requests, setRequests] = useState<LessonRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [rejectingRequestId, setRejectingRequestId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [completingRequestId, setCompletingRequestId] = useState<string | null>(null);
+  const [selectedPodcastId, setSelectedPodcastId] = useState("");
+  const [availablePodcasts, setAvailablePodcasts] = useState<any[]>([]);
+
   const selectedItem = useMemo(
     () => items.find((item) => item.id === selectedId) ?? null,
     [items, selectedId]
@@ -95,6 +108,34 @@ export default function TeacherPage() {
     }
   };
 
+  const loadRequests = async () => {
+    setLoadingRequests(true);
+    setError("");
+    try {
+      const data = await subscriptionApi.getTeacherLessonRequests();
+      setRequests(data);
+      
+      const podcastsRes = await api.get<{ success: boolean; data: any[] }>("/podcasts");
+      setAvailablePodcasts(podcastsRes.data.data || []);
+    } catch (err) {
+      setError("Không thể tải danh sách yêu cầu bài học.");
+    } finally {
+      setLoadingRequests(false);
+      setLoading(false); // Fix indefinite loading state
+    }
+  };
+
+  // Sync tab from URL query params
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab === "requests") {
+        setActiveDashboardTab("requests");
+      }
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
@@ -108,14 +149,92 @@ export default function TeacherPage() {
         return;
       }
 
-      await loadItems();
+      if (activeDashboardTab === "reviews") {
+        await loadItems();
+      } else {
+        await loadRequests();
+      }
     };
 
     boot();
     return () => {
       mounted = false;
     };
-  }, [refreshUser]);
+  }, [refreshUser, activeDashboardTab]);
+
+  const handleAcceptRequest = async (requestId: string) => {
+    setSaving(true);
+    setMessage("");
+    setError("");
+    try {
+      await subscriptionApi.acceptLessonRequest(requestId);
+      setMessage("Đã nhận yêu cầu soạn bài thành công!");
+      await loadRequests();
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Lỗi khi nhận yêu cầu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleStartRequest = async (requestId: string) => {
+    setSaving(true);
+    setMessage("");
+    setError("");
+    try {
+      await subscriptionApi.startLessonRequest(requestId);
+      setMessage("Đã bắt đầu soạn thảo bài học!");
+      await loadRequests();
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Lỗi khi cập nhật trạng thái.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRejectRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectReason.trim()) {
+      setFeedbackError("Vui lòng nhập lý do từ chối.");
+      return;
+    }
+    setSaving(true);
+    setMessage("");
+    setError("");
+    try {
+      await subscriptionApi.rejectLessonRequest(rejectingRequestId!, rejectReason.trim());
+      setMessage("Đã từ chối yêu cầu.");
+      setRejectingRequestId(null);
+      setRejectReason("");
+      await loadRequests();
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Lỗi khi từ chối yêu cầu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCompleteRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPodcastId) {
+      setFeedbackError("Vui lòng chọn podcast liên kết.");
+      return;
+    }
+    setSaving(true);
+    setMessage("");
+    setError("");
+    try {
+      await subscriptionApi.completeLessonRequest(completingRequestId!, selectedPodcastId);
+      setMessage("Đã hoàn thành yêu cầu soạn bài!");
+      setCompletingRequestId(null);
+      setSelectedPodcastId("");
+      await loadRequests();
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Lỗi khi hoàn thành yêu cầu.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const filteredItems = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -243,6 +362,42 @@ export default function TeacherPage() {
             <strong>{user.name}</strong>
             <small>{user.email}</small>
           </div>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", margin: "16px 0" }}>
+            <button
+              onClick={() => setActiveDashboardTab("reviews")}
+              style={{
+                textAlign: "left",
+                padding: "8px 12px",
+                borderRadius: "4px",
+                fontWeight: "600",
+                fontSize: "14px",
+                border: "none",
+                cursor: "pointer",
+                background: activeDashboardTab === "reviews" ? "#f5e7c9" : "transparent",
+                color: activeDashboardTab === "reviews" ? "#5c3300" : "#78716c",
+              }}
+            >
+              Duyệt Game & Podcast
+            </button>
+            <button
+              onClick={() => setActiveDashboardTab("requests")}
+              style={{
+                textAlign: "left",
+                padding: "8px 12px",
+                borderRadius: "4px",
+                fontWeight: "600",
+                fontSize: "14px",
+                border: "none",
+                cursor: "pointer",
+                background: activeDashboardTab === "requests" ? "#f5e7c9" : "transparent",
+                color: activeDashboardTab === "requests" ? "#5c3300" : "#78716c",
+              }}
+            >
+              Yêu cầu bài học (Pro)
+            </button>
+          </div>
+
           <div className="teacher-review-rules">
             <strong>Quyền Teacher</strong>
             <span>Xem chi tiết game/podcast</span>
@@ -262,94 +417,223 @@ export default function TeacherPage() {
             </div>
           )}
 
-          <div className="admin-stack">
-            <div className="admin-heading">
-              <div>
-                <p className="admin-kicker">Duyệt game & podcast</p>
-                <h2>Teacher Review Dashboard</h2>
-              </div>
-            </div>
-
-            <div className="admin-stat-grid teacher-stat-grid">
-              <StatCard label="Chờ duyệt" value={stats.pending} />
-              <StatCard label="Đã xuất bản" value={stats.published} />
-              <StatCard label="Bị từ chối" value={stats.rejected} />
-              <StatCard label="Tổng mục" value={stats.total} />
-            </div>
-
-            <div className="admin-panel">
-              <div className="teacher-filter-bar teacher-filter-bar--compact">
-                <input
-                  className="admin-search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Tìm theo tiêu đề..."
-                />
-                <select
-                  value={statusFilter}
-                  onChange={(event) =>
-                    setStatusFilter(event.target.value as ReviewStatus | "All")
-                  }
-                  className="teacher-select"
-                >
-                  {statusOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="admin-panel-heading teacher-list-heading">
-                <h3>Danh sách game & podcast</h3>
-                <span>{filteredItems.length} mục</span>
-              </div>
-
-              <div className="admin-table teacher-review-table teacher-review-table--lesson">
-                <div className="admin-table-head">
-                  <span>Tiêu đề</span>
-                  <span>Loại</span>
-                  <span>Người tạo</span>
-                  <span>Ngày gửi</span>
-                  <span>Trạng thái</span>
-                  <span>Thao tác</span>
+          {activeDashboardTab === "reviews" ? (
+            <div className="admin-stack">
+              <div className="admin-heading">
+                <div>
+                  <p className="admin-kicker">Duyệt game & podcast</p>
+                  <h2>Teacher Review Dashboard</h2>
                 </div>
-                {filteredItems.map((item) => (
-                  <div key={item.id} className="admin-table-row">
-                    <div>
-                      <strong>{item.title}</strong>
-                      <small className="line-clamp-2">{item.summary}</small>
-                    </div>
-                    <span className={`teacher-type-badge ${item.type === "Podcast" ? "teacher-type-badge--podcast" : ""}`}>
-                      {item.type === "Lesson" ? "Game" : item.type}
-                    </span>
-                    <span className="flex flex-col min-w-0 justify-center">
-                      <span className="font-semibold text-amber-900 truncate block text-sm" title={formatCreatorDisplay(item.createdBy).name}>
-                        {formatCreatorDisplay(item.createdBy).name}
-                      </span>
-                      {formatCreatorDisplay(item.createdBy).email && (
-                        <span className="text-[10px] text-amber-600 truncate block mt-0.5" title={formatCreatorDisplay(item.createdBy).email}>
-                          {formatCreatorDisplay(item.createdBy).email}
-                        </span>
-                      )}
-                    </span>
-                    <span>{formatDate(item.submittedAt)}</span>
-                    <StatusBadge status={item.status} />
-                    <div className="admin-row-actions teacher-row-actions">
-                      <button type="button" onClick={() => setSelectedId(item.id)}>
-                        Chi tiết
-                      </button>
-                    </div>
+              </div>
+
+              <div className="admin-stat-grid teacher-stat-grid">
+                <StatCard label="Chờ duyệt" value={stats.pending} />
+                <StatCard label="Đã xuất bản" value={stats.published} />
+                <StatCard label="Bị từ chối" value={stats.rejected} />
+                <StatCard label="Tổng mục" value={stats.total} />
+              </div>
+
+              <div className="admin-panel">
+                <div className="teacher-filter-bar teacher-filter-bar--compact">
+                  <input
+                    className="admin-search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Tìm theo tiêu đề..."
+                  />
+                  <select
+                    value={statusFilter}
+                    onChange={(event) =>
+                      setStatusFilter(event.target.value as ReviewStatus | "All")
+                    }
+                    className="teacher-select"
+                  >
+                    {statusOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="admin-panel-heading teacher-list-heading">
+                  <h3>Danh sách game & podcast</h3>
+                  <span>{filteredItems.length} mục</span>
+                </div>
+
+                <div className="admin-table teacher-review-table teacher-review-table--lesson">
+                  <div className="admin-table-head">
+                    <span>Tiêu đề</span>
+                    <span>Loại</span>
+                    <span>Người tạo</span>
+                    <span>Ngày gửi</span>
+                    <span>Trạng thái</span>
+                    <span>Thao tác</span>
                   </div>
-                ))}
-                {filteredItems.length === 0 && (
-                  <p className="admin-empty">
-                    Không có game/podcast phù hợp với bộ lọc hiện tại.
-                  </p>
-                )}
+                  {filteredItems.map((item) => (
+                    <div key={item.id} className="admin-table-row">
+                      <div>
+                        <strong>{item.title}</strong>
+                        <small className="line-clamp-2">{item.summary}</small>
+                      </div>
+                      <span className={`teacher-type-badge ${item.type === "Podcast" ? "teacher-type-badge--podcast" : ""}`}>
+                        {item.type === "Lesson" ? "Game" : item.type}
+                      </span>
+                      <span className="flex flex-col min-w-0 justify-center">
+                        <span className="font-semibold text-amber-900 truncate block text-sm" title={formatCreatorDisplay(item.createdBy).name}>
+                          {formatCreatorDisplay(item.createdBy).name}
+                        </span>
+                        {formatCreatorDisplay(item.createdBy).email && (
+                          <span className="text-[10px] text-amber-600 truncate block mt-0.5" title={formatCreatorDisplay(item.createdBy).email}>
+                            {formatCreatorDisplay(item.createdBy).email}
+                          </span>
+                        )}
+                      </span>
+                      <span>{formatDate(item.submittedAt)}</span>
+                      <StatusBadge status={item.status} />
+                      <div className="admin-row-actions teacher-row-actions">
+                        <button type="button" onClick={() => setSelectedId(item.id)}>
+                          Chi tiết
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {filteredItems.length === 0 && (
+                    <p className="admin-empty">
+                      Không có game/podcast phù hợp với bộ lọc hiện tại.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="admin-stack">
+              <div className="admin-heading">
+                <div>
+                  <p className="admin-kicker">Quản lý bài soạn</p>
+                  <h2>Yêu cầu bài học từ học viên Pro</h2>
+                </div>
+              </div>
+
+              <div className="admin-panel">
+                <div className="admin-panel-heading teacher-list-heading">
+                  <h3>Danh sách yêu cầu soạn bài</h3>
+                  <span>{requests.length} yêu cầu</span>
+                </div>
+
+                <div className="admin-table teacher-review-table">
+                  <div className="admin-table-head">
+                    <span>Tiêu đề & Nội dung</span>
+                    <span>Thời kỳ</span>
+                    <span>Học sinh</span>
+                    <span>Trạng thái</span>
+                    <span>Thao tác</span>
+                  </div>
+                  {requests.map((req) => {
+                    const assignedTeacherId = req.assignedTeacherId && (typeof req.assignedTeacherId === "object" ? req.assignedTeacherId._id : req.assignedTeacherId);
+                    const isMyAssignment = assignedTeacherId === user.id;
+
+                    return (
+                      <div key={req._id} className="admin-table-row">
+                        <div>
+                          <strong>{req.title}</strong>
+                          <small className="line-clamp-3 mt-1 block text-stone-600">{req.description}</small>
+                          {req.teacherResponse && (
+                            <div className="mt-2 text-rose-700 bg-rose-50 p-2 rounded border border-rose-200 text-xs">
+                              <strong>Lý do từ chối:</strong> {req.teacherResponse}
+                            </div>
+                          )}
+                          {req.resultPodcastId && (
+                            <div className="mt-2 text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200 text-xs">
+                              <strong>Podcast xuất bản:</strong> {typeof req.resultPodcastId === "object" ? req.resultPodcastId.title : req.resultPodcastId}
+                            </div>
+                          )}
+                        </div>
+                        <span>{req.historicalPeriod || "Chưa phân loại"}</span>
+                        <span>
+                          {req.requesterId && typeof req.requesterId === "object" ? (req.requesterId.name || req.requesterId.email) : "Học viên Pro"}
+                        </span>
+                        <span>
+                          <span className={`inline-block px-2.5 py-1 rounded text-xs font-semibold ${
+                            req.status === "Pending" ? "bg-amber-100 text-amber-800" :
+                            req.status === "Accepted" ? "bg-blue-100 text-blue-800" :
+                            req.status === "InProgress" ? "bg-purple-100 text-purple-800" :
+                            req.status === "Completed" ? "bg-emerald-100 text-emerald-800" :
+                            "bg-rose-100 text-rose-800"
+                          }`}>
+                            {req.status === "Pending" ? "Chờ duyệt" :
+                             req.status === "Accepted" ? "Đã nhận" :
+                             req.status === "InProgress" ? "Đang soạn" :
+                             req.status === "Completed" ? "Hoàn thành" :
+                             "Từ chối"}
+                          </span>
+                          {req.status !== "Pending" && (
+                            <small className="block mt-1 text-[10px] text-stone-500">
+                              GV: {req.assignedTeacherId && typeof req.assignedTeacherId === "object" ? req.assignedTeacherId.name : "N/A"}
+                            </small>
+                          )}
+                        </span>
+                        <div className="admin-row-actions teacher-row-actions flex flex-col gap-1.5 justify-center">
+                          {req.status === "Pending" && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleAcceptRequest(req._id)}
+                                className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700"
+                              >
+                                Nhận soạn
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRejectingRequestId(req._id);
+                                  setRejectReason("");
+                                  setFeedbackError("");
+                                }}
+                                className="px-2 py-1 bg-rose-600 text-white rounded text-xs font-semibold hover:bg-rose-700"
+                              >
+                                Từ chối
+                              </button>
+                            </>
+                          )}
+                          {req.status === "Accepted" && isMyAssignment && (
+                            <button
+                              type="button"
+                              onClick={() => handleStartRequest(req._id)}
+                              className="px-2 py-1 bg-purple-600 text-white rounded text-xs font-semibold hover:bg-purple-700"
+                            >
+                              Bắt đầu soạn
+                            </button>
+                          )}
+                          {req.status === "InProgress" && isMyAssignment && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCompletingRequestId(req._id);
+                                setSelectedPodcastId("");
+                                setFeedbackError("");
+                              }}
+                              className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700"
+                            >
+                              Hoàn thành
+                            </button>
+                          )}
+                          {req.status !== "Pending" && !isMyAssignment && (
+                            <span className="text-[10px] text-stone-400 italic">Không có thao tác</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {requests.length === 0 && (
+                    <p className="admin-empty">
+                      Không có yêu cầu bài học nào cần xử lý.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -376,6 +660,93 @@ export default function TeacherPage() {
           onClose={() => setRejectingItem(null)}
           onSubmit={handleReject}
         />
+      )}
+
+      {rejectingRequestId && (
+        <div className="teacher-modal-backdrop" role="dialog" aria-modal="true" style={{ zIndex: 100 }}>
+          <div className="teacher-modal teacher-modal--compact" style={{ width: "450px" }}>
+            <div className="teacher-modal-header" style={{ borderBottom: "1px solid #c9a15a", paddingBottom: "10px", marginBottom: "15px" }}>
+              <h3>Từ chối yêu cầu bài học</h3>
+              <button type="button" onClick={() => setRejectingRequestId(null)} className="teacher-close-button">✕</button>
+            </div>
+            <form onSubmit={handleRejectRequestSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Lý do từ chối *</span>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Nhập lý do từ chối để gửi cho học viên..."
+                  rows={4}
+                  required
+                  style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", resize: "none" }}
+                />
+              </div>
+              {feedbackError && <p style={{ fontSize: "11px", color: "#e11d48", margin: 0 }}>{feedbackError}</p>}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => setRejectingRequestId(null)}
+                  style={{ padding: "6px 12px", fontSize: "12px", background: "#f5f5f4", border: "1px solid #e7e5e4", borderRadius: "4px", cursor: "pointer" }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{ padding: "6px 12px", fontSize: "12px", background: "#be123c", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "600" }}
+                >
+                  {saving ? "Đang xử lý..." : "Xác nhận từ chối"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {completingRequestId && (
+        <div className="teacher-modal-backdrop" role="dialog" aria-modal="true" style={{ zIndex: 100 }}>
+          <div className="teacher-modal teacher-modal--compact" style={{ width: "450px" }}>
+            <div className="teacher-modal-header" style={{ borderBottom: "1px solid #c9a15a", paddingBottom: "10px", marginBottom: "15px" }}>
+              <h3>Hoàn thành bài soạn</h3>
+              <button type="button" onClick={() => setCompletingRequestId(null)} className="teacher-close-button">✕</button>
+            </div>
+            <form onSubmit={handleCompleteRequestSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Chọn podcast đã xuất bản *</span>
+                <select
+                  value={selectedPodcastId}
+                  onChange={(e) => setSelectedPodcastId(e.target.value)}
+                  required
+                  style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", background: "white" }}
+                >
+                  <option value="">-- Chọn podcast liên kết --</option>
+                  {availablePodcasts.map((podcast) => (
+                    <option key={podcast._id} value={podcast._id}>
+                      {podcast.title} ({podcast._id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {feedbackError && <p style={{ fontSize: "11px", color: "#e11d48", margin: 0 }}>{feedbackError}</p>}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => setCompletingRequestId(null)}
+                  style={{ padding: "6px 12px", fontSize: "12px", background: "#f5f5f4", border: "1px solid #e7e5e4", borderRadius: "4px", cursor: "pointer" }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{ padding: "6px 12px", fontSize: "12px", background: "#15803d", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "600" }}
+                >
+                  {saving ? "Đang xử lý..." : "Hoàn thành & Liên kết"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </section>
   );

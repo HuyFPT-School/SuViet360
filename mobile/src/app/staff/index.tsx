@@ -20,7 +20,7 @@ import { blogApi } from '@/services/blogApi';
 import { adminApi } from '@/services/adminApi';
 import type { BlogPost, BlogReport } from '@/types/blog';
 
-const TABS = ['Bài Học', 'Diễn Đàn', 'Báo Cáo'] as const;
+const TABS = ['Nội Dung', 'Diễn Đàn', 'Báo Cáo'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function StaffScreen() {
@@ -30,8 +30,9 @@ export default function StaffScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('Bài Học');
   const [loading, setLoading] = useState(true);
 
-  // Lessons
+  // Content
   const [lessons, setLessons] = useState<any[]>([]);
+  const [podcasts, setPodcasts] = useState<any[]>([]);
 
   // Blog moderation
   const [pendingPosts, setPendingPosts] = useState<BlogPost[]>([]);
@@ -48,9 +49,13 @@ export default function StaffScreen() {
   const loadData = async () => {
     setLoading(true);
     try {
-      if (activeTab === 'Bài Học') {
-        const l = await adminApi.getLessons();
+      if (activeTab === 'Nội Dung') {
+        const [l, p] = await Promise.all([
+          adminApi.getLessons(),
+          adminApi.getPodcasts(),
+        ]);
         setLessons(l);
+        setPodcasts(p);
       } else if (activeTab === 'Diễn Đàn') {
         const posts = await blogApi.getPendingPosts();
         setPendingPosts(posts.data || []);
@@ -105,6 +110,26 @@ export default function StaffScreen() {
     loadData();
   };
 
+  const handleDeleteLesson = async (id: string) => {
+    Alert.alert('Xác nhận', 'Xóa bài học này?', [
+      { text: 'Hủy', style: 'cancel' },
+      { text: 'Xóa', style: 'destructive', onPress: async () => {
+        await adminApi.deleteLesson(id);
+        loadData();
+      }},
+    ]);
+  };
+
+  const handleDeletePodcast = async (id: string) => {
+    Alert.alert('Xác nhận', 'Xóa podcast này?', [
+      { text: 'Hủy', style: 'cancel' },
+      { text: 'Xóa', style: 'destructive', onPress: async () => {
+        await adminApi.deletePodcast(id);
+        loadData();
+      }},
+    ]);
+  };
+
   if (!user || (user.role !== 'staff' && user.role !== 'admin')) {
     return (
       <PageBackground style={styles.container}>
@@ -140,24 +165,43 @@ export default function StaffScreen() {
         </View>
       ) : (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-          {/* Lessons Tab */}
-          {activeTab === 'Bài Học' && (
+          {/* Content Tab */}
+          {activeTab === 'Nội Dung' && (
             <>
               <View style={styles.menuGrid}>
-                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/admin')}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/staff/create-lesson')}>
                   <Ionicons name="add-circle-outline" size={32} color={Colors.light.goldDark} />
                   <Text style={styles.menuLabel}>Tạo Lesson</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/admin')}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/staff/create-podcast')}>
                   <Ionicons name="musical-notes-outline" size={32} color={Colors.light.goldDark} />
                   <Text style={styles.menuLabel}>Tạo Podcast</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.sectionTitle}>Bài Học Hiện Có ({lessons.length})</Text>
+              
+              <Text style={styles.sectionTitle}>Bài Học ({lessons.length})</Text>
               {lessons.map((l) => (
                 <View key={l._id} style={styles.card}>
-                  <Text style={styles.cardTitle}>{l.title}</Text>
-                  <Text style={styles.cardDate}>{new Date(l.createdAt).toLocaleDateString('vi-VN')}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cardTitle}>{l.title}</Text>
+                    <Text style={styles.cardDate}>{new Date(l.createdAt).toLocaleDateString('vi-VN')}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => handleDeleteLesson(l._id)}>
+                    <Ionicons name="trash-outline" size={20} color={Colors.light.error} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              <Text style={styles.sectionTitle}>Podcast ({podcasts.length})</Text>
+              {podcasts.map((p) => (
+                <View key={p._id} style={styles.card}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cardTitle}>{p.title}</Text>
+                    <Text style={styles.cardDate}>{new Date(p.createdAt).toLocaleDateString('vi-VN')}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => handleDeletePodcast(p._id)}>
+                    <Ionicons name="trash-outline" size={20} color={Colors.light.error} />
+                  </TouchableOpacity>
                 </View>
               ))}
             </>
@@ -244,6 +288,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.panelBorder,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   cardTitle: { color: Colors.light.textMain, fontSize: FontSizes.md, fontWeight: '600' },
   cardBody: { color: Colors.light.textMuted, fontSize: FontSizes.sm, marginTop: 4 },

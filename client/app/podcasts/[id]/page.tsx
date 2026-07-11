@@ -224,6 +224,11 @@ export default function PodcastDetailPage() {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [noteTimestamp, setNoteTimestamp] = useState(0);
 
+  // Completion states
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [xpGained, setXpGained] = useState<number | null>(null);
+  const [showCompletionToast, setShowCompletionToast] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -246,6 +251,17 @@ export default function PodcastDetailPage() {
         setNotes(notesRes.data.data || []);
         setComments(commentsRes.data.data || []);
         setDuration(podRes.data.data.duration || 0);
+
+        if (user) {
+          try {
+            const progRes = await api.get("/progress/dashboard");
+            const completedPodcasts = progRes.data.data.completedPodcasts || [];
+            setIsCompleted(completedPodcasts.includes(id));
+          } catch (progErr) {
+            console.error("Error fetching progress dashboard:", progErr);
+          }
+        }
+
         setLoading(false);
       } catch (err) {
         console.error("Error fetching podcast details:", err);
@@ -256,7 +272,7 @@ export default function PodcastDetailPage() {
     };
 
     fetchData();
-  }, [id]);
+  }, [id, user]);
 
   // Audio Controls
   const togglePlay = () => {
@@ -275,9 +291,21 @@ export default function PodcastDetailPage() {
     try {
       const csrfRes = await api.get<{ data: { csrfToken: string } }>("/csrf-token");
       const csrfToken = csrfRes.data.data.csrfToken;
-      await api.post(`/progress/podcast/${id}/complete`, {}, {
-        headers: { "x-csrf-token": csrfToken },
-      });
+      const res = await api.post<{ success: boolean; data?: { xpGained: number } }>(
+        `/progress/podcast/${id}/complete`,
+        {},
+        { headers: { "x-csrf-token": csrfToken } }
+      );
+      if (res.data.success) {
+        setIsCompleted(true);
+        if (res.data.data && res.data.data.xpGained > 0) {
+          setXpGained(res.data.data.xpGained);
+          setShowCompletionToast(true);
+          setTimeout(() => {
+            setShowCompletionToast(false);
+          }, 5000);
+        }
+      }
     } catch (err) {
       console.error("Error completing podcast:", err);
     }
@@ -516,7 +544,17 @@ export default function PodcastDetailPage() {
               
               <div className="flex gap-6 mb-6">
                  <div className="flex-1">
-                    <h1 className="text-3xl font-bold text-[#3a2312] font-display mb-4 leading-tight">{podcast.title}</h1>
+                     <h1 className="text-3xl font-bold text-[#3a2312] font-display mb-4 leading-tight flex items-center gap-3">
+                        {podcast.title}
+                        {isCompleted && (
+                           <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border border-emerald-200">
+                              <svg className="w-3 h-3 text-emerald-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                 <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                              Đã hoàn thành
+                           </span>
+                        )}
+                     </h1>
                     <p className="text-[#5c4a3d] text-sm leading-relaxed mb-6">{podcast.description}</p>
                     
                     <div className="flex flex-wrap items-center gap-6 text-xs text-[#8c6a34] font-medium">
@@ -951,9 +989,23 @@ export default function PodcastDetailPage() {
             <div className="absolute -top-12 -left-12 w-24 h-24 bg-amber-200/20 rounded-full blur-xl" />
             <div className="absolute -bottom-12 -right-12 w-24 h-24 bg-amber-400/20 rounded-full blur-xl" />
 
-            <span className="text-6xl block mb-4">
-              {quizResult.passed ? "🏆" : "✊"}
-            </span>
+            <div className="flex justify-center mb-4">
+              {quizResult.passed ? (
+                <svg className="w-16 h-16 text-amber-500 animate-bounce" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                  <path d="M4 22h16" />
+                  <path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34" />
+                  <path d="M12 2a6 6 0 0 1 6 6v1H6V8a6 6 0 0 1 6-6z" />
+                </svg>
+              ) : (
+                <svg className="w-16 h-16 text-amber-700/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+                  <path d="M6 6h10" />
+                  <path d="M6 10h10" />
+                </svg>
+              )}
+            </div>
 
             <h2 className="font-display text-2xl font-bold text-amber-900 mb-2">
               {quizResult.passed ? "Kiểm Tra Hoàn Thành!" : "Cố Gắng Lên!"}
@@ -983,7 +1035,9 @@ export default function PodcastDetailPage() {
             {/* XP Gained display */}
             {quizResult.xpGained > 0 ? (
               <div className="mb-6 flex justify-center items-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-950 font-bold px-5 py-2.5 rounded-full shadow-md max-w-xs mx-auto animate-bounce animate-duration-1000">
-                <span>⭐</span>
+                <svg className="w-4 h-4 text-amber-950 fill-amber-950 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
                 <span>Nhận +{quizResult.xpGained} XP Tích Lũy!</span>
               </div>
             ) : (
@@ -1002,8 +1056,17 @@ export default function PodcastDetailPage() {
                   {quizResult.details.map((q, idx) => (
                     <div key={idx} className="text-xs border-b border-amber-200/20 pb-2 last:border-0 last:pb-0">
                       <div className="flex items-start gap-2">
-                        <span className="text-sm">
-                          {q.isCorrect ? "✅" : "❌"}
+                        <span className="text-sm shrink-0">
+                          {q.isCorrect ? (
+                            <svg className="w-4 h-4 text-emerald-600 inline shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4 text-red-600 inline shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="18" x2="6" y1="6" y2="18" />
+                              <line x1="6" x2="18" y1="6" y2="18" />
+                            </svg>
+                          )}
                         </span>
                         <div className="flex-1">
                           <p className="font-semibold text-amber-950 leading-tight">
@@ -1038,6 +1101,26 @@ export default function PodcastDetailPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* ── Completion Toast Notification ── */}
+      {showCompletionToast && xpGained && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#3a2312] border-2 border-[#eac988] text-white rounded-xl shadow-2xl p-4 flex items-center gap-3 animate-slide-in max-w-sm border-t-4 border-t-amber-500">
+          <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center shrink-0 animate-bounce">
+            <svg className="w-5 h-5 text-amber-950 fill-amber-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+          </div>
+          <div>
+            <h4 className="font-bold text-[#f0ddb7] text-sm">Podcast Hoàn Thành!</h4>
+            <p className="text-xs text-amber-200/90 mt-0.5">Bạn đã nghe xong podcast và nhận được <span className="font-bold text-amber-400">+{xpGained} XP</span> tích lũy.</p>
+          </div>
+          <button 
+            onClick={() => setShowCompletionToast(false)}
+            className="text-amber-200/70 hover:text-white ml-2 text-xs shrink-0 self-start"
+          >
+            ✕
+          </button>
         </div>
       )}
       </div>

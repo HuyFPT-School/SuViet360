@@ -64,7 +64,7 @@ function CheckoutForm() {
         bonusXPMultiplier: 1.0,
       },
       description: "Trải nghiệm cơ bản với các bài học lịch sử Việt Nam",
-      badge: "🆓",
+      badge: "Free",
     },
     {
       _id: "student-plus",
@@ -79,7 +79,7 @@ function CheckoutForm() {
         bonusXPMultiplier: 1.5,
       },
       description: "Mở khóa bài học premium và tăng tốc học tập",
-      badge: "⭐",
+      badge: "Plus",
     },
     {
       _id: "student-pro",
@@ -94,7 +94,7 @@ function CheckoutForm() {
         bonusXPMultiplier: 2.0,
       },
       description: "Trải nghiệm tối đa với AI không giới hạn và yêu cầu bài học riêng",
-      badge: "💎",
+      badge: "Pro",
     },
   ];
 
@@ -436,7 +436,14 @@ function CheckoutForm() {
         {checkoutSuccess ? (
           // Success Modal/Layout
           <div className="sub-card max-w-2xl mx-auto text-center py-10">
-            <div className="text-6xl mb-6">🎉</div>
+            <div className="flex justify-center mb-6">
+              <div className="p-4 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              </div>
+            </div>
             <h2 className="sub-title mb-4" style={{ fontSize: "1.6rem" }}>
               Giao Dịch Thành Công!
             </h2>
@@ -593,8 +600,13 @@ function CheckoutForm() {
                         )}
 
                         {recipientError && (
-                          <div className="mt-2 text-sm text-red-400 italic">
-                            ⚠️ {recipientError}
+                          <div className="mt-2 text-sm text-red-400 italic flex items-center gap-1.5">
+                            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                              <line x1="12" x2="12" y1="9" y2="13" />
+                              <line x1="12" x2="12.01" y1="17" y2="17" />
+                            </svg>
+                            <span>{recipientError}</span>
                           </div>
                         )}
                       </div>
@@ -638,14 +650,25 @@ function CheckoutForm() {
                 </form>
 
                 {validatedCoupon && (
-                  <div className="mt-3 p-3 bg-emerald-950/40 border border-emerald-500/30 rounded text-sm text-emerald-200">
-                    ✅ <strong>Đã áp dụng mã: {validatedCoupon.code}</strong> - {validatedCoupon.description || `Giảm ${validatedCoupon.discountValue}${validatedCoupon.discountType === "percentage" ? "%" : "đ"}`}
+                  <div className="mt-3 p-3 bg-emerald-950/40 border border-emerald-500/30 rounded text-sm text-emerald-200 flex items-start gap-2">
+                    <svg className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                      <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                    <div>
+                      <strong>Đã áp dụng mã: {validatedCoupon.code}</strong> - {validatedCoupon.description || `Giảm ${validatedCoupon.discountValue}${validatedCoupon.discountType === "percentage" ? "%" : "đ"}`}
+                    </div>
                   </div>
                 )}
 
                 {couponError && (
-                  <div className="mt-2 text-sm text-red-400 italic">
-                    ⚠️ {couponError}
+                  <div className="mt-2 text-sm text-red-400 italic flex items-center gap-1.5">
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                      <line x1="12" x2="12" y1="9" y2="13" />
+                      <line x1="12" x2="12.01" y1="17" y2="17" />
+                    </svg>
+                    <span>{couponError}</span>
                   </div>
                 )}
               </div>
@@ -668,7 +691,14 @@ function CheckoutForm() {
                         <div className="font-semibold text-sm text-[#f4e7c9]">Chuyển khoản VietQR Ngân hàng (Tự động duyệt)</div>
                         <div className="text-xs text-muted">Quét mã QR bằng ứng dụng ngân hàng, duyệt VIP ngay sau 10 giây</div>
                       </div>
-                      <span className="text-gold text-lg">🏦</span>
+                      <svg className="w-6 h-6 text-gold shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 22h18" />
+                        <path d="M6 18v-7" />
+                        <path d="M10 18v-7" />
+                        <path d="M14 18v-7" />
+                        <path d="M18 18v-7" />
+                        <path d="m12 2-10 5v3h20V7L12 2Z" />
+                      </svg>
                     </div>
                   </label>
                   
@@ -686,7 +716,12 @@ function CheckoutForm() {
                         <div className="font-semibold text-sm text-[#f4e7c9]">Chế độ Demo (Nâng cấp tức thì để thử nghiệm)</div>
                         <div className="text-xs text-muted">Mô phỏng thanh toán thành công ngay lập tức để nhà phát triển kiểm tra flow</div>
                       </div>
-                      <span className="text-[#a08040] text-lg">🧪</span>
+                      <svg className="w-6 h-6 text-[#c9a15a] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M10 2v7.5" />
+                        <path d="M14 2v7.5" />
+                        <path d="M8.5 2h7" />
+                        <path d="M14 11.5c1.7-1 3.5 1 3.5 3.5a5.5 5.5 0 0 1-11 0c0-2.5 1.8-4.5 3.5-3.5Z" />
+                      </svg>
                     </div>
                   </label>
                 </div>

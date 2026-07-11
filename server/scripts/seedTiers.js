@@ -20,7 +20,7 @@ const tiers = [
     isActive: true,
     displayOrder: 0,
     description: "Trải nghiệm cơ bản với các bài học lịch sử Việt Nam",
-    badge: "🆓",
+    badge: "Free",
   },
   {
     name: "Student Plus",
@@ -36,7 +36,7 @@ const tiers = [
     isActive: true,
     displayOrder: 1,
     description: "Mở khóa bài học premium và tăng tốc học tập",
-    badge: "⭐",
+    badge: "Plus",
   },
   {
     name: "Student Pro",
@@ -52,7 +52,7 @@ const tiers = [
     isActive: true,
     displayOrder: 2,
     description: "Trải nghiệm tối đa với AI không giới hạn và yêu cầu bài học riêng",
-    badge: "💎",
+    badge: "Pro",
   },
 ];
 

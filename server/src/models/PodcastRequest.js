@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const lessonRequestSchema = new mongoose.Schema(
+const podcastRequestSchema = new mongoose.Schema(
   {
     requesterId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     title: { type: String, required: true, trim: true, maxlength: 200 },
@@ -13,12 +13,12 @@ const lessonRequestSchema = new mongoose.Schema(
     },
     assignedTeacherId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     teacherResponse: { type: String, default: "" },
-    resultLessonId: { type: mongoose.Schema.Types.ObjectId, ref: "Lesson", default: null },
+    resultPodcastId: { type: mongoose.Schema.Types.ObjectId, ref: "Podcast", default: null },
   },
-  { timestamps: true, collection: "gamerequests" }
+  { timestamps: true, collection: "podcastrequests" }
 );
 
-lessonRequestSchema.index({ status: 1 });
-lessonRequestSchema.index({ assignedTeacherId: 1 });
+podcastRequestSchema.index({ status: 1 });
+podcastRequestSchema.index({ assignedTeacherId: 1 });
 
-module.exports = mongoose.models.LessonRequest || mongoose.model("LessonRequest", lessonRequestSchema);
+module.exports = mongoose.models.PodcastRequest || mongoose.model("PodcastRequest", podcastRequestSchema);

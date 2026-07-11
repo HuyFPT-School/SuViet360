@@ -73,7 +73,15 @@ const activateSubscription = async (userId, tierId, billingCycle, giftedBy = nul
 
   // Calculate end date
   const now = new Date();
-  const endDate = new Date(now);
+  let baseDate = new Date();
+
+  // Check if user already has an active subscription of the SAME tier to extend the period
+  const userObj = await User.findById(userId);
+  if (userObj && userObj.subscriptionTier === tier.name && userObj.subscriptionExpiry && userObj.subscriptionExpiry > now) {
+    baseDate = new Date(userObj.subscriptionExpiry);
+  }
+
+  const endDate = new Date(baseDate);
   if (billingCycle === "monthly") {
     endDate.setMonth(endDate.getMonth() + 1);
   } else {
@@ -266,7 +274,7 @@ const purchaseGift = async (buyerId, recipientIdentifier, tierId, billingCycle, 
       await Notification.create({
         recipient: recipient._id,
         type: "Gift_Received",
-        title: "Bạn nhận được quà tặng! 🎁",
+        title: "Bạn nhận được quà tặng!",
         message: `${buyer.name} đã tặng bạn gói ${tier.name}!${giftMessage ? " Lời nhắn: " + giftMessage : ""}`,
         link: "/subscription",
       });
@@ -323,7 +331,7 @@ const redeemGiftCode = async (userId, code) => {
   await Notification.create({
     recipient: userId,
     type: "Gift_Received",
-    title: "Quà tặng đã được kích hoạt! 🎁",
+    title: "Quà tặng đã được kích hoạt!",
     message: `${giftCode.senderId.name} đã tặng bạn gói ${giftCode.tierId.name}!${giftCode.giftMessage ? " Lời nhắn: " + giftCode.giftMessage : ""}`,
     link: "/subscription",
   });

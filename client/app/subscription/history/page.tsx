@@ -91,7 +91,14 @@ export default function HistoryPage() {
           </div>
         ) : transactions.length === 0 ? (
           <div className="sub-card text-center max-w-xl mx-auto py-12">
-            <div className="text-4xl mb-4">📜</div>
+             <div className="flex justify-center mb-4">
+               <svg className="w-12 h-12 text-gold/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                 <rect width="16" height="20" x="4" y="2" rx="2" />
+                 <path d="M12 6h-4" />
+                 <path d="M12 10h-4" />
+                 <path d="M12 14h-4" />
+               </svg>
+             </div>
             <h3 className="text-gold font-display text-lg font-semibold mb-2">
               Chưa có giao dịch nào
             </h3>
@@ -143,9 +150,16 @@ export default function HistoryPage() {
                           </span>
                         ) : (
                           <div className="flex flex-col">
-                            <span className="text-xs font-semibold text-amber-200">
-                              🎁 Tặng: {tx.recipientId?.name || "Bạn bè"}
-                            </span>
+                             <span className="text-xs font-semibold text-amber-200 inline-flex items-center gap-1">
+                               <svg className="w-3.5 h-3.5 text-amber-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                 <path d="M20 12v10H4V12" />
+                                 <path d="M2 7h20v5H2z" />
+                                 <path d="M12 22V7" />
+                                 <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+                                 <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+                               </svg>
+                               Tặng: {tx.recipientId?.name || "Bạn bè"}
+                             </span>
                             <span className="text-[10px] text-muted">
                               ({tx.recipientId?.email || "Email không xác định"})
                             </span>

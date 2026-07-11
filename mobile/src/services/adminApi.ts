@@ -90,6 +90,38 @@ export const adminApi = {
     return res.data;
   },
 
+  // ─── Podcasts ──────────────────────────────────────
+  getPodcasts: async () => {
+    const res = await api.get('/podcasts');
+    return res.data.data || res.data.podcasts || [];
+  },
+
+  createPodcast: async (formData: FormData, onUploadProgress?: (e: any) => void) => {
+    const token = await ensureCsrfToken();
+    const res = await api.post('/podcasts', formData, {
+      headers: { 'x-csrf-token': token, 'Content-Type': 'multipart/form-data' },
+      onUploadProgress,
+    });
+    return res.data;
+  },
+
+  updatePodcast: async (id: string, formData: FormData, onUploadProgress?: (e: any) => void) => {
+    const token = await ensureCsrfToken();
+    const res = await api.put(`/podcasts/${id}`, formData, {
+      headers: { 'x-csrf-token': token, 'Content-Type': 'multipart/form-data' },
+      onUploadProgress,
+    });
+    return res.data;
+  },
+
+  deletePodcast: async (id: string) => {
+    const token = await ensureCsrfToken();
+    const res = await api.delete(`/podcasts/${id}`, {
+      headers: { 'x-csrf-token': token },
+    });
+    return res.data;
+  },
+
   // ─── Users ─────────────────────────────────────────
   getAvailableUsers: async () => {
     const res = await api.get('/auth/users');

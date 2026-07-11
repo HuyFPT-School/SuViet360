@@ -206,7 +206,23 @@ export default function StaffPage() {
   const [newTilesetName, setNewTilesetName] = useState("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"lessons" | "podcasts" | "blog">("lessons");
+  const [activeTab, setActiveTab] = useState<"lessons" | "podcasts" | "blog" | "lesson-requests">("lessons");
+
+  // Lesson Requests states for staff
+  const [lessonRequests, setLessonRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+
+  const loadRequests = async () => {
+    setLoadingRequests(true);
+    try {
+      const res = await api.get<{ success: boolean; data: any[] }>("/subscriptions/admin/lesson-requests");
+      setLessonRequests(res.data.data);
+    } catch (err) {
+      console.error("Error loading requests:", err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
 
   // Blog Moderation states
   const [pendingPosts, setPendingPosts] = useState<BlogPost[]>([]);
@@ -325,6 +341,8 @@ export default function StaffPage() {
       loadPodcasts();
     } else if (activeTab === "blog") {
       fetchBlogModeration();
+    } else if (activeTab === "lesson-requests") {
+      loadRequests();
     }
   }, [user, activeTab]);
 
@@ -827,6 +845,15 @@ export default function StaffPage() {
               }`}
           >
             Kiểm duyệt diễn đàn
+          </button>
+          <button
+            onClick={() => { setActiveTab("lesson-requests"); setMessage(null); }}
+            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "lesson-requests"
+                ? "border-amber-700 text-amber-950 font-bold"
+                : "border-transparent text-amber-650 hover:text-amber-800"
+              }`}
+          >
+            Yêu cầu bài học
           </button>
         </div>
 
@@ -1664,6 +1691,99 @@ export default function StaffPage() {
                     </div>
                   </form>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "lesson-requests" && (
+          <div className="bg-[#FFFBF2] border-2 border-amber-700 rounded-xl p-6 shadow-md mt-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="font-semibold text-lg text-amber-900 tracking-wider uppercase" style={{ fontFamily: "Cinzel, serif" }}>
+                  Theo dõi Yêu cầu bài học (Pro)
+                </h3>
+                <p className="text-xs text-amber-800">
+                  Giám sát các yêu cầu soạn thảo bài học từ học viên Pro và trạng thái xử lý của Giáo viên
+                </p>
+              </div>
+              <span className="bg-amber-100 text-amber-900 px-3 py-1 rounded text-xs font-bold border border-amber-200">
+                {lessonRequests.length} Yêu cầu
+              </span>
+            </div>
+
+            {loadingRequests ? (
+              <div className="text-center py-10 text-amber-800 font-semibold italic">
+                Đang tải danh sách yêu cầu bài học...
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse" style={{ fontSize: "14px" }}>
+                  <thead>
+                    <tr className="border-b-2 border-amber-700 text-amber-900 font-bold uppercase" style={{ fontFamily: "Cinzel, serif", fontSize: "12px" }}>
+                      <th className="py-2.5 px-3">Học sinh</th>
+                      <th className="py-2.5 px-3">Chi tiết yêu cầu</th>
+                      <th className="py-2.5 px-3">Thời kỳ</th>
+                      <th className="py-2.5 px-3">Giáo viên phụ trách</th>
+                      <th className="py-2.5 px-3">Trạng thái</th>
+                      <th className="py-2.5 px-3">Ngày gửi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lessonRequests.map((req) => (
+                      <tr key={req._id} className="border-b border-amber-200 hover:bg-amber-50/50">
+                        <td className="py-3 px-3">
+                          <strong className="text-amber-950 block">{req.requesterId?.name || "Học viên Pro"}</strong>
+                          <span className="text-[10px] text-stone-500">{req.requesterId?.email || ""}</span>
+                        </td>
+                        <td className="py-3 px-3" style={{ maxWidth: "350px" }}>
+                          <strong className="text-amber-900">{req.title}</strong>
+                          <p className="text-stone-600 text-xs mt-1 line-clamp-3">{req.description}</p>
+                          {req.teacherResponse && (
+                            <div className="mt-2 text-rose-700 bg-rose-50 p-2 rounded border border-rose-200 text-xs">
+                              <strong>Lý do từ chối:</strong> {req.teacherResponse}
+                            </div>
+                          )}
+                          {req.resultPodcastId && (
+                            <div className="mt-2 text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200 text-xs">
+                              <strong>Podcast xuất bản:</strong> {typeof req.resultPodcastId === "object" ? req.resultPodcastId.title : req.resultPodcastId}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-stone-700">{req.historicalPeriod || "Chưa rõ"}</td>
+                        <td className="py-3 px-3">
+                          <strong className="text-amber-950 block">{req.assignedTeacherId?.name || "Chưa nhận"}</strong>
+                          <span className="text-[10px] text-stone-500">{req.assignedTeacherId?.email || ""}</span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                            req.status === "Pending" ? "bg-amber-100 text-amber-800 border border-amber-200" :
+                            req.status === "Accepted" ? "bg-blue-100 text-blue-800 border border-blue-200" :
+                            req.status === "InProgress" ? "bg-purple-100 text-purple-800 border border-purple-200" :
+                            req.status === "Completed" ? "bg-emerald-100 text-emerald-800 border border-emerald-200" :
+                            "bg-rose-100 text-rose-800 border border-rose-200"
+                          }`}>
+                            {req.status === "Pending" ? "Chờ duyệt" :
+                             req.status === "Accepted" ? "Đã nhận" :
+                             req.status === "InProgress" ? "Đang soạn" :
+                             req.status === "Completed" ? "Hoàn thành" :
+                             "Từ chối"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-stone-500 text-xs">
+                          {new Date(req.createdAt).toLocaleDateString("vi-VN")}
+                        </td>
+                      </tr>
+                    ))}
+                    {lessonRequests.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-6 text-center text-stone-500 italic">
+                          Chưa có yêu cầu bài học nào trên hệ thống.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

@@ -208,7 +208,7 @@ export default function SubscriptionPage() {
         bonusXPMultiplier: 1.0,
       },
       description: "Trải nghiệm cơ bản với các bài học lịch sử Việt Nam",
-      badge: "🆓",
+      badge: "Free",
     },
     {
       _id: "student-plus",
@@ -223,7 +223,7 @@ export default function SubscriptionPage() {
         bonusXPMultiplier: 1.5,
       },
       description: "Mở khóa bài học premium và tăng tốc học tập",
-      badge: "⭐",
+      badge: "Plus",
     },
     {
       _id: "student-pro",
@@ -238,7 +238,7 @@ export default function SubscriptionPage() {
         bonusXPMultiplier: 2.0,
       },
       description: "Trải nghiệm tối đa với AI không giới hạn và yêu cầu bài học riêng",
-      badge: "💎",
+      badge: "Pro",
     },
   ];
 
@@ -559,7 +559,12 @@ export default function SubscriptionPage() {
           <div>
             {!isPro ? (
               <div className="sub-card lock-screen">
-                <div className="lock-icon">🔒</div>
+                <div className="lock-icon flex justify-center mb-4">
+                  <svg className="w-16 h-16 text-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </div>
                 <h2 className="lock-title">Tính năng dành riêng cho Student Pro</h2>
                 <p className="text-muted max-w-md mx-auto">
                   Tính năng yêu cầu soạn thảo bài học lịch sử theo chủ đề riêng chỉ dành cho các thành viên sở hữu gói <strong>Student Pro</strong>. Vui lòng nâng cấp gói để tiếp tục.
@@ -673,6 +678,19 @@ export default function SubscriptionPage() {
                                 Phản hồi từ giáo viên:
                               </p>
                               <p className="text-amber-100/90 italic">{req.teacherResponse}</p>
+                            </div>
+                          )}
+                          {req.resultPodcastId && (
+                            <div className="mt-4 p-3 bg-emerald-950/40 border border-emerald-900 rounded text-sm">
+                              <p className="text-emerald-400 font-semibold text-xs uppercase mb-1">
+                                Podcast đã xuất bản:
+                              </p>
+                              <a
+                                href={`/podcasts/${typeof req.resultPodcastId === "object" ? req.resultPodcastId._id : req.resultPodcastId}`}
+                                className="text-white hover:text-emerald-300 font-bold underline"
+                              >
+                                {typeof req.resultPodcastId === "object" ? req.resultPodcastId.title : "Nghe ngay tại đây"}
+                              </a>
                             </div>
                           )}
                         </div>

@@ -21,6 +21,23 @@ const calculateLevel = (xp) => {
 };
 
 /**
+ * Helper to fetch user's subscription tier XP multiplier.
+ */
+const getXPMultiplier = async (user) => {
+  const SubscriptionTier = require("../models/SubscriptionTier");
+  if (!user.subscriptionTier || user.subscriptionTier === "Free") {
+    return 1.0;
+  }
+  // Check if subscription has expired
+  if (user.subscriptionExpiry && user.subscriptionExpiry < new Date()) {
+    return 1.0;
+  }
+  // Fetch tier details
+  const tier = await SubscriptionTier.findOne({ name: user.subscriptionTier });
+  return tier && tier.features ? (tier.features.bonusXPMultiplier || 1.0) : 1.0;
+};
+
+/**
  * Publish XP update to Redis Pub/Sub for real-time Socket.IO broadcasts
  */
 const publishXPUpdate = async (user, amount, reason) => {
@@ -136,8 +153,10 @@ const completeLesson = asyncHandler(async (req, res) => {
   progress.completedLessons.push(lessonId);
 
   // Award XP
+  const multiplier = await getXPMultiplier(req.user);
+  const xpGained = Math.round(XP_LESSON * multiplier);
   const oldXP = req.user.xp || 0;
-  const newXP = oldXP + XP_LESSON;
+  const newXP = oldXP + xpGained;
   const newLevel = calculateLevel(newXP);
 
   // Update user
@@ -147,10 +166,10 @@ const completeLesson = asyncHandler(async (req, res) => {
   await user.save();
 
   // Log to history
-  const description = `Hoàn thành bài học: ${lesson.title}`;
+  const description = `Hoàn thành bài học: ${lesson.title}${multiplier > 1.0 ? ` (VIP x${multiplier} Bonus)` : ""}`;
   await XPHistory.create({
     userId,
-    amount: XP_LESSON,
+    amount: xpGained,
     source: "Lesson",
     sourceId: lessonId,
     description,
@@ -177,7 +196,7 @@ const completeLesson = asyncHandler(async (req, res) => {
   await progress.save();
 
   // Broadcast real-time XP and leaderboard update
-  await publishXPUpdate(user, XP_LESSON, description);
+  await publishXPUpdate(user, xpGained, description);
 
   res.status(200).json({
     success: true,
@@ -185,7 +204,7 @@ const completeLesson = asyncHandler(async (req, res) => {
     data: {
       xp: user.xp,
       level: user.level,
-      xpGained: XP_LESSON,
+      xpGained,
     },
   });
 });
@@ -224,8 +243,10 @@ const completePodcast = asyncHandler(async (req, res) => {
   await progress.save();
 
   // Award XP
+  const multiplier = await getXPMultiplier(req.user);
+  const xpGained = Math.round(XP_PODCAST * multiplier);
   const oldXP = req.user.xp || 0;
-  const newXP = oldXP + XP_PODCAST;
+  const newXP = oldXP + xpGained;
   const newLevel = calculateLevel(newXP);
 
   // Update user
@@ -235,17 +256,17 @@ const completePodcast = asyncHandler(async (req, res) => {
   await user.save();
 
   // Log to history
-  const description = `Nghe xong podcast: ${podcast.title}`;
+  const description = `Nghe xong podcast: ${podcast.title}${multiplier > 1.0 ? ` (VIP x${multiplier} Bonus)` : ""}`;
   await XPHistory.create({
     userId,
-    amount: XP_PODCAST,
+    amount: xpGained,
     source: "Podcast",
     sourceId: podcastId,
     description,
   });
 
   // Broadcast real-time update
-  await publishXPUpdate(user, XP_PODCAST, description);
+  await publishXPUpdate(user, xpGained, description);
 
   res.status(200).json({
     success: true,
@@ -253,7 +274,7 @@ const completePodcast = asyncHandler(async (req, res) => {
     data: {
       xp: user.xp,
       level: user.level,
-      xpGained: XP_PODCAST,
+      xpGained,
     },
   });
 });
@@ -286,12 +307,15 @@ const submitQuiz = asyncHandler(async (req, res) => {
   let xpToAward = 0;
   let statusReason = "";
 
+  const multiplier = await getXPMultiplier(req.user);
+
   if (existingPerformanceIndex === -1) {
     // First time submitting this quiz
-    xpToAward = passed ? XP_QUIZ_PASS : XP_QUIZ_FAIL;
+    const baseXP = passed ? XP_QUIZ_PASS : XP_QUIZ_FAIL;
+    xpToAward = Math.round(baseXP * multiplier);
     statusReason = passed
-      ? `Đạt Quiz bài học: ${lesson.title} (${score}/${total})`
-      : `Hoàn thành Quiz bài học: ${lesson.title} (${score}/${total})`;
+      ? `Đạt Quiz bài học: ${lesson.title} (${score}/${total})${multiplier > 1.0 ? ` (VIP x${multiplier} Bonus)` : ""}`
+      : `Hoàn thành Quiz bài học: ${lesson.title} (${score}/${total})${multiplier > 1.0 ? ` (VIP x${multiplier} Bonus)` : ""}`;
 
     progress.quizPerformances.push({
       lessonId,
@@ -306,8 +330,9 @@ const submitQuiz = asyncHandler(async (req, res) => {
 
     if (!previousPerformance.passed && passed) {
       // Failed previously, but now passed -> award difference (150 - 50 = 100 XP)
-      xpToAward = XP_QUIZ_PASS - XP_QUIZ_FAIL;
-      statusReason = `Thi lại đạt Quiz bài học: ${lesson.title} (${score}/${total})`;
+      const baseXP = XP_QUIZ_PASS - XP_QUIZ_FAIL;
+      xpToAward = Math.round(baseXP * multiplier);
+      statusReason = `Thi lại đạt Quiz bài học: ${lesson.title} (${score}/${total})${multiplier > 1.0 ? ` (VIP x${multiplier} Bonus)` : ""}`;
 
       // Update record
       previousPerformance.score = score;
@@ -372,13 +397,13 @@ const getLeaderboard = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   // Retrieve leaderboard sorted by XP desc
-  const leaderboard = await User.find({ role: "student" })
+  const leaderboard = await User.find({ role: "student", isLocked: { $ne: true } })
     .select("name avatar xp level")
     .sort({ xp: -1, createdAt: 1 })
     .skip(skip)
     .limit(limit);
 
-  const total = await User.countDocuments({ role: "student" });
+  const total = await User.countDocuments({ role: "student", isLocked: { $ne: true } });
 
   res.status(200).json({
     success: true,

@@ -160,10 +160,16 @@ export default function ProfileScreen() {
           <Ionicons name="receipt-outline" size={20} color={Colors.light.gold} />
           <Text style={styles.navText}>Lịch Sử GD</Text>
         </TouchableOpacity>
-        {(user.role === 'admin' || user.role === 'staff') && (
+        {user.role === 'admin' && (
           <TouchableOpacity style={styles.navItem} onPress={() => router.push('/admin' as any)}>
             <Ionicons name="settings-outline" size={20} color={Colors.light.gold} />
             <Text style={styles.navText}>Quản Trị</Text>
+          </TouchableOpacity>
+        )}
+        {user.role === 'staff' && (
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/staff' as any)}>
+            <Ionicons name="briefcase-outline" size={20} color={Colors.light.gold} />
+            <Text style={styles.navText}>QL Nội Dung</Text>
           </TouchableOpacity>
         )}
         {user.role === 'teacher' && (

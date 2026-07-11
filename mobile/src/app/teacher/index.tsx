@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,
   ScrollView,
+  Linking,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
@@ -60,6 +61,21 @@ export default function TeacherScreen() {
   const [feedback, setFeedback] = useState('');
   const [feedbackError, setFeedbackError] = useState('');
 
+  // Details modal
+  const [viewingItem, setViewingItem] = useState<TeacherReviewItem | null>(null);
+
+  const playPauseAudio = async (url: string) => {
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Lỗi', 'Không thể mở link audio.');
+    }
+  };
+
+  const closeViewModal = () => {
+    setViewingItem(null);
+  };
+
   const loadItems = async () => {
     setLoading(true);
     try {
@@ -93,6 +109,7 @@ export default function TeacherScreen() {
     try {
       await teacherReviewApi.approveContent(item.id, item.type);
       Alert.alert('Thành công', 'Nội dung đã được phê duyệt.');
+      closeViewModal();
       await loadItems();
     } catch {
       Alert.alert('Lỗi', 'Không thể phê duyệt.');
@@ -113,6 +130,7 @@ export default function TeacherScreen() {
       setRejectingItem(null);
       setFeedback('');
       setFeedbackError('');
+      closeViewModal();
       await loadItems();
     } catch {
       Alert.alert('Lỗi', 'Không thể từ chối nội dung.');
@@ -146,9 +164,9 @@ export default function TeacherScreen() {
   }
 
   const renderItem = ({ item }: { item: TeacherReviewItem }) => (
-    <View style={styles.itemCard}>
+    <TouchableOpacity style={styles.itemCard} onPress={() => setViewingItem(item)}>
       <View style={styles.itemHeader}>
-        <View>
+        <View style={{ flex: 1, paddingRight: 8 }}>
           <Text style={styles.itemType}>{item.type === 'Lesson' ? 'Bài Học' : 'Podcast'}</Text>
           <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
         </View>
@@ -168,24 +186,14 @@ export default function TeacherScreen() {
           <Text style={styles.feedbackText}>📝 {item.reviewFeedback}</Text>
         </View>
       )}
-      {item.status === 'Pending_Review' && (
         <View style={styles.itemActions}>
           <GoldButton
-            title="Phê Duyệt"
-            onPress={() => handleApprove(item)}
-            loading={saving}
-            disabled={saving}
-            style={{ flex: 1 }}
-          />
-          <GoldButton
-            title="Từ Chối"
-            variant="secondary"
-            onPress={() => { setRejectingItem(item); setFeedback(''); setFeedbackError(''); }}
+            title="Xem chi tiết"
+            onPress={() => setViewingItem(item)}
             style={{ flex: 1 }}
           />
         </View>
-      )}
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -246,6 +254,61 @@ export default function TeacherScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* View Details Modal */}
+      <Modal visible={!!viewingItem} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '90%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chi tiết: {viewingItem?.title}</Text>
+              <TouchableOpacity onPress={closeViewModal}>
+                <Ionicons name="close" size={24} color={Colors.light.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ marginBottom: 16 }}>
+              <Text style={styles.label}>Tóm tắt / Nội dung:</Text>
+              <Text style={styles.detailText}>{viewingItem?.summary}</Text>
+              
+              {viewingItem?.type === 'Lesson' && viewingItem.game && (
+                <View style={{ marginTop: 12 }}>
+                  <Text style={styles.label}>Cấu hình Game (JSON):</Text>
+                  <View style={styles.jsonBox}>
+                    <Text style={styles.jsonText}>{JSON.stringify(viewingItem.game, null, 2)}</Text>
+                  </View>
+                </View>
+              )}
+
+              {viewingItem?.type === 'Podcast' && viewingItem.podcastDetails && (
+                <View style={{ marginTop: 12 }}>
+                  <Text style={styles.label}>Audio:</Text>
+                  <TouchableOpacity style={styles.audioBtn} onPress={() => playPauseAudio(viewingItem.podcastDetails!.audioUrl)}>
+                    <Ionicons name="play-circle" size={32} color={Colors.light.gold} />
+                    <Text style={styles.audioBtnText}>Nghe thử (Mở trình duyệt)</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+            
+            {viewingItem?.status === 'Pending_Review' && (
+              <View style={styles.itemActions}>
+                <GoldButton
+                  title="Phê Duyệt"
+                  onPress={() => handleApprove(viewingItem)}
+                  loading={saving}
+                  disabled={saving}
+                  style={{ flex: 1 }}
+                />
+                <GoldButton
+                  title="Từ Chối"
+                  variant="secondary"
+                  onPress={() => { setRejectingItem(viewingItem); setFeedback(''); setFeedbackError(''); }}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Rejection Modal */}
       <Modal visible={!!rejectingItem} animationType="slide" transparent>
@@ -377,4 +440,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   errorMsg: { color: Colors.light.error, fontSize: FontSizes.xs, marginBottom: 8 },
+  detailText: { color: Colors.light.textMain, fontSize: FontSizes.sm, lineHeight: 20 },
+  jsonBox: {
+    backgroundColor: '#1E1E1E',
+    padding: 12,
+    borderRadius: BorderRadius.md,
+    marginTop: 8,
+  },
+  jsonText: { color: '#D4D4D4', fontSize: FontSizes.xs, fontFamily: 'monospace' },
+  audioBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.light.backgroundCard,
+    padding: 12,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.light.panelBorder,
+    marginTop: 8,
+  },
+  audioBtnText: { color: Colors.light.textMain, fontSize: FontSizes.sm, marginLeft: 8, fontWeight: '600' },
 });
