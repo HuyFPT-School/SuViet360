@@ -2,7 +2,7 @@ import { api } from "@/lib/api";
 
 export type ReviewStatus = "Pending_Review" | "Published" | "Rejected";
 
-export type ReviewContentType = "Lesson" | "Podcast";
+export type ReviewContentType = "Lesson" | "Podcast" | "StudyUnit" | "Quiz";
 
 export type Tileset = {
   name: string;
@@ -53,6 +53,15 @@ export type TeacherReviewItem = {
   summary: string;
   game?: LessonGame;
   podcastDetails?: PodcastDetails;
+  studyUnitDetails?: {
+    contentBlocks: any[];
+  };
+  quizDetails?: {
+    questions: any[];
+    timeLimit?: number;
+    passScore?: number;
+    shuffleQuestions?: boolean;
+  };
   reviewFeedback?: string;
   reviewedBy?: UserSummary;
   reviewedAt?: string;
@@ -92,6 +101,33 @@ type PodcastResponseItem = {
   reviewFeedback?: string;
   createdAt: string;
   createdBy?: string | { _id: string; name: string; email: string };
+  pendingDraft?: any;
+};
+
+type StudyUnitResponseItem = {
+  _id: string;
+  title: string;
+  summary: string;
+  status: ReviewStatus;
+  reviewFeedback?: string;
+  createdAt: string;
+  createdBy?: string | { _id: string; name: string; email: string };
+  contentBlocks: any[];
+  pendingDraft?: any;
+};
+
+type QuizResponseItem = {
+  _id: string;
+  title: string;
+  description: string;
+  status: ReviewStatus;
+  reviewFeedback?: string;
+  createdAt: string;
+  createdBy?: string | { _id: string; name: string; email: string };
+  questions: any[];
+  timeLimit?: number;
+  passScore?: number;
+  shuffleQuestions?: boolean;
   pendingDraft?: any;
 };
 
@@ -162,6 +198,53 @@ const podcastToReviewItem = (
   };
 };
 
+const studyUnitToReviewItem = (
+  unit: StudyUnitResponseItem
+): TeacherReviewItem => {
+  const isDraftUpdate = unit.status === "Published" && !!unit.pendingDraft;
+  const draft = unit.pendingDraft;
+
+  return {
+    id: unit._id,
+    title: isDraftUpdate ? (draft?.title || unit.title) : unit.title,
+    type: "StudyUnit",
+    createdBy: formatCreator(unit.createdBy),
+    submittedAt: unit.createdAt,
+    status: isDraftUpdate ? "Pending_Review" : (unit.status || "Pending_Review"),
+    summary: isDraftUpdate ? (draft?.summary || unit.summary || "") : (unit.summary || ""),
+    reviewFeedback: unit.reviewFeedback || "",
+    studyUnitDetails: {
+      contentBlocks: isDraftUpdate ? (draft?.contentBlocks || unit.contentBlocks || []) : (unit.contentBlocks || []),
+    },
+    isDraftUpdate,
+  };
+};
+
+const quizToReviewItem = (
+  quiz: QuizResponseItem
+): TeacherReviewItem => {
+  const isDraftUpdate = quiz.status === "Published" && !!quiz.pendingDraft;
+  const draft = quiz.pendingDraft;
+
+  return {
+    id: quiz._id,
+    title: isDraftUpdate ? (draft?.title || quiz.title) : quiz.title,
+    type: "Quiz",
+    createdBy: formatCreator(quiz.createdBy),
+    submittedAt: quiz.createdAt,
+    status: isDraftUpdate ? "Pending_Review" : (quiz.status || "Pending_Review"),
+    summary: isDraftUpdate ? (draft?.description || quiz.description || "") : (quiz.description || ""),
+    reviewFeedback: quiz.reviewFeedback || "",
+    quizDetails: {
+      questions: isDraftUpdate ? (draft?.questions || quiz.questions || []) : (quiz.questions || []),
+      timeLimit: isDraftUpdate ? (draft?.timeLimit || quiz.timeLimit) : quiz.timeLimit,
+      passScore: isDraftUpdate ? (draft?.passScore || quiz.passScore) : quiz.passScore,
+      shuffleQuestions: isDraftUpdate ? (draft?.shuffleQuestions || quiz.shuffleQuestions) : quiz.shuffleQuestions,
+    },
+    isDraftUpdate,
+  };
+};
+
 export const rejectionSuggestions = [
   "Sai kiến thức lịch sử",
   "Nội dung chưa đầy đủ",
@@ -179,15 +262,19 @@ const getCsrfToken = async () => {
 
 export const teacherReviewApi = {
   getReviewItems: async () => {
-    const [lessonsRes, podcastsRes] = await Promise.all([
+    const [lessonsRes, podcastsRes, unitsRes, quizzesRes] = await Promise.all([
       api.get<LessonsResponse>("/lessons"),
       api.get<{ success: boolean; data: PodcastResponseItem[] }>("/podcasts/review"),
+      api.get<{ success: boolean; data: { units: StudyUnitResponseItem[] } }>("/curriculum/units"),
+      api.get<{ success: boolean; data: { quizzes: QuizResponseItem[] } }>("/curriculum/quizzes"),
     ]);
 
     const lessonsData = lessonsRes.data.lessons.map((lesson) => toReviewItem(lesson));
     const podcastsData = podcastsRes.data.data.map((podcast) => podcastToReviewItem(podcast));
+    const unitsData = (unitsRes.data.data.units || []).map((unit) => studyUnitToReviewItem(unit));
+    const quizzesData = (quizzesRes.data.data.quizzes || []).map((quiz) => quizToReviewItem(quiz));
 
-    const merged = [...lessonsData, ...podcastsData].sort(
+    const merged = [...lessonsData, ...podcastsData, ...unitsData, ...quizzesData].sort(
       (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
     );
 
@@ -198,7 +285,12 @@ export const teacherReviewApi = {
   },
   approveContent: async (id: string, type: ReviewContentType) => {
     const csrfToken = await getCsrfToken();
-    const endpoint = type === "Lesson" ? `/lessons/${id}/approve` : `/podcasts/${id}/approve`;
+    let endpoint = "";
+    if (type === "Lesson") endpoint = `/lessons/${id}/approve`;
+    else if (type === "Podcast") endpoint = `/podcasts/${id}/approve`;
+    else if (type === "StudyUnit") endpoint = `/curriculum/units/${id}/approve`;
+    else if (type === "Quiz") endpoint = `/curriculum/quizzes/${id}/approve`;
+
     await api.put(
       endpoint,
       {},
@@ -210,7 +302,12 @@ export const teacherReviewApi = {
   },
   rejectContent: async (id: string, type: ReviewContentType, feedback: string) => {
     const csrfToken = await getCsrfToken();
-    const endpoint = type === "Lesson" ? `/lessons/${id}/reject` : `/podcasts/${id}/reject`;
+    let endpoint = "";
+    if (type === "Lesson") endpoint = `/lessons/${id}/reject`;
+    else if (type === "Podcast") endpoint = `/podcasts/${id}/reject`;
+    else if (type === "StudyUnit") endpoint = `/curriculum/units/${id}/reject`;
+    else if (type === "Quiz") endpoint = `/curriculum/quizzes/${id}/reject`;
+
     await api.put(
       endpoint,
       { feedback },

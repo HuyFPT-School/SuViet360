@@ -2,62 +2,24 @@ const mongoose = require("mongoose");
 
 const userProgressSchema = new mongoose.Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      unique: true,
-      index: true,
-    },
-    completedLessons: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Lesson",
-      },
-    ],
-    completedPodcasts: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Podcast",
-      },
-    ],
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
+    completedLessons: [{ type: mongoose.Schema.Types.ObjectId, ref: "Lesson" }],
+    completedPodcasts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Podcast" }],
+    completedUnits: [{ type: mongoose.Schema.Types.ObjectId, ref: "StudyUnit" }],
     quizPerformances: [
       {
-        lessonId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Lesson",
-          required: true,
-        },
-        score: {
-          type: Number,
-          required: true,
-        },
-        total: {
-          type: Number,
-          required: true,
-        },
-        passed: {
-          type: Boolean,
-          required: true,
-        },
-        updatedAt: {
-          type: Date,
-          default: Date.now,
-        },
+        lessonId: { type: mongoose.Schema.Types.ObjectId, ref: "Lesson", required: false },
+        unitId: { type: mongoose.Schema.Types.ObjectId, ref: "StudyUnit", required: false },
+        quizId: { type: mongoose.Schema.Types.ObjectId, ref: "Quiz", required: false },
+        score: { type: Number, required: true },
+        total: { type: Number, required: true },
+        passed: { type: Boolean, required: true },
+        updatedAt: { type: Date, default: Date.now },
       },
     ],
-    unlockedLessons: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Lesson",
-      },
-    ],
+    unlockedLessons: [{ type: mongoose.Schema.Types.ObjectId, ref: "Lesson" }],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-module.exports =
-  mongoose.models.UserProgress ||
-  mongoose.model("UserProgress", userProgressSchema);
+module.exports = mongoose.models.UserProgress || mongoose.model("UserProgress", userProgressSchema);
