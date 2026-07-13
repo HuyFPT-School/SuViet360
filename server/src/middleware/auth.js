@@ -36,6 +36,14 @@ const protect = asyncHandler(async (req, res, next) => {
     throw new AppError("Email not verified", 403);
   }
 
+  // Check subscription expiry (Issue #10)
+  if (user.subscriptionTier && user.subscriptionTier !== "Free" &&
+      user.subscriptionExpiry && user.subscriptionExpiry < new Date()) {
+    user.subscriptionTier = "Free";
+    user.subscriptionExpiry = null;
+    await user.save({ validateBeforeSave: false });
+  }
+
   req.user = user;
   next();
 });

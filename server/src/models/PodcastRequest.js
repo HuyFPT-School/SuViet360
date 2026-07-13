@@ -14,6 +14,14 @@ const podcastRequestSchema = new mongoose.Schema(
     assignedTeacherId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     teacherResponse: { type: String, default: "" },
     resultPodcastId: { type: mongoose.Schema.Types.ObjectId, ref: "Podcast", default: null },
+    needsGameCreation: { type: Boolean, default: false },
+    gameCreationStatus: {
+      type: String,
+      enum: ["None", "Requested", "Completed"],
+      default: "None",
+    },
+    pedagogicalNotes: { type: String, default: "" },
+    estimatedCompletionDate: { type: Date, default: null },
   },
   { timestamps: true, collection: "podcastrequests" }
 );

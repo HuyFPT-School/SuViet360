@@ -126,11 +126,19 @@ export const subscriptionApi = {
     return res.data.data;
   },
 
-  acceptLessonRequest: async (id: string) => {
+  acceptLessonRequest: async (
+    id: string,
+    params?: {
+      needsGameCreation?: boolean;
+      pedagogicalNotes?: string;
+      estimatedCompletionDate?: string;
+      resultPodcastId?: string;
+    }
+  ) => {
     const token = await getCsrfToken();
     const res = await api.put<{ success: boolean; data: LessonRequest }>(
       `/subscriptions/lesson-requests/${id}/accept`,
-      {},
+      params || {},
       { headers: { "x-csrf-token": token } }
     );
     return res.data.data;
@@ -156,11 +164,11 @@ export const subscriptionApi = {
     return res.data.data;
   },
 
-  completeLessonRequest: async (id: string, resultPodcastId: string) => {
+  completeLessonRequest: async (id: string, resultPodcastId?: string) => {
     const token = await getCsrfToken();
     const res = await api.put<{ success: boolean; data: LessonRequest }>(
       `/subscriptions/lesson-requests/${id}/complete`,
-      { resultPodcastId },
+      resultPodcastId ? { resultPodcastId } : {},
       { headers: { "x-csrf-token": token } }
     );
     return res.data.data;

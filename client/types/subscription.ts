@@ -68,6 +68,10 @@ export interface LessonRequest {
   assignedTeacherId?: { _id: string; name: string; avatar?: string };
   teacherResponse: string;
   resultPodcastId?: { _id: string; title: string };
+  needsGameCreation?: boolean;
+  gameCreationStatus?: "None" | "Requested" | "Completed";
+  pedagogicalNotes?: string;
+  estimatedCompletionDate?: string;
   createdAt: string;
 }
 

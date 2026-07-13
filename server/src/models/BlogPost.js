@@ -18,7 +18,7 @@ const blogPostSchema = new mongoose.Schema(
       type: String,
       required: [true, "Content is required"],
       trim: true,
-      maxlength: [5000, "Content cannot exceed 5000 characters"],
+      maxlength: [10000, "Content cannot exceed 10000 characters"],
     },
     images: {
       type: [

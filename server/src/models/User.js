@@ -118,9 +118,13 @@ userSchema.pre("save", async function preSave() {
     return;
   }
 
-  this.password = await bcrypt.hash(this.password, 12);
-  if (!this.isNew) {
-    this.passwordChangedAt = Date.now() - 1000;
+  try {
+    this.password = await bcrypt.hash(this.password, 12);
+    if (!this.isNew) {
+      this.passwordChangedAt = Date.now() - 1000;
+    }
+  } catch (err) {
+    throw err;
   }
 });
 
