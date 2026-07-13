@@ -73,6 +73,8 @@ type Podcast = {
   createdAt: string;
   updatedAt: string;
   pendingDraft?: any;
+  createdBy?: any;
+  podcastRequest?: { _id: string; requester: { name: string; email: string }; title: string } | null;
 };
 
 type PodcastFormState = {
@@ -103,16 +105,22 @@ function CustomFileInput({
   onChange,
   fileCount,
   singleFileName,
+  disabled,
 }: {
   accept?: string;
   multiple?: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   fileCount: number;
   singleFileName?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="mt-2 flex items-center gap-3">
-      <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer transition-colors duration-150 select-none">
+      <label className={`inline-flex items-center gap-2 px-3 py-1.5 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors duration-150 select-none ${
+        disabled
+          ? "bg-stone-300 cursor-not-allowed text-stone-500"
+          : "bg-amber-600 hover:bg-amber-700 active:bg-amber-800 cursor-pointer"
+      }`}>
         <svg
           className="w-3.5 h-3.5"
           fill="none"
@@ -132,6 +140,7 @@ function CustomFileInput({
           accept={accept}
           multiple={multiple}
           onChange={onChange}
+          disabled={disabled}
           className="hidden"
         />
       </label>
@@ -314,6 +323,10 @@ export default function StaffPage() {
 
   const selectedLesson = lessons.find((l) => l._id === selectedId);
   const selectedPodcast = podcasts.find((p) => p._id === selectedPodcastId);
+
+  const isTeacherPodcast = podcastFormMode === "edit" && selectedPodcast?.createdBy && (
+    typeof selectedPodcast.createdBy === "object" && (selectedPodcast.createdBy as any).role === "teacher"
+  );
 
   const setPodcastFormField = <K extends keyof PodcastFormState>(
     field: K,
@@ -1233,7 +1246,7 @@ export default function StaffPage() {
                         <img
                           src={podcast.thumbnail}
                           alt={podcast.title}
-                          className="w-16 h-16 object-cover rounded-lg border border-amber-200 flex-shrink-0"
+                            className="w-16 h-16 object-cover rounded-lg border border-amber-200 flex-shrink-0"
                         />
                       )}
                       <div className="flex-1 min-w-0">
@@ -1243,6 +1256,16 @@ export default function StaffPage() {
                             {translateLevel(podcast.level)}
                           </span>
                           {renderStaffStatusBadge(podcast.status)}
+                          {podcast.podcastRequest && (
+                            <span className="text-[10px] text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200 font-bold">
+                              Yêu cầu Pro
+                            </span>
+                          )}
+                          {podcast.createdBy && typeof podcast.createdBy === "object" && podcast.createdBy.role === "teacher" && (
+                            <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-250 font-bold">
+                              GV soạn
+                            </span>
+                          )}
                         </div>
                         <p className="mt-2 text-xs text-amber-655 line-clamp-2">
                           {podcast.description}
@@ -1297,6 +1320,30 @@ export default function StaffPage() {
                   </div>
                 )}
 
+                {isTeacherPodcast && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                    <h3 className="font-semibold text-amber-950 mb-1 flex items-center gap-1.5">
+                      <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      Quyền sở hữu của Giáo viên & Học sinh Pro
+                    </h3>
+                    <div className="space-y-1.5 text-xs text-amber-700 font-medium mt-1">
+                      <p>
+                        • <strong>Giáo viên biên soạn:</strong> {(selectedPodcast?.createdBy as any)?.name || "Chưa xác định"}
+                      </p>
+                      {selectedPodcast?.podcastRequest && (
+                        <p>
+                          • <strong>Học sinh yêu cầu (Pro):</strong> {selectedPodcast.podcastRequest.requester?.name || "Học sinh Pro"} ({(selectedPodcast.podcastRequest.requester as any)?.email})
+                        </p>
+                      )}
+                      <p className="mt-2 text-amber-900 font-semibold bg-amber-100/50 p-2 rounded-lg border border-amber-200">
+                        * Vì đây là podcast chuyên biệt do Giáo viên tạo theo Yêu cầu học tập riêng tư của Học sinh Pro, Staff không có quyền chỉnh sửa hoặc xóa dữ liệu này. Chỉ Giáo viên chịu trách nhiệm biên soạn mới có quyền chỉnh sửa.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
                     Tiêu đề
@@ -1305,7 +1352,8 @@ export default function StaffPage() {
                     type="text"
                     value={podcastForm.title}
                     onChange={(e) => setPodcastFormField("title", e.target.value)}
-                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    disabled={isTeacherPodcast}
+                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-stone-100 disabled:cursor-not-allowed"
                     placeholder="Nhập tiêu đề podcast"
                   />
                 </div>
@@ -1317,8 +1365,9 @@ export default function StaffPage() {
                   <textarea
                     value={podcastForm.description}
                     onChange={(e) => setPodcastFormField("description", e.target.value)}
+                    disabled={isTeacherPodcast}
                     rows={2}
-                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-stone-100 disabled:cursor-not-allowed"
                     placeholder="Tóm tắt ngắn về podcast này"
                   />
                 </div>
@@ -1330,8 +1379,9 @@ export default function StaffPage() {
                   <textarea
                     value={podcastForm.content}
                     onChange={(e) => setPodcastFormField("content", e.target.value)}
+                    disabled={isTeacherPodcast}
                     rows={4}
-                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-stone-100 disabled:cursor-not-allowed"
                     placeholder="Nội dung chính hoặc transcript của podcast"
                   />
                 </div>
@@ -1342,35 +1392,37 @@ export default function StaffPage() {
                       Chủ đề (Category)
                     </label>
                     <div className="flex items-center gap-3">
-                      {podcastForm.category && !isAddingNewCategory && (
+                      {podcastForm.category && !isAddingNewCategory && !isTeacherPodcast && (
                         <>
                           <button
                             type="button"
                             onClick={handleRenameCategoryPrompt}
-                            className="text-xs font-semibold text-blue-700 hover:text-blue-900 underline cursor-pointer"
+                            className="text-xs font-semibold text-blue-700 hover:text-blue-900 underline cursor-pointer font-medium"
                           >
                             Đổi tên
                           </button>
                           <button
                             type="button"
                             onClick={handleDeleteCategoryPrompt}
-                            className="text-xs font-semibold text-red-700 hover:text-red-900 underline cursor-pointer"
+                            className="text-xs font-semibold text-red-700 hover:text-red-900 underline cursor-pointer font-medium"
                           >
                             Xóa
                           </button>
                         </>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsAddingNewCategory(!isAddingNewCategory);
-                          setNewCategoryName("");
-                          setPodcastFormField("category", "");
-                        }}
-                        className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline cursor-pointer"
-                      >
-                        {isAddingNewCategory ? "Hủy" : "Tạo mới"}
-                      </button>
+                      {!isTeacherPodcast && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddingNewCategory(!isAddingNewCategory);
+                            setNewCategoryName("");
+                            setPodcastFormField("category", "");
+                          }}
+                          className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline cursor-pointer font-medium"
+                        >
+                          {isAddingNewCategory ? "Hủy" : "Tạo mới"}
+                        </button>
+                      )}
                     </div>
                   </div>
                   {isAddingNewCategory ? (
@@ -1381,14 +1433,16 @@ export default function StaffPage() {
                         setNewCategoryName(e.target.value);
                         setPodcastFormField("category", e.target.value);
                       }}
-                      className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      disabled={isTeacherPodcast}
+                      className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-stone-100 disabled:cursor-not-allowed"
                       placeholder="Nhập tên chủ đề mới (ví dụ: liên hợp quốc...)"
                     />
                   ) : (
                     <select
                       value={podcastForm.category}
                       onChange={(e) => setPodcastFormField("category", e.target.value)}
-                      className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      disabled={isTeacherPodcast}
+                      className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-stone-100 disabled:cursor-not-allowed"
                     >
                       <option value="">Chọn chủ đề (Bắt buộc)</option>
                       {categoriesList.map((cat) => (
@@ -1407,7 +1461,8 @@ export default function StaffPage() {
                   <select
                     value={podcastForm.level}
                     onChange={(e) => setPodcastFormField("level", e.target.value)}
-                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    disabled={isTeacherPodcast}
+                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-stone-100 disabled:cursor-not-allowed"
                   >
                     <option value="Easy">Dễ (Easy)</option>
                     <option value="Medium">Trung bình (Medium)</option>
@@ -1422,7 +1477,8 @@ export default function StaffPage() {
                   <select
                     value={podcastForm.lessonId}
                     onChange={(e) => setPodcastFormField("lessonId", e.target.value)}
-                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    disabled={isTeacherPodcast}
+                    className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-stone-100 disabled:cursor-not-allowed"
                   >
                     <option value="">Không liên kết game</option>
                     {lessons
@@ -1448,6 +1504,7 @@ export default function StaffPage() {
                     onChange={(e) => setPodcastFormField("thumbnailFile", e.target.files?.[0] || null)}
                     fileCount={podcastForm.thumbnailFile ? 1 : 0}
                     singleFileName={podcastForm.thumbnailFile?.name}
+                    disabled={isTeacherPodcast}
                   />
                   {podcastFormMode === "edit" && selectedPodcast?.thumbnail && (
                     <div className="mt-2 space-y-1.5">
@@ -1463,9 +1520,7 @@ export default function StaffPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-amber-800 underline hover:text-amber-900 break-all truncate block"
-                        >
-                          {selectedPodcast.thumbnail.split("/").pop()}
-                        </a>
+                        />
                       </div>
                     </div>
                   )}
@@ -1480,6 +1535,7 @@ export default function StaffPage() {
                     onChange={(e) => setPodcastFormField("audioFile", e.target.files?.[0] || null)}
                     fileCount={podcastForm.audioFile ? 1 : 0}
                     singleFileName={podcastForm.audioFile?.name}
+                    disabled={isTeacherPodcast}
                   />
                   {podcastFormMode === "edit" && selectedPodcast?.audioUrl && (
                     <div className="mt-2 space-y-1.5">
@@ -1500,14 +1556,16 @@ export default function StaffPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={handlePodcastSubmit}
-                    className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
-                  >
-                    {podcastFormMode === "create" ? "Tạo podcast" : "Lưu cập nhật"}
-                  </button>
-                  {podcastFormMode === "edit" && (
+                  {!isTeacherPodcast && (
+                    <button
+                      type="button"
+                      onClick={handlePodcastSubmit}
+                      className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
+                    >
+                      {podcastFormMode === "create" ? "Tạo podcast" : "Lưu cập nhật"}
+                    </button>
+                  )}
+                  {podcastFormMode === "edit" && !isTeacherPodcast && (
                     <button
                       type="button"
                       onClick={handlePodcastDelete}

@@ -140,6 +140,13 @@ const updatePodcast = asyncHandler(async (req, res) => {
     throw new AppError("Bạn không được phép chỉnh sửa podcast của người khác", 403);
   }
 
+  // Staff permission check: cannot edit teacher's podcasts
+  const User = require("../models/User");
+  const creatorUser = await User.findById(podcast.createdBy);
+  if (creatorUser && creatorUser.role === "teacher" && req.user.role === "staff") {
+    throw new AppError("Bạn không được phép chỉnh sửa podcast do Giáo viên tạo", 403);
+  }
+
   const { title, description, content, level, category, lessonId } = req.body;
 
   const cleanLessonId = (id) => {
@@ -272,6 +279,13 @@ const deletePodcast = asyncHandler(async (req, res) => {
     throw new AppError("Bạn không được phép xóa podcast của người khác", 403);
   }
 
+  // Staff permission check: cannot delete teacher's podcasts
+  const User = require("../models/User");
+  const creatorUser = await User.findById(podcast.createdBy);
+  if (creatorUser && creatorUser.role === "teacher" && req.user.role === "staff") {
+    throw new AppError("Bạn không được phép xóa podcast do Giáo viên tạo", 403);
+  }
+
   // Delete assets from Cloudinary
   if (podcast.thumbnailPublicId) {
     await deleteCloudinaryResource(podcast.thumbnailPublicId, "image");
@@ -325,13 +339,32 @@ const deletePodcast = asyncHandler(async (req, res) => {
 const getStaffPodcasts = asyncHandler(async (req, res) => {
   const podcasts = await Podcast.find()
     .populate("lessonId")
-    .populate("createdBy", "name email")
+    .populate("createdBy", "name email role")
     .sort({ createdAt: -1 });
+
+  const PodcastRequest = require("../models/PodcastRequest");
+  const podcastIds = podcasts.map(p => p._id);
+  const requests = await PodcastRequest.find({ resultPodcastId: { $in: podcastIds } })
+    .populate("requesterId", "name email")
+    .lean();
+
+  const podcastsWithRequests = podcasts.map(p => {
+    const pObj = p.toObject();
+    const matchedRequest = requests.find(r => r.resultPodcastId && r.resultPodcastId.toString() === p._id.toString());
+    if (matchedRequest) {
+      pObj.podcastRequest = {
+        _id: matchedRequest._id,
+        requester: matchedRequest.requesterId,
+        title: matchedRequest.title,
+      };
+    }
+    return pObj;
+  });
 
   res.status(200).json({
     success: true,
-    count: podcasts.length,
-    data: podcasts,
+    count: podcastsWithRequests.length,
+    data: podcastsWithRequests,
   });
 });
 
@@ -423,27 +456,10 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
     }
   }
 
-  let bypassCache = false;
-  if (currentUser && ["admin", "staff", "teacher"].includes(currentUser.role)) {
-    // Management roles can see private podcasts, bypass cache to avoid mixing public/private views
-    bypassCache = true;
-  } else if (currentUser) {
-    // Students can see public podcasts OR private podcasts allowed for them
-    queryObj.$or = [
-      { isPrivate: { $ne: true } },
-      { isPrivate: true, allowedUsers: currentUser._id }
-    ];
-    // Check if the user has any allowed private podcasts. If yes, bypass cache.
-    const hasPrivateAllowed = await Podcast.exists({ isPrivate: true, allowedUsers: currentUser._id });
-    if (hasPrivateAllowed) {
-      bypassCache = true;
-    } else {
-      queryObj.isPrivate = { $ne: true };
-    }
-  } else {
-    // Guest: public podcasts only
-    queryObj.isPrivate = { $ne: true };
-  }
+  // Enforce privacy: Public listing only returns public podcasts.
+  // Private requests are accessed exclusively through direct links from the student's request dashboard.
+  queryObj.isPrivate = { $ne: true };
+  const bypassCache = false;
 
   // ── Redis Cache (2-step: ETag check nhỏ → body chỉ khi cần) ─
   const cacheKey = podcastListKey(req.query);

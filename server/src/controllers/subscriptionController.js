@@ -10,6 +10,7 @@ const Transaction = require("../models/Transaction");
 const env = require("../config/env");
 const Subscription = require("../models/Subscription");
 const SubscriptionTier = require("../models/SubscriptionTier");
+const Podcast = require("../models/Podcast");
 
 // GET /api/subscriptions/tiers
 const getTiers = asyncHandler(async (req, res) => {
@@ -226,6 +227,7 @@ const getTeacherLessonRequests = asyncHandler(async (req, res) => {
   })
     .populate("requesterId", "name avatar email")
     .populate("assignedTeacherId", "name avatar")
+    .populate("resultPodcastId", "title")
     .sort({ createdAt: -1 });
 
   res.status(200).json({ success: true, data: requests });
@@ -239,7 +241,7 @@ const acceptLessonRequest = asyncHandler(async (req, res) => {
   if (!request) throw new AppError("Yêu cầu không tồn tại", 404);
   if (request.status !== "Pending") throw new AppError("Yêu cầu đã được xử lý", 400);
 
-  request.status = "Accepted";
+  request.status = "InProgress"; // Go directly to InProgress (Đang soạn)
   request.assignedTeacherId = req.user._id;
 
   if (resultPodcastId) {
@@ -265,10 +267,12 @@ const acceptLessonRequest = asyncHandler(async (req, res) => {
   await Notification.create({
     recipient: request.requesterId,
     type: "Lesson_Request_Accepted",
-    title: "Yêu cầu bài học đã được chấp nhận!",
-    message: `Giáo viên ${req.user.name} đã nhận yêu cầu bài học "${request.title}" của bạn.`,
+    title: "Yêu cầu bài học đang được soạn thảo!",
+    message: `Giáo viên ${req.user.name} đã nhận yêu cầu bài học "${request.title}" của bạn và đang tiến hành soạn thảo.`,
     link: "/subscription?tab=requests",
   });
+
+  await request.populate("resultPodcastId", "title");
 
   res.status(200).json({ success: true, data: request });
 });
@@ -314,6 +318,8 @@ const startLessonRequest = asyncHandler(async (req, res) => {
     link: "/subscription?tab=requests",
   });
 
+  await request.populate("resultPodcastId", "title");
+
   res.status(200).json({ success: true, data: request });
 });
 
@@ -334,7 +340,7 @@ const completeLessonRequest = asyncHandler(async (req, res) => {
 
   // Retrieve the linked podcast and make it private to this Student Pro (Issue #3 upgrade)
   const Podcast = require("../models/Podcast");
-  const linkedPodcast = await Podcast.findById(resultPodcastId);
+  const linkedPodcast = await Podcast.findById(finalPodcastId);
   if (linkedPodcast) {
     linkedPodcast.isPrivate = true;
     if (!linkedPodcast.allowedUsers.includes(request.requesterId)) {
@@ -355,8 +361,10 @@ const completeLessonRequest = asyncHandler(async (req, res) => {
     type: "System",
     title: "Yêu cầu bài học đã hoàn thành!",
     message: `Yêu cầu bài học (podcast) "${request.title}" của bạn đã hoàn thành. Hãy vào nghe ngay!`,
-    link: `/podcasts/${resultPodcastId}`,
+    link: `/podcasts/${finalPodcastId}`,
   });
+
+  await request.populate("resultPodcastId", "title");
 
   res.status(200).json({ success: true, data: request });
 });

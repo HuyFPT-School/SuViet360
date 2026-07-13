@@ -113,6 +113,8 @@ export default function TeacherPage() {
     lessonId: "",
     thumbnailFile: null as File | null,
     audioFile: null as File | null,
+    existingThumbnail: "",
+    existingAudioUrl: "",
   };
   const [podcastForm, setPodcastForm] = useState(emptyPodcastForm);
 
@@ -292,6 +294,29 @@ export default function TeacherPage() {
     }
   };
 
+  const triggerCompleteRequest = async (requestId: string, podcastId: string | null, podcastTitle: string) => {
+    if (podcastId) {
+      if (window.confirm(`Bạn có chắc chắn muốn hoàn thành bài soạn và xuất bản podcast "${podcastTitle}"?`)) {
+        setSaving(true);
+        setError("");
+        setMessage("");
+        try {
+          await subscriptionApi.completeLessonRequest(requestId, podcastId);
+          setMessage("Đã hoàn thành yêu cầu soạn bài và xuất bản podcast!");
+          await loadRequests();
+        } catch (err: any) {
+          setError(err.response?.data?.message || "Lỗi khi hoàn thành yêu cầu.");
+        } finally {
+          setSaving(false);
+        }
+      }
+    } else {
+      setCompletingRequestId(requestId);
+      setSelectedPodcastId("");
+      setFeedbackError("");
+    }
+  };
+
   const handleCompleteRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFeedbackError("");
@@ -442,6 +467,8 @@ export default function TeacherPage() {
               : (podcast.lessonId as string) || ""),
           thumbnailFile: null,
           audioFile: null,
+          existingThumbnail: draft?.thumbnail ?? podcast.thumbnail ?? "",
+          existingAudioUrl: draft?.audioUrl ?? podcast.audioUrl ?? "",
         });
         await loadLessonsList();
       }
@@ -904,11 +931,9 @@ export default function TeacherPage() {
                             <button
                               type="button"
                               onClick={() => {
-                                setCompletingRequestId(req._id);
-                                // Pre-fill resultPodcastId from the request itself
-                                const pId = typeof req.resultPodcastId === "object" ? req.resultPodcastId._id : req.resultPodcastId;
-                                setSelectedPodcastId(pId || "");
-                                setFeedbackError("");
+                                const pId = typeof req.resultPodcastId === "object" ? req.resultPodcastId?._id : req.resultPodcastId;
+                                const pTitle = typeof req.resultPodcastId === "object" ? req.resultPodcastId?.title : "bài soạn";
+                                triggerCompleteRequest(req._id, pId || null, pTitle || "bài soạn");
                               }}
                               className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700"
                             >
@@ -1515,6 +1540,17 @@ export default function TeacherPage() {
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>
                   Hình ảnh đại diện (Thumbnail) (Tải lên để thay thế)
                 </span>
+                {podcastForm.existingThumbnail && (
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "4px", background: "#fef3c7/20", padding: "6px", borderRadius: "6px", border: "1px solid #fef3c7" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={podcastForm.existingThumbnail}
+                      alt="Ảnh đại diện hiện tại"
+                      style={{ width: "80px", height: "45px", objectFit: "cover", borderRadius: "4px", border: "1px solid #d1c2a5" }}
+                    />
+                    <span style={{ fontSize: "11px", color: "#b45309", fontWeight: "600" }}>Ảnh đại diện hiện tại đã lưu trên máy chủ</span>
+                  </div>
+                )}
                 <label
                   style={{
                     display: "flex",
@@ -1554,6 +1590,16 @@ export default function TeacherPage() {
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>
                   Tệp âm thanh (Audio) (Tải lên để thay thế)
                 </span>
+                {podcastForm.existingAudioUrl && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginBottom: "4px", background: "#fef3c7/20", padding: "6px", borderRadius: "6px", border: "1px solid #fef3c7" }}>
+                    <audio
+                      src={podcastForm.existingAudioUrl}
+                      controls
+                      style={{ width: "100%", height: "32px", outline: "none" }}
+                    />
+                    <span style={{ fontSize: "11px", color: "#b45309", fontWeight: "600" }}>Tệp âm thanh hiện tại đã lưu trên máy chủ</span>
+                  </div>
+                )}
                 <label
                   style={{
                     display: "flex",
