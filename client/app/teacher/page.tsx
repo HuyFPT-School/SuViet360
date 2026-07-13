@@ -89,6 +89,7 @@ export default function TeacherPage() {
   const [completingRequestId, setCompletingRequestId] = useState<string | null>(null);
   const [selectedPodcastId, setSelectedPodcastId] = useState("");
   const [availablePodcasts, setAvailablePodcasts] = useState<any[]>([]);
+  const [availableQuizzes, setAvailableQuizzes] = useState<any[]>([]);
 
   // Refined Request parameters
   const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
@@ -179,10 +180,14 @@ export default function TeacherPage() {
 
       if (activeDashboardTab === "reviews") {
         await loadItems();
+        loadLessonsList();
+        loadPodcasts();
+        loadQuizzes();
       } else {
         await loadRequests();
         await loadLessonsList();
         await loadPodcasts();
+        await loadQuizzes();
       }
     };
 
@@ -355,6 +360,15 @@ export default function TeacherPage() {
     try {
       const res = await api.get<{ success: boolean; lessons: any[] }>("/lessons");
       setLessons(res.data.lessons || []);
+    } catch {
+      // Ignore
+    }
+  };
+
+  const loadQuizzes = async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: { quizzes: any[] } }>("/curriculum/quizzes");
+      setAvailableQuizzes(res.data.data.quizzes || []);
     } catch {
       // Ignore
     }
@@ -558,8 +572,9 @@ export default function TeacherPage() {
   );
 
   const handleApprove = async (item: TeacherReviewItem) => {
+    const typeLabel = item.type === "Lesson" ? "game" : item.type === "Podcast" ? "podcast" : "bài học";
     const ok = window.confirm(
-      `Duyệt ${item.type === "Lesson" ? "game" : "podcast"} "${item.title}" và cho phép hiển thị với học sinh?`
+      `Duyệt ${typeLabel} "${item.title}" và cho phép hiển thị với học sinh?`
     );
     if (!ok) return;
 
@@ -569,9 +584,9 @@ export default function TeacherPage() {
     try {
       await teacherReviewApi.approveContent(item.id, item.type);
       await loadItems();
-      setMessage(`Đã duyệt ${item.type === "Lesson" ? "game" : "podcast"} và cập nhật trạng thái Published.`);
+      setMessage(`Đã duyệt ${typeLabel} và cập nhật trạng thái Published.`);
     } catch {
-      setError(`Không thể duyệt ${item.type === "Lesson" ? "game" : "podcast"} này.`);
+      setError(`Không thể duyệt ${typeLabel} này.`);
     } finally {
       setSaving(false);
     }
@@ -593,6 +608,8 @@ export default function TeacherPage() {
       return;
     }
 
+    const typeLabel = rejectingItem.type === "Lesson" ? "game" : rejectingItem.type === "Podcast" ? "podcast" : "bài học";
+
     setSaving(true);
     setMessage("");
     setError("");
@@ -601,9 +618,9 @@ export default function TeacherPage() {
       await loadItems();
       setRejectingItem(null);
       setFeedback("");
-      setMessage(`Đã từ chối ${rejectingItem.type === "Lesson" ? "game" : "podcast"} và lưu feedback cho Staff.`);
+      setMessage(`Đã từ chối ${typeLabel} và lưu feedback cho Staff.`);
     } catch {
-      setError(`Không thể từ chối ${rejectingItem.type === "Lesson" ? "game" : "podcast"} này.`);
+      setError(`Không thể từ chối ${typeLabel} này.`);
     } finally {
       setSaving(false);
     }
@@ -773,8 +790,8 @@ export default function TeacherPage() {
                         <strong>{item.title}</strong>
                         <small className="line-clamp-2">{item.summary}</small>
                       </div>
-                      <span className={`teacher-type-badge ${item.type === "Podcast" ? "teacher-type-badge--podcast" : ""}`}>
-                        {item.type === "Lesson" ? "Game" : item.type}
+                      <span className={`teacher-type-badge ${item.type === "Podcast" ? "teacher-type-badge--podcast" : item.type === "StudyUnit" ? "teacher-type-badge--study-unit" : item.type === "Quiz" ? "teacher-type-badge--quiz" : ""}`}>
+                        {item.type === "Lesson" ? "Game" : item.type === "Podcast" ? "Podcast" : item.type === "StudyUnit" ? "Lý thuyết" : "Quiz"}
                       </span>
                       <span className="flex flex-col min-w-0 justify-center">
                         <span className="font-semibold text-amber-900 truncate block text-sm" title={formatCreatorDisplay(item.createdBy).name}>
@@ -979,6 +996,9 @@ export default function TeacherPage() {
         <ContentDetailModal
           item={selectedItem}
           saving={saving}
+          lessons={lessons}
+          podcasts={podcasts}
+          quizzes={availableQuizzes}
           onClose={() => setSelectedId(null)}
           onApprove={handleApprove}
           onReject={openRejectForm}
@@ -1758,15 +1778,215 @@ function PodcastPreview({
   );
 }
 
+function QuizPreview({
+  quizDetails,
+  title,
+}: {
+  quizDetails: any;
+  title: string;
+}) {
+  const questions = quizDetails?.questions || [];
+  return (
+    <div className="teacher-preview max-w-full space-y-6">
+      <div className="border-b border-amber-200 pb-3">
+        <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+          Ngân hàng Quiz
+        </span>
+        <h3 className="font-display text-lg font-bold text-amber-950 mt-1">{title}</h3>
+        <div className="flex gap-4 mt-2 text-xs text-amber-800">
+          {quizDetails?.timeLimit ? (
+            <span>Hạn giờ: {quizDetails.timeLimit}s</span>
+          ) : (
+            <span>Hạn giờ: Vô hạn</span>
+          )}
+          <span>Điểm đạt: {quizDetails?.passScore || 60}%</span>
+          {quizDetails?.shuffleQuestions && <span>Xáo trộn câu hỏi</span>}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {questions.map((q: any, idx: number) => (
+          <div key={idx} className="bg-amber-50/40 border border-amber-200 rounded-xl p-4 space-y-2.5">
+            <div className="flex gap-1.5 items-start">
+              <span className="text-xs font-bold text-amber-850 bg-amber-200/50 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
+                {idx + 1}
+              </span>
+              <p className="font-semibold text-amber-950 text-sm">{q.question}</p>
+            </div>
+
+            {q.image && (
+              <img
+                src={q.image}
+                alt={`Minh họa câu ${idx + 1}`}
+                className="max-h-40 rounded-lg border border-amber-200 object-cover"
+              />
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-6">
+              {q.options.map((opt: string, optIdx: number) => {
+                const isCorrect = optIdx === q.correctIndex;
+                return (
+                  <div
+                    key={optIdx}
+                    className={`text-xs p-2 rounded-lg border transition-colors ${
+                      isCorrect
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-medium"
+                        : "bg-white border-amber-100 text-amber-900"
+                    }`}
+                  >
+                    <span className="font-bold mr-1.5">{String.fromCharCode(65 + optIdx)}.</span>
+                    {opt}
+                    {isCorrect && (
+                      <svg className="w-3 h-3 text-emerald-600 inline ml-1.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {q.explanation && (
+              <div className="text-[11px] bg-amber-50/70 border-l-2 border-emerald-500 text-amber-850 p-2 rounded-r-lg pl-3 italic">
+                <strong className="text-emerald-700 not-italic mr-1">Giải thích:</strong>
+                {q.explanation}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {questions.length === 0 && (
+          <p className="text-xs text-amber-600 italic">Quiz này chưa có câu hỏi nào.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StudyUnitPreview({
+  studyUnitDetails,
+  title,
+  lessons = [],
+  podcasts = [],
+  quizzes = [],
+}: {
+  studyUnitDetails: any;
+  title: string;
+  lessons?: any[];
+  podcasts?: any[];
+  quizzes?: any[];
+}) {
+  const blocks = studyUnitDetails?.contentBlocks || [];
+
+  const getGameTitle = (id: string) => {
+    const game = lessons.find((g: any) => g._id === id);
+    return game ? game.title : `Trò chơi (${id})`;
+  };
+
+  const getPodcastTitle = (id: string) => {
+    const pod = podcasts.find((p: any) => p._id === id);
+    return pod ? pod.title : `Podcast (${id})`;
+  };
+
+  const getQuizTitle = (id: string) => {
+    const q = quizzes.find((qz: any) => qz._id === id);
+    return q ? q.title : `Quiz (${id})`;
+  };
+
+  return (
+    <div className="teacher-preview overflow-y-auto max-h-[70vh]">
+      <div className="teacher-preview-header">
+        <h3>Bài viết lý thuyết</h3>
+        <span>Danh sách các khối nội dung ({blocks.length} khối)</span>
+      </div>
+
+      <div className="space-y-4 mt-4" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {blocks.map((block: any, idx: number) => {
+          const data = block.data || {};
+          return (
+            <div key={idx} style={{ padding: "12px", border: "1px solid #d1c2a5", borderRadius: "8px", background: "rgba(255,255,255,0.6)", fontSize: "13px" }}>
+              <div style={{ display: "flex", justifyContent: "between", fontWeight: "bold", color: "#78350f", borderBottom: "1px solid #e2d1b6", paddingBottom: "4px", marginBottom: "6px", textTransform: "uppercase" }}>
+                <span>Khối {idx + 1}: {block.type}</span>
+              </div>
+
+              {block.type === "text" && (
+                <p style={{ whiteSpace: "pre-wrap", color: "#451a03" }}>{data.text}</p>
+              )}
+
+              {block.type === "image" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  {data.imageUrl && <img src={data.imageUrl} style={{ maxHeight: "120px", width: "auto", objectFit: "cover", borderRadius: "4px" }} alt="preview" />}
+                  <p style={{ fontStyle: "italic", color: "#78716c" }}>Chú thích: {data.caption || "Không có"}</p>
+                </div>
+              )}
+
+              {block.type === "audio" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <p style={{ fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg><span>{data.title || "Tệp âm thanh"}</span></p>
+                  {data.audioUrl && <audio src={data.audioUrl} controls style={{ width: "100%" }} />}
+                </div>
+              )}
+
+              {block.type === "video" && (
+                <p>Link Youtube: <a href={data.url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", textDecoration: "underline" }}>{data.title || data.url}</a></p>
+              )}
+
+              {block.type === "quote" && (
+                <p style={{ fontStyle: "italic", borderLeft: "2px solid #b45309", paddingLeft: "8px" }}>"{data.text}" — {data.author || "Khuyết danh"}</p>
+              )}
+
+              {block.type === "map" && (
+                <p>Bản đồ nhúng: <a href={data.embedUrl} target="_blank" rel="noreferrer" style={{ color: "#2563eb", textDecoration: "underline" }}>{data.title || data.embedUrl}</a></p>
+              )}
+
+              {block.type === "podcast" && (
+                <p>Podcast liên kết: <strong>{getPodcastTitle(data.podcastId)}</strong></p>
+              )}
+
+              {block.type === "game" && (
+                <p>Trò chơi 2D: <strong>{getGameTitle(data.gameId)}</strong></p>
+              )}
+
+              {block.type === "quiz" && (
+                <p>Quiz trắc nghiệm: <strong>{getQuizTitle(data.quizId)}</strong></p>
+              )}
+
+              {block.type === "timeline" && (
+                <ul style={{ paddingLeft: "16px", color: "#44403c" }}>
+                  {(data.events || []).map((ev: any, evIdx: number) => (
+                    <li key={evIdx} style={{ listStyleType: "disc", marginTop: "4px" }}>
+                      <strong>{ev.date}</strong>: {ev.title} — {ev.description}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+
+        {blocks.length === 0 && (
+          <p style={{ textAlign: "center", fontStyle: "italic", color: "#78716c" }}>Bài viết lý thuyết này không chứa khối nội dung nào.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ContentDetailModal({
   item,
   saving,
+  lessons = [],
+  podcasts = [],
+  quizzes = [],
   onClose,
   onApprove,
   onReject,
 }: {
   item: TeacherReviewItem;
   saving: boolean;
+  lessons?: any[];
+  podcasts?: any[];
+  quizzes?: any[];
   onClose: () => void;
   onApprove: (item: TeacherReviewItem) => void;
   onReject: (item: TeacherReviewItem) => void;
@@ -1778,7 +1998,7 @@ function ContentDetailModal({
       <div className="teacher-modal teacher-detail-modal">
         <div className="teacher-modal-header">
           <div>
-            <p className="admin-kicker">Chi tiết {item.type === "Lesson" ? "game" : "podcast"}</p>
+            <p className="admin-kicker">Chi tiết {item.type === "Lesson" ? "game" : item.type === "Podcast" ? "podcast" : "bài học"}</p>
             <h2>{item.title}</h2>
           </div>
           <button type="button" onClick={onClose} className="teacher-close-button">
@@ -1788,8 +2008,16 @@ function ContentDetailModal({
 
         <div className="teacher-detail-grid">
           <div className="teacher-detail-main">
-            <InfoRow label="Loại nội dung" value={item.type === "Lesson" ? "Game" : item.type} />
-            <InfoRow label="Người tạo" value={item.createdBy} />
+            <InfoRow label="Loại nội dung" value={item.type === "Lesson" ? "Game" : item.type === "Podcast" ? "Podcast" : "Lý thuyết"} />
+            <div className="teacher-info-row">
+              <span>Người tạo</span>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                <strong style={{ color: "#451a03", fontWeight: "700" }}>{formatCreatorDisplay(item.createdBy).name}</strong>
+                {formatCreatorDisplay(item.createdBy).email && (
+                  <span style={{ fontSize: "11px", color: "#d97706" }}>{formatCreatorDisplay(item.createdBy).email}</span>
+                )}
+              </div>
+            </div>
             <InfoRow label="Ngày gửi duyệt" value={formatDate(item.submittedAt)} />
             <div className="teacher-info-row">
               <span>Trạng thái hiện tại</span>
@@ -1821,6 +2049,16 @@ function ContentDetailModal({
               <LessonGamePreview game={item.game} lessonTitle={item.title} />
             ) : item.type === "Podcast" && item.podcastDetails ? (
               <PodcastPreview podcastDetails={item.podcastDetails} title={item.title} />
+            ) : item.type === "StudyUnit" && item.studyUnitDetails ? (
+              <StudyUnitPreview
+                studyUnitDetails={item.studyUnitDetails}
+                title={item.title}
+                lessons={lessons}
+                podcasts={podcasts}
+                quizzes={quizzes}
+              />
+            ) : item.type === "Quiz" && item.quizDetails ? (
+              <QuizPreview quizDetails={item.quizDetails} title={item.title} />
             ) : (
               <div className="teacher-preview">
                 <p className="admin-note">Không có xem trước cho mục này.</p>
@@ -2080,7 +2318,7 @@ function RejectModal({
       <form className="teacher-modal teacher-reject-modal" onSubmit={onSubmit}>
         <div className="teacher-modal-header">
           <div>
-            <p className="admin-kicker">Reject {item.type === "Lesson" ? "game" : "podcast"}</p>
+            <p className="admin-kicker">Reject {item.type === "Lesson" ? "game" : item.type === "Podcast" ? "podcast" : "bài học"}</p>
             <h2>{item.title}</h2>
           </div>
           <button type="button" onClick={onClose} className="teacher-close-button">
@@ -2094,7 +2332,7 @@ function RejectModal({
             value={feedback}
             onChange={(event) => onFeedbackChange(event.target.value)}
             rows={5}
-            placeholder={`Nhập feedback cụ thể để Staff chỉnh sửa ${item.type === "Lesson" ? "game" : "podcast"}...`}
+            placeholder={`Nhập feedback cụ thể để Staff chỉnh sửa ${item.type === "Lesson" ? "game" : item.type === "Podcast" ? "podcast" : "bài học"}...`}
           />
         </label>
         {feedbackError && <p className="teacher-field-error">{feedbackError}</p>}

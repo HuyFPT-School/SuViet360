@@ -3319,6 +3319,18 @@ img.avatar-circle {
   color: #0f766e;
 }
 
+.teacher-type-badge--study-unit {
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  background: rgba(219, 234, 254, 0.5);
+  color: #1d4ed8;
+}
+
+.teacher-type-badge--quiz {
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  background: rgba(237, 233, 254, 0.5);
+  color: #6d28d9;
+}
+
 .teacher-status {
   border: 1px solid rgba(74, 31, 36, 0.18);
 }

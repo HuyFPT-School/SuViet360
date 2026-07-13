@@ -37,6 +37,9 @@ export default function RootLayout({
                 <Link href="/podcasts" className="sv-menu-link">
                   Hành Trình
                 </Link>
+                <Link href="/study" className="sv-menu-link">
+                  Học Tập
+                </Link>
                 <Link href="/leaderboard" className="sv-menu-link">
                   Bảng Vàng 
                 </Link>

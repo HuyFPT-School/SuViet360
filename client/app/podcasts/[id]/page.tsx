@@ -274,6 +274,15 @@ export default function PodcastDetailPage() {
     fetchData();
   }, [id, user]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("playGame") === "true" || params.get("tab") === "game") {
+        setActiveTab("game");
+      }
+    }
+  }, [id]);
+
   // Audio Controls
   const togglePlay = () => {
     if (!audioRef.current) return;
