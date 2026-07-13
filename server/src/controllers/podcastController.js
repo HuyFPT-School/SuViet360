@@ -135,6 +135,18 @@ const updatePodcast = asyncHandler(async (req, res) => {
     throw new AppError("Podcast not found", 404);
   }
 
+  // Teacher permission check: can only edit their own podcasts
+  if (req.user.role === "teacher" && podcast.createdBy.toString() !== req.user._id.toString()) {
+    throw new AppError("Bạn không được phép chỉnh sửa podcast của người khác", 403);
+  }
+
+  // Staff permission check: cannot edit teacher's podcasts
+  const User = require("../models/User");
+  const creatorUser = await User.findById(podcast.createdBy);
+  if (creatorUser && creatorUser.role === "teacher" && req.user.role === "staff") {
+    throw new AppError("Bạn không được phép chỉnh sửa podcast do Giáo viên tạo", 403);
+  }
+
   const { title, description, content, level, category, lessonId } = req.body;
 
   const cleanLessonId = (id) => {
@@ -262,6 +274,18 @@ const deletePodcast = asyncHandler(async (req, res) => {
     throw new AppError("Podcast not found", 404);
   }
 
+  // Teacher permission check: can only delete their own podcasts
+  if (req.user.role === "teacher" && podcast.createdBy.toString() !== req.user._id.toString()) {
+    throw new AppError("Bạn không được phép xóa podcast của người khác", 403);
+  }
+
+  // Staff permission check: cannot delete teacher's podcasts
+  const User = require("../models/User");
+  const creatorUser = await User.findById(podcast.createdBy);
+  if (creatorUser && creatorUser.role === "teacher" && req.user.role === "staff") {
+    throw new AppError("Bạn không được phép xóa podcast do Giáo viên tạo", 403);
+  }
+
   // Delete assets from Cloudinary
   if (podcast.thumbnailPublicId) {
     await deleteCloudinaryResource(podcast.thumbnailPublicId, "image");
@@ -270,10 +294,35 @@ const deletePodcast = asyncHandler(async (req, res) => {
     await deleteCloudinaryResource(podcast.audioPublicId, "video");
   }
 
+  // Delete pending draft assets from Cloudinary (Issue #4)
+  if (podcast.pendingDraft) {
+    if (podcast.pendingDraft.thumbnailPublicId) {
+      await deleteCloudinaryResource(podcast.pendingDraft.thumbnailPublicId, "image");
+    }
+    if (podcast.pendingDraft.audioPublicId) {
+      await deleteCloudinaryResource(podcast.pendingDraft.audioPublicId, "video");
+    }
+  }
+
+  // Clean UserProgress references
+  const UserProgress = require("../models/UserProgress");
+  await UserProgress.updateMany(
+    {},
+    {
+      $pull: { completedPodcasts: req.params.id },
+    }
+  );
+
+  // Clean XP History
+  const XPHistory = require("../models/XPHistory");
+  await XPHistory.deleteMany({ source: "Podcast", sourceId: req.params.id });
+
   // Delete from DB
   await Podcast.findByIdAndDelete(req.params.id);
 
   // Also delete associated notes and comments
+  const PodcastNote = require("../models/PodcastNote");
+  const PodcastComment = require("../models/PodcastComment");
   await PodcastNote.deleteMany({ podcastId: req.params.id });
   await PodcastComment.deleteMany({ podcastId: req.params.id });
 
@@ -290,13 +339,32 @@ const deletePodcast = asyncHandler(async (req, res) => {
 const getStaffPodcasts = asyncHandler(async (req, res) => {
   const podcasts = await Podcast.find()
     .populate("lessonId")
-    .populate("createdBy", "name email")
+    .populate("createdBy", "name email role")
     .sort({ createdAt: -1 });
+
+  const PodcastRequest = require("../models/PodcastRequest");
+  const podcastIds = podcasts.map(p => p._id);
+  const requests = await PodcastRequest.find({ resultPodcastId: { $in: podcastIds } })
+    .populate("requesterId", "name email")
+    .lean();
+
+  const podcastsWithRequests = podcasts.map(p => {
+    const pObj = p.toObject();
+    const matchedRequest = requests.find(r => r.resultPodcastId && r.resultPodcastId.toString() === p._id.toString());
+    if (matchedRequest) {
+      pObj.podcastRequest = {
+        _id: matchedRequest._id,
+        requester: matchedRequest.requesterId,
+        title: matchedRequest.title,
+      };
+    }
+    return pObj;
+  });
 
   res.status(200).json({
     success: true,
-    count: podcasts.length,
-    data: podcasts,
+    count: podcastsWithRequests.length,
+    data: podcastsWithRequests,
   });
 });
 
@@ -371,36 +439,60 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
     sortObj = { createdAt: 1 };
   }
 
+  // ── Determine current user and enforce privacy checks ──
+  const jwt = require("jsonwebtoken");
+  const env = require("../config/env");
+  const User = require("../models/User");
+  const { getCookie } = require("../utils/cookies");
+
+  let currentUser = null;
+  const token = getCookie(req, "token");
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, env.jwtSecret);
+      currentUser = await User.findById(decoded.id);
+    } catch (err) {
+      // Ignore
+    }
+  }
+
+  // Enforce privacy: Public listing only returns public podcasts.
+  // Private requests are accessed exclusively through direct links from the student's request dashboard.
+  queryObj.isPrivate = { $ne: true };
+  const bypassCache = false;
+
   // ── Redis Cache (2-step: ETag check nhỏ → body chỉ khi cần) ─
   const cacheKey = podcastListKey(req.query);
 
-  // Bước 1: Chỉ đọc ETag (~50 bytes, cực nhanh)
-  let cachedETag = await getCacheETag(cacheKey);
-  if (cachedETag && etagMatch(req.headers["if-none-match"], cachedETag)) {
-    return res
-      .set("Cache-Control", "no-cache")
-      .status(304)
-      .end();
-  }
-
-  // Bước 2: ETag key chưa có hoặc không khớp → đọc full body
-  const payload = await getCachePayload(cacheKey);
-  if (payload) {
-    if (!cachedETag) {
-      await setCacheETag(cacheKey, payload.etag);
-    }
-    if (etagMatch(req.headers["if-none-match"], payload.etag)) {
+  if (!bypassCache) {
+    // Bước 1: Chỉ đọc ETag (~50 bytes, cực nhanh)
+    let cachedETag = await getCacheETag(cacheKey);
+    if (cachedETag && etagMatch(req.headers["if-none-match"], cachedETag)) {
       return res
         .set("Cache-Control", "no-cache")
         .status(304)
         .end();
     }
-    return res
-      .status(200)
-      .set("Cache-Control", "no-cache")
-      .set("ETag", payload.etag)
-      .type("json")
-      .send(payload.body);
+
+    // Bước 2: ETag key chưa có hoặc không khớp → đọc full body
+    const payload = await getCachePayload(cacheKey);
+    if (payload) {
+      if (!cachedETag) {
+        await setCacheETag(cacheKey, payload.etag);
+      }
+      if (etagMatch(req.headers["if-none-match"], payload.etag)) {
+        return res
+          .set("Cache-Control", "no-cache")
+          .status(304)
+          .end();
+      }
+      return res
+        .status(200)
+        .set("Cache-Control", "no-cache")
+        .set("ETag", payload.etag)
+        .type("json")
+        .send(payload.body);
+    }
   }
 
   // ────────────────────────────────────────────────────────────
@@ -424,8 +516,10 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
     data: podcasts,
   };
 
-  // Lưu cache kèm ETag (không await để không block response)
-  setCachePayload(cacheKey, responseData);
+  // Lưu cache kèm ETag nếu không bypass (không await để không block response)
+  if (!bypassCache) {
+    setCachePayload(cacheKey, responseData);
+  }
 
   res
     .set("Cache-Control", "no-cache")
@@ -437,33 +531,71 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
 const getPodcastById = asyncHandler(async (req, res) => {
   const cacheKey = podcastDetailKey(req.params.id);
 
-  // ── Redis Cache (2-step: ETag check nhỏ → body chỉ khi cần) ─
-  let cachedETag = await getCacheETag(cacheKey);
-  if (cachedETag && etagMatch(req.headers["if-none-match"], cachedETag)) {
-    // Vẫn tăng viewCount ngầm
-    Podcast.findByIdAndUpdate(req.params.id, { $inc: { viewCount: 1 } }).catch(() => {});
-    return res
-      .set("Cache-Control", "no-cache")
-      .status(304)
-      .end();
+  // ── Determine current user and enforce privacy checks ──
+  const jwt = require("jsonwebtoken");
+  const env = require("../config/env");
+  const User = require("../models/User");
+  const { getCookie } = require("../utils/cookies");
+
+  let currentUser = null;
+  const token = getCookie(req, "token");
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, env.jwtSecret);
+      currentUser = await User.findById(decoded.id);
+    } catch (err) {
+      // Ignore
+    }
   }
 
-  const payload = await getCachePayload(cacheKey);
-  if (payload) {
-    Podcast.findByIdAndUpdate(req.params.id, { $inc: { viewCount: 1 } }).catch(() => {});
-    if (!cachedETag) await setCacheETag(cacheKey, payload.etag);
-    if (etagMatch(req.headers["if-none-match"], payload.etag)) {
+  // Pre-load podcast to verify status & privacy
+  const checkPodcast = await Podcast.findById(req.params.id);
+  if (!checkPodcast) {
+    throw new AppError("Podcast not found", 404);
+  }
+
+  // Enforce privacy (allowedUsers or admin/staff/teacher)
+  if (checkPodcast.isPrivate) {
+    const isAllowed = currentUser && (
+      ["admin", "staff", "teacher"].includes(currentUser.role) ||
+      checkPodcast.allowedUsers.some(uid => uid.toString() === currentUser._id.toString())
+    );
+    if (!isAllowed) {
+      throw new AppError("Bạn không có quyền truy cập podcast riêng tư này", 403);
+    }
+  }
+
+  const bypassCache = checkPodcast.isPrivate;
+
+  if (!bypassCache) {
+    // ── Redis Cache (2-step: ETag check nhỏ → body chỉ khi cần) ─
+    let cachedETag = await getCacheETag(cacheKey);
+    if (cachedETag && etagMatch(req.headers["if-none-match"], cachedETag)) {
+      // Vẫn tăng viewCount ngầm
+      Podcast.findByIdAndUpdate(req.params.id, { $inc: { viewCount: 1 } }).catch(() => {});
       return res
         .set("Cache-Control", "no-cache")
         .status(304)
         .end();
     }
-    return res
-      .status(200)
-      .set("Cache-Control", "no-cache")
-      .set("ETag", payload.etag)
-      .type("json")
-      .send(payload.body);
+
+    const payload = await getCachePayload(cacheKey);
+    if (payload) {
+      Podcast.findByIdAndUpdate(req.params.id, { $inc: { viewCount: 1 } }).catch(() => {});
+      if (!cachedETag) await setCacheETag(cacheKey, payload.etag);
+      if (etagMatch(req.headers["if-none-match"], payload.etag)) {
+        return res
+          .set("Cache-Control", "no-cache")
+          .status(304)
+          .end();
+      }
+      return res
+        .status(200)
+        .set("Cache-Control", "no-cache")
+        .set("ETag", payload.etag)
+        .type("json")
+        .send(payload.body);
+    }
   }
   // ────────────────────────────────────────────────────────────
 
@@ -485,8 +617,10 @@ const getPodcastById = asyncHandler(async (req, res) => {
     data: podcast,
   };
 
-  // Lưu cache kèm ETag (TTL ngắn hơn vì có viewCount)
-  setCachePayload(cacheKey, responseData, DETAIL_TTL);
+  // Lưu cache kèm ETag (TTL ngắn hơn vì có viewCount) nếu không bypass
+  if (!bypassCache) {
+    setCachePayload(cacheKey, responseData, DETAIL_TTL);
+  }
 
   res
     .set("Cache-Control", "no-cache")
@@ -571,6 +705,12 @@ const getComments = asyncHandler(async (req, res) => {
   });
 });
 
+// Helper to sanitize html tags (Issue #17)
+const sanitizeInput = (text) => {
+  if (typeof text !== "string") return text;
+  return text.replace(/<[^>]*>/g, "");
+};
+
 // Create Comment (Authenticated)
 const createComment = asyncHandler(async (req, res) => {
   const { podcastId, content } = req.body;
@@ -579,10 +719,12 @@ const createComment = asyncHandler(async (req, res) => {
     throw new AppError("Podcast ID and content are required", 400);
   }
 
+  const sanitizedContent = sanitizeInput(content.trim());
+
   let comment = await PodcastComment.create({
     podcastId,
     userId: req.user.id,
-    content,
+    content: sanitizedContent,
   });
 
   // Populate user details for response
@@ -665,7 +807,7 @@ const updateComment = asyncHandler(async (req, res) => {
     throw new AppError("Not authorized to update this comment", 403);
   }
 
-  comment.content = content;
+  comment.content = sanitizeInput(content.trim());
   await comment.save();
 
   // Populate user info for frontend response consistency
@@ -736,18 +878,26 @@ const approvePodcast = asyncHandler(async (req, res) => {
 
     const followers = await User.find({ followedCategories: podcast.category }).select("_id");
     
-    if (followers.length > 0) {
-      // 1. Tạo các bản ghi thông báo trong Database
-      const notificationPromises = followers.map((follower) =>
-        Notification.create({
+      // 1. Kiểm tra và lọc người dùng đã được thông báo trước đó để tránh trùng lặp (Issue #5)
+      const existing = await Notification.find({
+        type: "New_Podcast",
+        link: `/podcasts/${podcast._id}`
+      }).select("recipient").lean();
+      const existingRecipients = new Set(existing.map(n => n.recipient.toString()));
+
+      const newFollowers = followers.filter(f => !existingRecipients.has(f._id.toString()));
+
+      if (newFollowers.length > 0) {
+        // 2. Batch insert thông báo bằng insertMany để tăng tốc độ (Issue #23)
+        const docs = newFollowers.map((follower) => ({
           recipient: follower._id,
           type: "New_Podcast",
           title: "Bài học âm thanh mới!",
           message: `Chủ đề "${podcast.category}" vừa có podcast mới: "${podcast.title}"`,
           link: `/podcasts/${podcast._id}`,
-        })
-      );
-      await Promise.all(notificationPromises);
+        }));
+        await Notification.insertMany(docs);
+      }
 
       // 2. Publish tín hiệu sang Redis Pub/Sub để Socket Server truyền tải thời gian thực
       if (isRedisReady()) {
@@ -762,7 +912,6 @@ const approvePodcast = asyncHandler(async (req, res) => {
           })
         );
       }
-    }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[Notification] Failed to create or publish notification:", err.message);

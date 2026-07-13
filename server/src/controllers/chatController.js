@@ -95,13 +95,13 @@ const createConversation = asyncHandler(async (req, res) => {
     throw new AppError("User not found", 404);
   }
 
-  // Enforce role rules
+  // Enforce role rules (Issue #20)
   const currentRole = req.user.role;
-  if (currentRole === "student" && participant.role !== "teacher") {
-    throw new AppError("Students can only chat with teachers", 403);
+  if (currentRole === "student" && !["teacher", "staff"].includes(participant.role)) {
+    throw new AppError("Students can only chat with teachers or staff members", 403);
   }
-  if (currentRole === "teacher" && participant.role !== "student") {
-    throw new AppError("Teachers can only chat with students", 403);
+  if (["teacher", "staff"].includes(currentRole) && participant.role !== "student") {
+    throw new AppError("Teachers and staff members can only chat with students", 403);
   }
   // admin can chat with anyone — no restriction
 
@@ -135,8 +135,8 @@ const createConversation = asyncHandler(async (req, res) => {
 
 /* ─── GET /api/chat/teachers ─── */
 const getTeachers = asyncHandler(async (req, res) => {
-  const teachers = await User.find({ role: "teacher" }).select(
-    "name avatar email"
+  const teachers = await User.find({ role: { $in: ["teacher", "staff"] } }).select(
+    "name avatar email role"
   );
 
   res.status(200).json({

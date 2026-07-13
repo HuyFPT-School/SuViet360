@@ -129,9 +129,19 @@ const getPostById = asyncHandler(async (req, res) => {
     }
   }
 
-  // Increment viewCount
-  post.viewCount += 1;
-  await post.save();
+  // Increment viewCount atomically with cookie deduplication (Issues #14, #24)
+  const viewedCookieName = `viewed_post_${req.params.id}`;
+  const hasViewed = getCookie(req, viewedCookieName);
+  if (!hasViewed) {
+    await BlogPost.findByIdAndUpdate(req.params.id, { $inc: { viewCount: 1 } });
+    post.viewCount += 1;
+    res.cookie(viewedCookieName, "true", {
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      httpOnly: true,
+      secure: env.cookieSecure,
+      sameSite: env.cookieSecure ? "none" : "lax"
+    });
+  }
 
   res.status(200).json({
     success: true,
@@ -172,9 +182,9 @@ const updatePost = asyncHandler(async (req, res) => {
     post.tags = Array.isArray(tags) ? tags : tags.split(",").map(t => t.trim()).filter(Boolean);
   }
 
-  // Handle images
+  // Handle images (Issue #13)
   let keptImages = [];
-  if (keepImages) {
+  if (keepImages !== undefined) {
     // keepImages could be a JSON string or array of publicIds to keep
     const keepList = typeof keepImages === "string" ? JSON.parse(keepImages) : keepImages;
     // Delete removed images from Cloudinary
@@ -185,11 +195,14 @@ const updatePost = asyncHandler(async (req, res) => {
         keptImages.push(img);
       }
     }
-  } else {
-    // Delete all old images if not specified
+  } else if (req.files && req.files.length > 0) {
+    // If keepImages is not specified but new files are uploaded, delete all old images
     for (const img of post.images) {
       await deleteCloudinaryResource(img.publicId, "image");
     }
+  } else {
+    // If keepImages is not specified AND no new files are uploaded, keep all old images
+    keptImages = [...post.images];
   }
 
   // Add new uploaded images

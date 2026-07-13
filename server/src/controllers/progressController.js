@@ -159,11 +159,15 @@ const completeLesson = asyncHandler(async (req, res) => {
   const newXP = oldXP + xpGained;
   const newLevel = calculateLevel(newXP);
 
-  // Update user
-  const user = await User.findById(userId);
-  user.xp = newXP;
-  user.level = newLevel;
-  await user.save();
+  // Update user atomically (Issue #7)
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      $inc: { xp: xpGained },
+      $set: { level: newLevel }
+    },
+    { new: true }
+  );
 
   // Log to history
   const description = `Hoàn thành bài học: ${lesson.title}${multiplier > 1.0 ? ` (VIP x${multiplier} Bonus)` : ""}`;
@@ -249,11 +253,15 @@ const completePodcast = asyncHandler(async (req, res) => {
   const newXP = oldXP + xpGained;
   const newLevel = calculateLevel(newXP);
 
-  // Update user
-  const user = await User.findById(userId);
-  user.xp = newXP;
-  user.level = newLevel;
-  await user.save();
+  // Update user atomically (Issue #7)
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      $inc: { xp: xpGained },
+      $set: { level: newLevel }
+    },
+    { new: true }
+  );
 
   // Log to history
   const description = `Nghe xong podcast: ${podcast.title}${multiplier > 1.0 ? ` (VIP x${multiplier} Bonus)` : ""}`;
@@ -287,6 +295,12 @@ const submitQuiz = asyncHandler(async (req, res) => {
 
   if (typeof score !== "number" || typeof total !== "number" || total <= 0) {
     throw new AppError("Invalid score or total questions count", 400);
+  }
+  if (score < 0 || score > total) {
+    throw new AppError("Score must be between 0 and total questions", 400);
+  }
+  if (total > 100) {
+    throw new AppError("Total questions count cannot exceed 100", 400);
   }
 
   // Check lesson exists
@@ -361,9 +375,14 @@ const submitQuiz = asyncHandler(async (req, res) => {
     const newXP = oldXP + xpToAward;
     const newLevel = calculateLevel(newXP);
 
-    user.xp = newXP;
-    user.level = newLevel;
-    await user.save();
+    user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $inc: { xp: xpToAward },
+        $set: { level: newLevel }
+      },
+      { new: true }
+    );
 
     // Log to history
     await XPHistory.create({

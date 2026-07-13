@@ -15,6 +15,13 @@ const followCategory = asyncHandler(async (req, res) => {
 
   const cleanCategory = category.trim();
 
+  // Validate that the category actually exists in published podcasts or is default (Issue #6)
+  const Podcast = require("../models/Podcast");
+  const categoryExists = await Podcast.exists({ category: cleanCategory, status: "Published" });
+  if (!categoryExists && cleanCategory !== "Chủ đề chung") {
+    throw new AppError("Category does not exist", 400);
+  }
+
   await User.findByIdAndUpdate(req.user.id, {
     $addToSet: { followedCategories: cleanCategory },
   });

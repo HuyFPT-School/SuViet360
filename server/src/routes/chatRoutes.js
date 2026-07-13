@@ -9,6 +9,8 @@ const {
   getChatUsers,
 } = require("../controllers/chatController");
 
+const { chatLimiter } = require("../middleware/rateLimiter");
+
 const router = express.Router();
 
 // All routes require authentication
@@ -24,7 +26,7 @@ router.post("/conversations", createConversation);
 router.get("/conversations/:conversationId/messages", getMessages);
 
 // POST /api/chat/conversations/:conversationId/messages - Send a message
-router.post("/conversations/:conversationId/messages", sendMessage);
+router.post("/conversations/:conversationId/messages", chatLimiter, sendMessage);
 
 // GET /api/chat/teachers - List all teachers (for users to start a chat)
 router.get("/teachers", authorize("student", "admin", "staff"), getTeachers);

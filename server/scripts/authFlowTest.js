@@ -156,7 +156,7 @@ const test = async () => {
 
     const verify = await requestJson(
       `${BASE_URL}/api/auth/verify-email?token=${verifyToken}`,
-      { method: "GET" },
+      { method: "GET", headers: { "accept": "application/json" } },
       jar
     );
     record(

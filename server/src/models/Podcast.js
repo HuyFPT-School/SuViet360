@@ -74,6 +74,14 @@ const podcastSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: null,
     },
+    isPrivate: {
+      type: Boolean,
+      default: false,
+    },
+    allowedUsers: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      default: [],
+    },
   },
   {
     timestamps: true,
