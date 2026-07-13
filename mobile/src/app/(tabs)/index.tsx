@@ -33,18 +33,42 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const QUICK_LINKS: Array<{
   label: string;
-  route: '/(tabs)/lessons' | '/(tabs)/podcasts' | '/(tabs)/chat' | '/(tabs)/profile';
+  route: string;
   icon: IoniconName;
 }> = [
-  { label: 'Bài Học', route: '/(tabs)/lessons', icon: 'book-outline' },
-  { label: 'Podcast', route: '/(tabs)/podcasts', icon: 'headset-outline' },
+  { label: 'Hành Trình', route: '/(tabs)/podcasts', icon: 'compass-outline' },
+  { label: 'Diễn Đàn', route: '/(tabs)/blog', icon: 'newspaper-outline' },
   { label: 'Hỏi Đáp', route: '/(tabs)/chat', icon: 'chatbubble-ellipses-outline' },
-  { label: 'Thành Tựu', route: '/(tabs)/profile', icon: 'trophy-outline' },
+  { label: 'Bảng Vàng', route: '/leaderboard', icon: 'trophy-outline' },
+];
+
+const SECONDARY_LINKS: Array<{
+  label: string;
+  route: string;
+  icon: IoniconName;
+}> = [
+  { label: 'Gói VIP', route: '/subscription', icon: 'diamond-outline' },
+  { label: 'Thông Báo', route: '/notifications', icon: 'notifications-outline' },
+  { label: 'Thành Tựu', route: '/(tabs)/profile', icon: 'person-outline' },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
+
+  const ADMIN_LINKS: Array<{
+    label: string;
+    route: string;
+    icon: IoniconName;
+    roles: string[];
+  }> = [
+    { label: 'Kiểm duyệt', route: '/teacher', icon: 'shield-checkmark-outline', roles: ['teacher', 'admin'] },
+    { label: 'Quản lý', route: '/staff', icon: 'settings-outline', roles: ['staff', 'admin'] },
+  ];
+
+  const visibleAdminLinks = ADMIN_LINKS.filter(
+    (link) => user && link.roles.includes(user.role)
+  );
 
   return (
     <PageBackground style={styles.container}>
@@ -70,7 +94,7 @@ export default function HomeScreen() {
           <View style={styles.heroActions}>
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => router.push('/(tabs)/lessons')}
+              onPress={() => router.push('/(tabs)/podcasts')}
             >
               <Text style={styles.primaryButtonText}>Bắt Đầu</Text>
             </TouchableOpacity>
@@ -117,7 +141,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={link.route}
                 style={styles.quickLink}
-                onPress={() => router.push(link.route)}
+                onPress={() => router.push(link.route as any)}
               >
                 <View style={styles.quickLinkIcon}>
                   <Ionicons name={link.icon} size={32} color={Colors.light.goldDark} />
@@ -127,6 +151,46 @@ export default function HomeScreen() {
             ))}
           </View>
         </View>
+
+        {/* Secondary Links */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Khám Phá Thêm</Text>
+          <View style={styles.quickLinks}>
+            {SECONDARY_LINKS.map((link) => (
+              <TouchableOpacity
+                key={link.route}
+                style={styles.quickLink}
+                onPress={() => router.push(link.route as any)}
+              >
+                <View style={styles.quickLinkIcon}>
+                  <Ionicons name={link.icon} size={32} color={Colors.light.goldDark} />
+                </View>
+                <Text style={styles.quickLinkText}>{link.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Admin Links (role-based) */}
+        {visibleAdminLinks.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quản Trị</Text>
+            <View style={styles.quickLinks}>
+              {visibleAdminLinks.map((link) => (
+                <TouchableOpacity
+                  key={link.route}
+                  style={styles.quickLink}
+                  onPress={() => router.push(link.route as any)}
+                >
+                  <View style={[styles.quickLinkIcon, styles.adminQuickLinkIcon]}>
+                    <Ionicons name={link.icon} size={32} color={Colors.light.goldDark} />
+                  </View>
+                  <Text style={styles.quickLinkText}>{link.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
       </ScrollView>
     </PageBackground>
   );
@@ -328,6 +392,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(201, 161, 90, 0.14)',
+  },
+  adminQuickLinkIcon: {
+    backgroundColor: 'rgba(139, 105, 20, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 161, 90, 0.3)',
   },
   quickLinkText: {
     fontFamily: 'Cinzel',

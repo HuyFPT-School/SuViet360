@@ -56,29 +56,29 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="lessons"
+        name="podcasts"
         options={{
-          title: 'Học Tập',
+          title: 'Hành Trình',
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
               focused={focused}
               color={color}
-              activeIcon="book"
-              inactiveIcon="book-outline"
+              activeIcon="compass"
+              inactiveIcon="compass-outline"
             />
           ),
         }}
       />
       <Tabs.Screen
-        name="podcasts"
+        name="blog"
         options={{
-          title: 'Khám Phá',
+          title: 'Diễn Đàn',
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
               focused={focused}
               color={color}
-              activeIcon="headset"
-              inactiveIcon="headset-outline"
+              activeIcon="newspaper"
+              inactiveIcon="newspaper-outline"
             />
           ),
         }}

@@ -446,7 +446,10 @@ const getAllPodcasts = asyncHandler(async (req, res) => {
   const { getCookie } = require("../utils/cookies");
 
   let currentUser = null;
-  const token = getCookie(req, "token");
+  let token = getCookie(req, "token");
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    token = req.headers.authorization.split(" ")[1];
+  }
   if (token) {
     try {
       const decoded = jwt.verify(token, env.jwtSecret);
@@ -538,7 +541,10 @@ const getPodcastById = asyncHandler(async (req, res) => {
   const { getCookie } = require("../utils/cookies");
 
   let currentUser = null;
-  const token = getCookie(req, "token");
+  let token = getCookie(req, "token");
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    token = req.headers.authorization.split(" ")[1];
+  }
   if (token) {
     try {
       const decoded = jwt.verify(token, env.jwtSecret);

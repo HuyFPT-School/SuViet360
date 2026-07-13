@@ -14,6 +14,7 @@ import { PageBackground } from '@/components/PageBackground';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/hooks/useAuth';
 import { profileApi, type ProfileUpdatePayload } from '@/services/profileApi';
+import { subscriptionApi } from '@/services/subscriptionApi';
 import { setUser } from '@/store/features/authSlice';
 import { useAppDispatch } from '@/store';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
@@ -45,6 +46,7 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<ProfileUpdatePayload>({});
+  const [subInfo, setSubInfo] = useState<any>(null);
 
   useEffect(() => {
     if (user) {
@@ -56,6 +58,9 @@ export default function ProfileScreen() {
         address: user.address,
         bio: user.bio,
       });
+      subscriptionApi.getMySubscription()
+        .then(setSubInfo)
+        .catch(() => {});
     }
   }, [user]);
 
@@ -131,6 +136,48 @@ export default function ProfileScreen() {
              user.role === 'teacher' ? 'Giáo Viên' : 'Học Viên'}
           </Text>
         </View>
+        {subInfo && (
+          <View style={styles.subBadge}>
+            <Ionicons name="diamond" size={14} color={Colors.light.gold} />
+            <Text style={styles.subText}>
+              {subInfo.tier || 'Chưa có gói'} {subInfo.expiry ? `— đến ${new Date(subInfo.expiry).toLocaleDateString('vi-VN')}` : ''}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Quick Nav */}
+      <View style={styles.quickNav}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/subscription' as any)}>
+          <Ionicons name="diamond-outline" size={20} color={Colors.light.gold} />
+          <Text style={styles.navText}>Gói VIP</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/blog/my-posts' as any)}>
+          <Ionicons name="document-text-outline" size={20} color={Colors.light.gold} />
+          <Text style={styles.navText}>Bài Viết Của Tôi</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/subscription/history' as any)}>
+          <Ionicons name="receipt-outline" size={20} color={Colors.light.gold} />
+          <Text style={styles.navText}>Lịch Sử GD</Text>
+        </TouchableOpacity>
+        {user.role === 'admin' && (
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/admin' as any)}>
+            <Ionicons name="settings-outline" size={20} color={Colors.light.gold} />
+            <Text style={styles.navText}>Quản Trị</Text>
+          </TouchableOpacity>
+        )}
+        {user.role === 'staff' && (
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/staff' as any)}>
+            <Ionicons name="briefcase-outline" size={20} color={Colors.light.gold} />
+            <Text style={styles.navText}>QL Nội Dung</Text>
+          </TouchableOpacity>
+        )}
+        {user.role === 'teacher' && (
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/teacher' as any)}>
+            <Ionicons name="checkmark-circle-outline" size={20} color={Colors.light.gold} />
+            <Text style={styles.navText}>Kiểm Duyệt</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
@@ -267,6 +314,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     fontFamily: 'Cinzel',
   },
+  subBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  subText: { color: Colors.light.goldLight, fontSize: FontSizes.xs },
+  quickNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: Colors.light.backgroundDark,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.panelBorder,
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.sm,
+  },
+  navItem: { alignItems: 'center', gap: 4 },
+  navText: { color: Colors.light.textMuted, fontSize: FontSizes.xs },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 32 },
   section: {

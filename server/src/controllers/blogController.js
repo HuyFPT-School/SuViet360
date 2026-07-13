@@ -105,7 +105,10 @@ const getPostById = asyncHandler(async (req, res) => {
   // Parse JWT token manually if available to check roles (for non-Published posts)
   if (post.status !== "Published") {
     let isAuthorized = false;
-    const token = getCookie(req, "token");
+    let token = getCookie(req, "token");
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
+    }
     if (token) {
       try {
         const decoded = jwt.verify(token, env.jwtSecret);

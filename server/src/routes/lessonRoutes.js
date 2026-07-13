@@ -15,6 +15,10 @@ const router = express.Router();
 
 // Public: get all lessons & get single lesson
 router.get("/", getAllLessons);
+// Staff: get all lessons (protected → req.user is set → showAll=true)
+router.get("/staff", protect, authorize("admin", "staff"), getAllLessons);
+// Teacher/Admin: review all lessons
+router.get("/review", protect, authorize("admin", "teacher"), getAllLessons);
 router.get("/:id", getLessonById);
 
 // Teacher/Admin review routes

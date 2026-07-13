@@ -35,6 +35,15 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="lesson/[id]" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="podcast/[id]" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="blog/[id]" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="blog/my-posts" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="subscription/index" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="subscription/checkout" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="subscription/redeem" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="subscription/history" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="leaderboard" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="teacher/index" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="notifications" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="admin/index" />
           <Stack.Screen name="staff/index" />
         </Stack>

@@ -13,324 +13,164 @@ import { useRouter } from 'expo-router';
 import { PageBackground } from '@/components/PageBackground';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { podcastApi } from '@/services/podcastApi';
+import { notificationApi } from '@/services/notificationApi';
 import type { Podcast } from '@/types/podcast';
+import { useAuth } from '@/hooks/useAuth';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
 import { formatDuration, formatDate } from '@/utils/format';
 
-export default function PodcastsScreen() {
+type JourneyItem = {
+  _id: string;
+  title: string;
+  description: string;
+  type: 'podcast';
+  category: string;
+  level: string;
+  duration: number;
+  createdAt: string;
+  audioUrl?: string;
+};
+
+const tl = (l: string) => ({ Easy: 'Dễ', Medium: 'Trung cấp', Hard: 'Nâng cao' } as Record<string, string>)[l] || l;
+
+export default function HanhTrinhScreen() {
   const router = useRouter();
-  const [podcasts, setPodcasts] = useState<Podcast[]>([]);
+  const { user } = useAuth();
+  const [items, setItems] = useState<JourneyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
   const [error, setError] = useState('');
-
-  const fetchPodcasts = async () => {
-    try {
-      const data = await podcastApi.getAll();
-      setPodcasts(data.podcasts || []);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [followed, setFollowed] = useState<string[]>([]);
+  const [flMap, setFlMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    fetchPodcasts();
+    (async () => {
+      try {
+        const pd = await podcastApi.getAll();
+        const pItems: JourneyItem[] = (pd.podcasts || []).map((p: Podcast) => ({
+          _id: p._id, title: p.title, description: p.description || p.content || '',
+          type: 'podcast' as const, category: p.category || 'Khác', level: p.level || '',
+          duration: p.duration || 0, createdAt: p.createdAt, audioUrl: p.audioUrl,
+        }));
+        setItems(pItems);
+      } catch (err: any) { setError(err.message); }
+      finally { setLoading(false); setRefreshing(false); }
+    })();
   }, []);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchPodcasts();
+  useEffect(() => {
+    if (user) { notificationApi.getFollowedCategories().then((c: string[]) => setFollowed(c.map((x: string) => x.trim()))).catch(() => {}); }
+    else setFollowed([]);
+  }, [user]);
+
+  const handleFollow = async (cat: string) => {
+    if (!user) return;
+    const clean = cat.trim();
+    setFlMap((p) => ({ ...p, [cat]: true }));
+    try {
+      if (followed.includes(clean)) { await notificationApi.unfollowCategory(clean); setFollowed((p) => p.filter((c) => c !== clean)); }
+      else { await notificationApi.followCategory(clean); setFollowed((p) => [...p, clean]); }
+    } catch { /* ignore */ }
+    finally { setFlMap((p) => ({ ...p, [cat]: false })); }
   };
 
-  const filtered = podcasts.filter((p) => {
-    if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
-    if (category && p.category !== category) return false;
+  const filtered = items.filter((i) => {
+    if (search && !i.title.toLowerCase().includes(search.toLowerCase()) && !i.category.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+  const groups = [...new Set(filtered.map((i) => i.category))];
+  const grouped: Record<string, JourneyItem[]> = {};
+  groups.forEach((g) => { grouped[g] = filtered.filter((i) => i.category === g); });
 
-  const categories = [...new Set(podcasts.map((p) => p.category).filter(Boolean))];
-
-  if (loading) {
-    return (
-      <PageBackground style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerTitleRow}>
-            <Ionicons name="headset-outline" size={22} color={Colors.light.goldLight} />
-            <Text style={styles.headerTitle}>Podcast</Text>
-          </View>
-        </View>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.light.gold} />
-        </View>
-      </PageBackground>
-    );
-  }
+  if (loading) return <PageBackground style={S.ct}><View style={S.hd}><View style={S.hr}><Ionicons name="compass-outline" size={22} color={Colors.light.goldLight} /><Text style={S.ht}>Hành Trình</Text></View></View><View style={S.ce}><ActivityIndicator size="large" color={Colors.light.gold} /></View></PageBackground>;
 
   return (
-    <PageBackground style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTitleRow}>
-          <Ionicons name="headset-outline" size={22} color={Colors.light.goldLight} />
-          <Text style={styles.headerTitle}>Podcast</Text>
+    <PageBackground style={S.ct}>
+      <View style={S.hd}>
+        <View style={S.hr}><Ionicons name="compass-outline" size={22} color={Colors.light.goldLight} /><Text style={S.ht}>Hành Trình</Text></View>
+        <Text style={S.hs}>Khám phá lịch sử Việt Nam qua game, podcast &amp; bài học</Text>
+      </View>
+      <View style={S.sb}><TextInput style={S.si} placeholder="Tìm kiếm hành trình..." placeholderTextColor={Colors.light.textDim} value={search} onChangeText={setSearch} /></View>
+      {error ? <View style={S.eb}><Text style={S.et}>{error}</Text></View> : null}
+      <ScrollView style={S.sc} contentContainerStyle={S.scc}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); /* trigger reload via key? Simple approach: just reset */ setRefreshing(false); }} tintColor={Colors.light.gold} />}>
+
+        <View style={S.sr}>
+          <View style={S.si2}><Text style={S.sv}>{groups.length}</Text><Text style={S.sl}>Chủ đề</Text></View>
+          <View style={S.si2}><Text style={S.sv}>{filtered.length}</Text><Text style={S.sl}>Bài học</Text></View>
+          <View style={S.si2}><Text style={S.sv}>{filtered.filter((i) => i.type === 'podcast').length}</Text><Text style={S.sl}>Podcast</Text></View>
         </View>
-        <Text style={styles.headerSubtitle}>Những câu chuyện lịch sử</Text>
-      </View>
 
-      {/* Search */}
-      <View style={styles.searchBar}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Tìm kiếm podcast..."
-          placeholderTextColor={Colors.light.textDim}
-          value={search}
-          onChangeText={setSearch}
-        />
-      </View>
-
-      {/* Categories */}
-      {categories.length > 0 && (
-        <ScrollView
-          horizontal
-          style={styles.categoriesRow}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesContent}
-        >
-          <TouchableOpacity
-            style={[styles.categoryChip, !category && styles.categoryChipActive]}
-            onPress={() => setCategory('')}
-          >
-            <Text style={[styles.categoryChipText, !category && styles.categoryChipTextActive]}>
-              Tất cả
-            </Text>
-          </TouchableOpacity>
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.categoryChip, category === cat && styles.categoryChipActive]}
-              onPress={() => setCategory(category === cat ? '' : cat)}
-            >
-              <Text style={[styles.categoryChipText, category === cat && styles.categoryChipTextActive]}>
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.light.gold} />
-        }
-      >
-        {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
-        {filtered.length === 0 ? (
-          <View style={styles.centered}>
-            <Text style={styles.emptyText}>Không tìm thấy podcast</Text>
-          </View>
-        ) : (
-          filtered.map((podcast) => (
-            <TouchableOpacity
-              key={podcast._id}
-              style={styles.podcastCard}
-              onPress={() => router.push(`/podcast/${podcast._id}` as any)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.podcastThumb}>
-                <Ionicons name="headset-outline" size={28} color={Colors.light.goldDark} />
-              </View>
-              <View style={styles.podcastInfo}>
-                <Text style={styles.podcastTitle} numberOfLines={1}>
-                  {podcast.title}
-                </Text>
-                <Text style={styles.podcastDesc} numberOfLines={2}>
-                  {podcast.description || podcast.content || ''}
-                </Text>
-                <View style={styles.podcastMeta}>
-                  {podcast.category ? (
-                    <Text style={styles.podcastTag}>{podcast.category}</Text>
-                  ) : null}
-                  {podcast.level ? (
-                    <Text style={styles.podcastLevel}>{podcast.level}</Text>
-                  ) : null}
-                  <Text style={styles.podcastDuration}>
-                    {formatDuration(podcast.duration)}
-                  </Text>
-                  <Text style={styles.podcastDate}>{formatDate(podcast.createdAt)}</Text>
+        {groups.length === 0 ? <View style={S.empty}><Text style={S.emp}>Không tìm thấy hành trình nào</Text></View> : groups.map((g) => {
+          const isOpen = expanded[g] === true;
+          const eps = grouped[g];
+          return (
+            <View key={g} style={S.gc}>
+              <TouchableOpacity style={S.tc} onPress={() => setExpanded((p) => ({ ...p, [g]: !p[g] }))} activeOpacity={0.85}>
+                <View style={S.tic}><Ionicons name="book-outline" size={22} color={Colors.light.goldDark} /></View>
+                <View style={S.tb}><Text style={S.tn}>{g}</Text><Text style={S.tm}>{eps.length} bài học</Text></View>
+                <View style={S.ta}>
+                  {user && <TouchableOpacity onPress={() => handleFollow(g)} disabled={flMap[g]} style={S.fb}><Ionicons name={followed.includes(g.trim()) ? 'notifications' : 'notifications-outline'} size={16} color={followed.includes(g.trim()) ? Colors.light.gold : Colors.light.textMuted} /></TouchableOpacity>}
+                  <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={20} color={Colors.light.textMuted} />
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
+              </TouchableOpacity>
+              {isOpen && <View style={S.el}>{eps.map((ep) => (
+                <TouchableOpacity key={ep._id} style={S.ec} onPress={() => router.push(`/podcast/${ep._id}` as any)}>
+                  <View style={S.eic}><Ionicons name="headset-outline" size={18} color={Colors.light.goldDark} /></View>
+                  <View style={S.ebd}>
+                    <View style={S.eto}><Text style={S.etn} numberOfLines={2}>{ep.title}</Text><View style={[S.etb, S.etbp]}><Text style={S.etbt}>Podcast</Text></View></View>
+                    {!!ep.description && <Text style={S.edsc} numberOfLines={2}>{ep.description}</Text>}
+                    <View style={S.em}><Text style={S.eml}>{ep.level ? tl(ep.level) : ''}</Text>{ep.duration > 0 && <Text style={S.emd}>{formatDuration(ep.duration)}</Text>}<Text style={S.emdt}>{formatDate(ep.createdAt)}</Text></View>
+                  </View>
+                  <TouchableOpacity style={S.epl}><Ionicons name="play-circle" size={24} color={Colors.light.gold} /></TouchableOpacity>
+                </TouchableOpacity>
+              ))}</View>}
+            </View>
+          );
+        })}
+        <View style={{ height: 40 }} />
       </ScrollView>
     </PageBackground>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    backgroundColor: Colors.light.backgroundDark,
-    borderBottomWidth: 2,
-    borderBottomColor: Colors.light.goldDark,
-    paddingTop: 50,
-    paddingBottom: 12,
-    paddingHorizontal: Spacing.md,
-  },
-  headerTitle: {
-    fontFamily: 'Cinzel',
-    fontSize: FontSizes.lg,
-    fontWeight: '700',
-    color: Colors.light.goldLight,
-    letterSpacing: 1.5,
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerSubtitle: {
-    fontFamily: 'Cormorant Garamond',
-    fontSize: FontSizes.sm,
-    color: Colors.light.goldMuted,
-    fontStyle: 'italic',
-    marginTop: 2,
-  },
-  searchBar: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.light.panel,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.panelBorder,
-  },
-  searchInput: {
-    backgroundColor: Colors.light.authInputBg,
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: FontSizes.sm,
-    color: Colors.light.text,
-    borderWidth: 1,
-    borderColor: Colors.light.authBorder,
-    fontFamily: 'Cormorant Garamond',
-  },
-  categoriesRow: {
-    maxHeight: 44,
-    backgroundColor: Colors.light.panel,
-  },
-  categoriesContent: {
-    paddingHorizontal: Spacing.md,
-    gap: 8,
-    alignItems: 'center',
-    flexDirection: 'row',
-    paddingVertical: 6,
-  },
-  categoryChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.light.panelBorder,
-    backgroundColor: Colors.light.panel,
-  },
-  categoryChipActive: {
-    backgroundColor: Colors.light.gold,
-    borderColor: Colors.light.goldDark,
-  },
-  categoryChipText: {
-    fontSize: FontSizes.xs,
-    color: Colors.light.textMuted,
-    fontFamily: 'Cinzel',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  categoryChipTextActive: {
-    color: '#3a2312',
-    fontWeight: '700',
-  },
-  scroll: { flex: 1 },
-  scrollContent: { padding: Spacing.md, gap: 12, paddingBottom: 32 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  emptyText: {
-    fontFamily: 'Cormorant Garamond',
-    fontSize: FontSizes.lg,
-    color: Colors.light.textMuted,
-    fontStyle: 'italic',
-  },
-  errorBox: {
-    padding: 12,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.light.errorBg,
-    borderWidth: 1,
-    borderColor: 'rgba(175, 55, 55, 0.5)',
-    marginBottom: 12,
-  },
-  errorText: { color: Colors.light.error, textAlign: 'center' },
-  podcastCard: {
-    flexDirection: 'row',
-    backgroundColor: Colors.light.panel,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: Colors.light.panelBorder,
-    padding: Spacing.md,
-    gap: 12,
-  },
-  podcastThumb: {
-    width: 56,
-    height: 56,
-    borderRadius: BorderRadius.md,
-    backgroundColor: 'rgba(201, 161, 90, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  podcastInfo: { flex: 1, gap: 4 },
-  podcastTitle: {
-    fontFamily: 'Playfair Display',
-    fontSize: FontSizes.md,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  podcastDesc: {
-    fontFamily: 'Cormorant Garamond',
-    fontSize: FontSizes.sm,
-    color: Colors.light.textMuted,
-    lineHeight: 18,
-  },
-  podcastMeta: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-    marginTop: 4,
-    flexWrap: 'wrap',
-  },
-  podcastTag: {
-    fontSize: FontSizes.xs,
-    color: Colors.light.gold,
-    fontWeight: '600',
-  },
-  podcastLevel: {
-    fontSize: FontSizes.xs,
-    color: Colors.light.textDim,
-    fontStyle: 'italic',
-  },
-  podcastDuration: {
-    fontSize: FontSizes.xs,
-    color: Colors.light.textMuted,
-  },
-  podcastDate: {
-    fontSize: FontSizes.xs,
-    color: Colors.light.textDim,
-    fontStyle: 'italic',
-  },
+const S = StyleSheet.create({
+  ct: { flex: 1 }, ce: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  hd: { backgroundColor: Colors.light.backgroundDark, borderBottomWidth: 2, borderBottomColor: Colors.light.goldDark, paddingTop: 50, paddingBottom: 12, paddingHorizontal: Spacing.md },
+  hr: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  ht: { fontFamily: 'Cinzel', fontSize: FontSizes.lg, fontWeight: '700', color: Colors.light.goldLight, letterSpacing: 1.5 },
+  hs: { fontFamily: 'Cormorant Garamond', fontSize: FontSizes.sm, color: Colors.light.goldMuted, fontStyle: 'italic', marginTop: 2 },
+  sb: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.light.panel, borderBottomWidth: 1, borderBottomColor: Colors.light.panelBorder },
+  si: { backgroundColor: Colors.light.authInputBg, borderRadius: BorderRadius.full, paddingHorizontal: 16, paddingVertical: 10, fontSize: FontSizes.sm, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.authBorder },
+  eb: { margin: Spacing.md, padding: Spacing.sm, backgroundColor: Colors.light.errorBg, borderRadius: BorderRadius.md },
+  et: { color: Colors.light.error, fontSize: FontSizes.sm, textAlign: 'center' },
+  sc: { flex: 1 }, scc: { padding: Spacing.md, paddingBottom: 40 },
+  sr: { flexDirection: 'row', gap: 8, marginBottom: Spacing.lg },
+  si2: { flex: 1, backgroundColor: Colors.light.panel, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.light.panelBorder, padding: Spacing.sm, alignItems: 'center' },
+  sv: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.light.gold },
+  sl: { fontSize: FontSizes.xs, color: Colors.light.textMuted, marginTop: 2 },
+  empty: { alignItems: 'center', padding: 40 }, emp: { fontSize: FontSizes.md, color: Colors.light.textMuted },
+  gc: { marginBottom: Spacing.sm },
+  tc: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.light.panel, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.light.panelBorder, padding: Spacing.md, gap: 12 },
+  tic: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(201,161,90,0.12)', alignItems: 'center', justifyContent: 'center' },
+  tb: { flex: 1 }, tn: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.light.text },
+  tm: { fontSize: FontSizes.xs, color: Colors.light.textMuted, marginTop: 2 },
+  ta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fb: { padding: 4 },
+  el: { marginTop: 4 },
+  ec: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.light.panel, marginHorizontal: 8, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.light.panelBorder, borderTopWidth: 0, padding: Spacing.sm, gap: 10 },
+  eic: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(201,161,90,0.08)', alignItems: 'center', justifyContent: 'center' },
+  ebd: { flex: 1 },
+  eto: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  etn: { flex: 1, fontSize: FontSizes.sm, fontWeight: '600', color: Colors.light.text, marginRight: 8 },
+  etb: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
+  etbp: { backgroundColor: Colors.light.gold + '22' }, etbl: { backgroundColor: '#4a7fb522' },
+  etbt: { fontSize: 9, fontWeight: '700', color: Colors.light.gold },
+  edsc: { fontSize: FontSizes.xs, color: Colors.light.textMuted, marginTop: 2, lineHeight: 16 },
+  em: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  eml: { fontSize: FontSizes.xs, color: Colors.light.goldDark }, emd: { fontSize: FontSizes.xs, color: Colors.light.textDim },
+  emdt: { fontSize: FontSizes.xs, color: Colors.light.textDim },
+  epl: { padding: 4 },
 });

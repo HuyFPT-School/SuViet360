@@ -440,17 +440,17 @@ export default function StaffPage() {
     setIsAddingNewCategory(false);
     setNewCategoryName("");
     const draft = podcast.pendingDraft;
+    // Use pendingDraft values if available (for Published podcasts with pending edits)
+    const rawLessonId = draft?.lessonId !== undefined ? draft.lessonId : podcast.lessonId;
     setPodcastForm({
       title: draft?.title ?? podcast.title,
       description: draft?.description ?? podcast.description ?? "",
       content: draft?.content ?? podcast.content ?? "",
       level: draft?.level ?? podcast.level ?? "Medium",
       category: draft?.category ?? podcast.category ?? "",
-      lessonId: draft?.lessonId
-        ? (typeof draft.lessonId === "object" ? draft.lessonId._id : draft.lessonId)
-        : (typeof podcast.lessonId === "object" && podcast.lessonId !== null
-          ? (podcast.lessonId as any)._id || ""
-          : (podcast.lessonId as string) || ""),
+      lessonId: rawLessonId && typeof rawLessonId === "object"
+        ? (rawLessonId as any)._id || ""
+        : (rawLessonId as string) || "",
       thumbnailFile: null,
       audioFile: null,
     });
@@ -482,9 +482,7 @@ export default function StaffPage() {
       formData.append("content", podcastForm.content.trim());
       formData.append("level", podcastForm.level.trim());
       formData.append("category", podcastForm.category.trim());
-      if (podcastForm.lessonId) {
-        formData.append("lessonId", podcastForm.lessonId);
-      }
+      formData.append("lessonId", podcastForm.lessonId || "");
 
       if (podcastForm.thumbnailFile) {
         formData.append("thumbnail", podcastForm.thumbnailFile);
