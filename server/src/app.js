@@ -13,13 +13,14 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const blogRoutes = require("./routes/blogRoutes");
 const progressRoutes = require("./routes/progressRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
+const curriculumRoutes = require("./routes/curriculumRoutes");
 const errorHandler = require("./middleware/errorHandler");
 const { setCsrfToken, requireCsrfToken } = require("./middleware/csrf");
 
 const app = express();
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: process.env.NODE_ENV === "test" ? 10000 : 100,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -75,6 +76,7 @@ app.use("/api/user/notifications", notificationRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/curriculum", curriculumRoutes);
 app.use("/api", podcastRoutes);
 
 // Load subscription cron job
