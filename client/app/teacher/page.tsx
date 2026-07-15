@@ -129,7 +129,7 @@ export default function TeacherPage() {
     setError("");
     try {
       const response = await teacherReviewApi.getReviewItems();
-      setItems(response.data);
+      setItems(response.data.filter((item: any) => item.type !== "StudyUnit" && item.type !== "Quiz"));
     } catch {
       setError("Không thể tải danh sách bài học cần duyệt.");
     } finally {

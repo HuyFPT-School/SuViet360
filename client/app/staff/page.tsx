@@ -202,7 +202,7 @@ export default function StaffPage() {
           >
             Quản lý podcast
           </button>
-          <button
+          {/* <button
             onClick={() => { setActiveTab("chapters"); setMessage(null); }}
             className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "chapters"
                 ? "border-amber-700 text-amber-950 font-bold"
@@ -228,7 +228,7 @@ export default function StaffPage() {
               }`}
           >
             Ngân hàng Quiz
-          </button>
+          </button> */}
           <button
             onClick={() => { setActiveTab("blog"); setMessage(null); }}
             className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "blog"
@@ -284,7 +284,7 @@ export default function StaffPage() {
             />
           )}
 
-          {activeTab === "chapters" && (
+          {/* {activeTab === "chapters" && (
             <ChapterTab
               setMessage={setMessage}
               onUpdateCounts={setChaptersCount}
@@ -305,7 +305,7 @@ export default function StaffPage() {
               user={user}
               setMessage={setMessage}
             />
-          )}
+          )} */}
 
           {activeTab === "blog" && (
             <BlogTab
