@@ -1,6 +1,7 @@
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const BlogPost = require("../models/BlogPost");
+const Group = require("../models/Group");
 const BlogComment = require("../models/BlogComment");
 const BlogLike = require("../models/BlogLike");
 const BlogReport = require("../models/BlogReport");
@@ -14,10 +15,25 @@ const { getCookie } = require("../utils/cookies");
 
 // Create BlogPost
 const createPost = asyncHandler(async (req, res) => {
-  const { title, content, category, tags } = req.body;
+  const { title, content, category, tags, group } = req.body;
 
   if (!title || !content) {
     throw new AppError("Title and content are required", 400);
+  }
+
+  // Validate group if provided
+  let groupObj = null;
+  let isGroupAdmin = false;
+  if (group) {
+    groupObj = await Group.findById(group);
+    if (!groupObj) {
+      throw new AppError("Group not found", 404);
+    }
+    const memberEntry = groupObj.members.find(m => m.user.toString() === req.user.id);
+    if (!memberEntry) {
+      throw new AppError("You must be a member of the group to post", 403);
+    }
+    isGroupAdmin = memberEntry.role === "admin";
   }
 
   const images = [];
@@ -36,6 +52,10 @@ const createPost = asyncHandler(async (req, res) => {
     tagList = Array.isArray(tags) ? tags : tags.split(",").map(t => t.trim()).filter(Boolean);
   }
 
+  // If in a group, it starts as Published if creator/admin, else Pending_Review.
+  // General forum posts always start as Pending_Review.
+  const status = groupObj ? (isGroupAdmin ? "Published" : "Pending_Review") : "Pending_Review";
+
   const post = await BlogPost.create({
     author: req.user.id,
     title,
@@ -43,7 +63,8 @@ const createPost = asyncHandler(async (req, res) => {
     category: category || "Chủ đề chung",
     tags: tagList,
     images,
-    status: "Pending_Review",
+    group: group || null,
+    status,
   });
 
   res.status(201).json({
@@ -58,7 +79,7 @@ const getPublishedPosts = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit, 10) || 12;
   const skip = (page - 1) * limit;
 
-  const filter = { status: "Published" };
+  const filter = { status: "Published", group: null };
 
   if (req.query.category && req.query.category !== "Tất cả") {
     filter.category = req.query.category;
@@ -272,7 +293,7 @@ const deletePost = asyncHandler(async (req, res) => {
 
 // Get Pending Posts
 const getPendingPosts = asyncHandler(async (req, res) => {
-  const posts = await BlogPost.find({ status: "Pending_Review" })
+  const posts = await BlogPost.find({ status: "Pending_Review", group: null })
     .populate("author", "name avatar role")
     .sort({ createdAt: -1 });
 

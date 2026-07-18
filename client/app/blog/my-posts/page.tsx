@@ -220,17 +220,21 @@ export default function MyBlogPostsPage() {
       ) : (
         <div className="space-y-6">
           {posts.map((post) => (
-            <div key={post._id} className="blog-post-card !cursor-default !flex-row flex-wrap gap-6 justify-between items-start">
-              <div className="flex-1 min-w-[280px]">
-                <div className="flex items-center gap-3 mb-2 flex-wrap">
+            <div key={post._id} className="blog-post-card !cursor-default space-y-4">
+              {/* Header Info */}
+              <div className="flex items-center justify-between border-b border-[#c7ab73]/20 pb-3 flex-wrap gap-2">
+                <div className="flex items-center gap-3">
                   <span className={`blog-status-badge ${post.status.toLowerCase().replace("_", "")}`}>
                     {getStatusLabel(post.status)}
                   </span>
-                  <span className="text-xs text-[#a37636] font-semibold">{post.category}</span>
-                  <span className="text-xs text-[#a37636]/60">Đăng lúc {formatDate(post.createdAt)}</span>
+                  <span className="text-xs text-[#a37636] font-semibold bg-[#c9a15a]/10 px-2 py-0.5 rounded-full">{post.category}</span>
                 </div>
+                <span className="text-xs text-[#a37636]/60">Đăng lúc {formatDate(post.createdAt)}</span>
+              </div>
 
-                <h3 className="blog-card-title !mb-2">
+              {/* Content Area */}
+              <div className="space-y-2">
+                <h3 className="text-base font-bold text-[#4a1f24] hover:text-[#c9a15a] transition">
                   {post.status === "Published" ? (
                     <Link href={`/blog/${post._id}`} className="hover:underline">{post.title}</Link>
                   ) : (
@@ -238,29 +242,49 @@ export default function MyBlogPostsPage() {
                   )}
                 </h3>
 
-                <p className="blog-card-excerpt !line-clamp-2">{post.content}</p>
+                <p className="text-sm text-[#5c4a3d] leading-relaxed whitespace-pre-wrap">{post.content}</p>
 
-                {/* Show moderator rejection feedback */}
-                {post.status === "Rejected" && post.reviewFeedback && (
-                  <div className="mt-3 p-3 bg-red-950/20 border border-red-500/20 text-red-200 text-xs rounded-lg">
-                    <span className="font-bold text-red-400">Lý do từ chối:</span> {post.reviewFeedback}
+                {/* Post Images Preview */}
+                {post.images && post.images.length > 0 && (
+                  <div className="mt-3 flex gap-2 flex-wrap">
+                    {post.images.map((img, index) => (
+                      <img 
+                        key={img.publicId} 
+                        src={img.url} 
+                        alt={`${post.title} - ${index + 1}`} 
+                        className="rounded-lg border border-[#c7ab73]/30 max-h-48 object-cover shadow-sm"
+                      />
+                    ))}
                   </div>
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 self-center">
+              {/* Rejection Feedback Alert Banner */}
+              {post.status === "Rejected" && post.reviewFeedback && (
+                <div className="p-3.5 bg-[#fdf2f2] border border-[#f5c2c2] text-[#8b1e22] text-xs rounded-lg flex items-start gap-2 shadow-sm">
+                  <svg className="w-4.5 h-4.5 text-[#e05656] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>
+                    <span className="font-bold text-[#b91c1c] block mb-0.5">Lý do từ chối kiểm duyệt:</span>
+                    <span className="leading-relaxed">{post.reviewFeedback}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Bottom Buttons Action Row */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#c7ab73]/10">
                 <button
                   onClick={() => openEditModal(post)}
-                  className="blog-comment-submit-btn !bg-transparent !border !border-[#c9a15a] !text-[#c9a15a] hover:!bg-[#c9a15a]/10"
+                  className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-transparent border border-[#c7ab73] text-[#a37636] hover:bg-[#c9a15a]/10 transition-colors shadow-sm"
                 >
                   Sửa bài
                 </button>
                 <button
                   onClick={() => handleDeletePost(post._id)}
-                  className="blog-comment-submit-btn !bg-transparent !border !border-rose-600 !text-rose-500 hover:!bg-rose-600/10"
+                  className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-transparent border border-rose-400 text-rose-600 hover:bg-rose-50/50 transition-colors shadow-sm"
                 >
-                  Xóa
+                  Xóa bài
                 </button>
               </div>
             </div>

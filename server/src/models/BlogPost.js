@@ -7,6 +7,11 @@ const blogPostSchema = new mongoose.Schema(
       ref: "User",
       required: [true, "Author is required"],
     },
+    group: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Group",
+      default: null,
+    },
     title: {
       type: String,
       required: [true, "Title is required"],

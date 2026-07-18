@@ -716,7 +716,7 @@ export default function TeacherPage() {
             <strong>Quyền Teacher</strong>
             <span>Xem chi tiết game/podcast</span>
             <span>Kiểm tra nội dung, game & audio</span>
-            <span>Approve hoặc Reject kèm feedback</span>
+            <span>Duyệt hoặc Từ chối kèm nhận xét</span>
           </div>
         </aside>
 
@@ -2076,7 +2076,7 @@ function ContentDetailModal({
                 onClick={() => onApprove(item)}
                 disabled={saving}
               >
-                {saving ? "Đang xử lý..." : "Approve"}
+                {saving ? "Đang xử lý..." : "Duyệt"}
               </button>
               <button
                 type="button"
@@ -2084,7 +2084,7 @@ function ContentDetailModal({
                 onClick={() => onReject(item)}
                 disabled={saving}
               >
-                Reject
+                Từ chối
               </button>
             </>
           ) : (
@@ -2318,7 +2318,7 @@ function RejectModal({
       <form className="teacher-modal teacher-reject-modal" onSubmit={onSubmit}>
         <div className="teacher-modal-header">
           <div>
-            <p className="admin-kicker">Reject {item.type === "Lesson" ? "game" : item.type === "Podcast" ? "podcast" : "bài học"}</p>
+            <p className="admin-kicker">Từ chối {item.type === "Lesson" ? "game" : item.type === "Podcast" ? "podcast" : "bài học"}</p>
             <h2>{item.title}</h2>
           </div>
           <button type="button" onClick={onClose} className="teacher-close-button">
@@ -2332,7 +2332,7 @@ function RejectModal({
             value={feedback}
             onChange={(event) => onFeedbackChange(event.target.value)}
             rows={5}
-            placeholder={`Nhập feedback cụ thể để Staff chỉnh sửa ${item.type === "Lesson" ? "game" : item.type === "Podcast" ? "podcast" : "bài học"}...`}
+            placeholder={`Nhập nhận xét cụ thể để Staff chỉnh sửa ${item.type === "Lesson" ? "game" : item.type === "Podcast" ? "podcast" : "bài học"}...`}
           />
         </label>
         {feedbackError && <p className="teacher-field-error">{feedbackError}</p>}

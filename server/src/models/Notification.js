@@ -19,7 +19,9 @@ const notificationSchema = new mongoose.Schema(
         "Subscription_Expiring",
         "Lesson_Request_New",
         "Lesson_Request_Accepted",
-        "Lesson_Request_Rejected"
+        "Lesson_Request_Rejected",
+        "Friend_Request",
+        "Friend_Accepted"
       ],
       default: "System",
     },

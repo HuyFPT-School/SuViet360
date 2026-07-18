@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { blogApi } from "@/lib/blogApi";
 import type { BlogPost } from "@/types/blog";
+import GroupSidebar from "@/components/blog/GroupSidebar";
+import FriendSidebar from "@/components/blog/FriendSidebar";
+import CreateGroupModal from "@/components/blog/CreateGroupModal";
 import "./blog.css";
 
 const CATEGORIES = [
@@ -41,6 +44,10 @@ export default function BlogFeedPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Group modal
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [groupRefreshKey, setGroupRefreshKey] = useState(0);
 
   // Fetch posts helper
   const fetchPosts = useCallback(async (pageNum: number, cat: string, searchVal: string) => {
@@ -174,56 +181,35 @@ export default function BlogFeedPage() {
             <h1 className="blog-main-title">Diễn đàn Sử Việt</h1>
             <p className="blog-subtitle">Nơi thảo luận, chia sẻ kiến thức lịch sử và trao đổi học tập</p>
           </div>
-          {user && (
-            <div className="flex gap-3">
-              <Link href="/blog/my-posts" className="blog-btn-gold !bg-transparent !border-2 !border-[#c9a15a] !text-[#c9a15a] hover:!bg-[#c9a15a]/10">
-                Bài viết của tôi
-              </Link>
-              <button onClick={() => setShowCreateModal(true)} className="blog-btn-gold">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Viết bài mới
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Search and Filters */}
-        <div className="blog-search-filter-section">
-          <form onSubmit={handleSearchSubmit} className="blog-search-wrapper">
-            <span className="blog-search-icon">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              placeholder="Tìm kiếm bài viết..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="blog-search-input"
-            />
-          </form>
-
-          <select
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value);
-              setPage(1);
-            }}
-            className="blog-filter-dropdown"
-          >
-            {CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* 3-Column Layout */}
+      <div className="blog-three-col-layout">
+        {/* Left Sidebar - Groups */}
+        <GroupSidebar user={user} onCreateGroup={() => setShowCreateGroupModal(true)} key={groupRefreshKey} />
+
+        {/* Main Feed */}
+        <div className="blog-main-feed">
+          {/* Facebook style Create Post trigger card */}
+          {user && (
+            <div className="fb-create-post-card">
+              <div className="fb-create-post-upper">
+                <div className="fb-create-post-avatar">
+                  {user.avatar ? (
+                    <img src={user.avatar} alt={user.name} />
+                  ) : (
+                    <span>{user.name.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <button onClick={() => setShowCreateModal(true)} className="fb-create-post-input-btn">
+                  {user.name} ơi, bạn đang chia sẻ kiến thức gì thế?
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Main Content */}
       {loading ? (
         <div className="flex justify-center py-20">
           <div className="text-center">
@@ -319,6 +305,8 @@ export default function BlogFeedPage() {
           )}
         </>
       )}
+        </div>
+      </div>
 
       {/* Create Post Modal */}
       {showCreateModal && (
@@ -439,6 +427,14 @@ export default function BlogFeedPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Create Group Modal */}
+      {showCreateGroupModal && (
+        <CreateGroupModal
+          onClose={() => setShowCreateGroupModal(false)}
+          onCreated={() => setGroupRefreshKey((k) => k + 1)}
+        />
       )}
     </div>
   );
