@@ -370,6 +370,16 @@ export default function SubscriptionPage() {
                   const isFree = tier.slug === "free";
                   const price = billingCycle === "monthly" ? tier.priceMonthly : tier.priceYearly;
 
+                  const getTierLevel = (slugName: string): number => {
+                    const s = slugName.toLowerCase();
+                    if (s.includes("pro")) return 2;
+                    if (s.includes("plus")) return 1;
+                    return 0;
+                  };
+
+                  const currentLevel = getTierLevel(userTier);
+                  const targetLevel = getTierLevel(tier.slug || tier.name);
+
                   return (
                     <div
                       key={tier._id}
@@ -462,6 +472,10 @@ export default function SubscriptionPage() {
                       ) : isCurrent ? (
                         <button className="btn-gold-outline" disabled>
                           Đang kích hoạt
+                        </button>
+                      ) : currentLevel > targetLevel ? (
+                        <button className="btn-gold-outline opacity-60" disabled>
+                          Đã có gói cao hơn
                         </button>
                       ) : (
                         <button

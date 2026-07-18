@@ -48,6 +48,40 @@ const formatDate = (dateString: string) => {
   return date.toLocaleDateString("vi-VN", { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
+const romanToArabic = (roman: string): number => {
+  const val: Record<string, number> = { i: 1, v: 5, x: 10, l: 50, c: 100, d: 500, m: 1000 };
+  let total = 0;
+  let prev = 0;
+  for (let i = roman.length - 1; i >= 0; i--) {
+    const char = roman[i].toLowerCase();
+    const current = val[char] || 0;
+    if (current < prev) {
+      total -= current;
+    } else {
+      total += current;
+    }
+    prev = current;
+  }
+  return total;
+};
+
+const extractNumberFromString = (str: string): number => {
+  // Try Arabic number first (e.g., Chủ đề 3, Chương 2, Bài 12)
+  const arabicMatch = str.match(/(?:Chủ đề|Chủ Đề|CHỦ ĐỀ|Chương|CHƯƠNG|Lớp|Bài|BÀI)\s*(\d+)/i);
+  if (arabicMatch) return parseInt(arabicMatch[1], 10);
+
+  // Try Roman numerals (e.g., Chương II, Chương IV)
+  const romanMatch = str.match(/(?:Chủ đề|Chủ Đề|CHỦ ĐỀ|Chương|CHƯƠNG)\s*([ivxlcdm]+)/i);
+  if (romanMatch) {
+    const val = romanToArabic(romanMatch[1]);
+    if (val > 0) return val;
+  }
+
+  // General fallback: just look for any number
+  const anyNumber = str.match(/\d+/);
+  return anyNumber ? parseInt(anyNumber[0], 10) : 999999;
+};
+
 const formatDuration = (seconds: number) => {
   if (!seconds || isNaN(seconds)) return "00:00";
   const hrs = Math.floor(seconds / 3600);
@@ -315,9 +349,16 @@ export default function PodcastListingPage() {
               <div className="text-center py-10 text-[#8c6a34]">Không tìm thấy podcast nào.</div>
             ) : (
               <div className="flex flex-col gap-4">
-                {Object.entries(groupedPodcasts).map(([cat, epList], idx) => {
-                  const isExpanded = expandedChapters[cat];
-                  const chapterLabel = cat.toUpperCase().includes("CHƯƠNG") ? "CHƯƠNG TRÌNH HỌC" : "CHỦ ĐỀ LỊCH SỬ";
+                {Object.entries(groupedPodcasts)
+                  .sort(([catA], [catB]) => {
+                    const numA = extractNumberFromString(catA);
+                    const numB = extractNumberFromString(catB);
+                    if (numA !== numB) return numA - numB;
+                    return catA.localeCompare(catB, 'vi');
+                  })
+                  .map(([cat, epList], idx) => {
+                    const isExpanded = expandedChapters[cat];
+                    const chapterLabel = cat.toUpperCase().includes("CHƯƠNG") ? "CHƯƠNG TRÌNH HỌC" : "CHỦ ĐỀ LỊCH SỬ";
                   
                   return (
                     <div key={cat} className="bg-[#fcf8ef] border border-[#e8d5b5] rounded-xl overflow-hidden shadow-sm transition-all">
@@ -364,7 +405,14 @@ export default function PodcastListingPage() {
                       {isExpanded && (
                         <div className="p-4 pt-0 border-t border-[#e8d5b5]/50 bg-[#f9f4e8]/50">
                            <div className="flex flex-col gap-3 mt-4">
-                             {epList.map((ep, i) => (
+                             {[...epList]
+                                 .sort((a, b) => {
+                                    const numA = extractNumberFromString(a.title);
+                                    const numB = extractNumberFromString(b.title);
+                                    if (numA !== numB) return numA - numB;
+                                    return a.title.localeCompare(b.title, 'vi');
+                                 })
+                                 .map((ep, i) => (
                                 <Link 
                                    key={ep._id} 
                                    href={`/podcasts/${ep._id}`}
@@ -419,7 +467,14 @@ export default function PodcastListingPage() {
                <h3 className="text-[#3a2312] font-bold text-[15px] tracking-wider mb-4 font-display">CHỦ ĐỀ NỔI BẬT</h3>
                <div className="flex flex-col gap-3">
                   {Object.entries(stats.categories).length > 0 ? (
-                     Object.entries(stats.categories).map(([name, count]: any) => (
+                     Object.entries(stats.categories)
+                       .sort(([nameA], [nameB]) => {
+                         const numA = extractNumberFromString(nameA);
+                         const numB = extractNumberFromString(nameB);
+                         if (numA !== numB) return numA - numB;
+                         return nameA.localeCompare(nameB, 'vi');
+                       })
+                       .map(([name, count]: any) => (
                         <div key={name} className="flex items-center justify-between group cursor-pointer">
                            <div className="flex items-center gap-2 text-sm text-[#5c4a3d] group-hover:text-[#a84d28] transition-colors">
                               <span className="text-[#c9a15a]">❖</span> {name}
