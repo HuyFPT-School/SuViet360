@@ -86,6 +86,7 @@ export default function PodcastDetailPage() {
   const [isFollowingCategory, setIsFollowingCategory] = useState(false);
   const [followingLoading, setFollowingLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isContentExpanded, setIsContentExpanded] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
   const [quizResult, setQuizResult] = useState<{
     score: number;
@@ -281,6 +282,14 @@ export default function PodcastDetailPage() {
         setActiveTab("game");
       }
     }
+  }, [id]);
+
+  // Scroll to top and reset collapse state when podcast ID changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+    }
+    setIsContentExpanded(false);
   }, [id]);
 
   // Audio Controls
@@ -695,9 +704,42 @@ export default function PodcastDetailPage() {
                </div>
                
                <div className="p-6 text-sm text-[#5c4a3d] leading-relaxed bg-[#fdfbf7]">
-                  {activeTab === "noidung" && (
-                     <div dangerouslySetInnerHTML={{ __html: podcast.content?.replace(/\n/g, '<br/>') || podcast.description }} />
-                  )}
+                   {activeTab === "noidung" && (() => {
+                      const rawContent = podcast?.content || podcast?.description || "";
+                      const needsTruncation = rawContent.length > 800;
+                      const displayContent = (!isContentExpanded && needsTruncation)
+                        ? rawContent.slice(0, 800) + "..."
+                        : rawContent;
+                      
+                      return (
+                        <div className="space-y-4">
+                          <div dangerouslySetInnerHTML={{ __html: displayContent.replace(/\n/g, '<br/>') }} />
+                          {needsTruncation && (
+                            <button
+                              type="button"
+                              onClick={() => setIsContentExpanded(!isContentExpanded)}
+                              className="text-xs font-bold text-[#a84d28] hover:text-[#8a3c1e] flex items-center gap-1 mt-2 focus:outline-none transition-colors"
+                            >
+                              {isContentExpanded ? (
+                                <>
+                                  <span>Thu gọn</span>
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                                  </svg>
+                                </>
+                              ) : (
+                                <>
+                                  <span>Xem thêm</span>
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      );
+                   })()}
                   {activeTab === "tailieu" && (
                      <p>Chưa có tài liệu liên quan cho bài học này.</p>
                   )}
@@ -721,14 +763,6 @@ export default function PodcastDetailPage() {
                               <p className="text-amber-800">Không tìm thấy dữ liệu game cho bài học này.</p>
                            )}
                         </div>
-                     </div>
-                  )}
-                  
-                  {activeTab !== "game" && (
-                     <div className="mt-4 text-center">
-                        <button className="text-[#a84d28] font-bold text-xs uppercase flex items-center justify-center gap-1 mx-auto hover:underline">
-                           Xem thêm <ChevronDownIcon />
-                        </button>
                      </div>
                   )}
                </div>
