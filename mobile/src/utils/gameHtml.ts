@@ -32,10 +32,14 @@ export function generateGameHtml(lesson: {
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#1a0a06;touch-action:none;}
 canvas{display:block}
-#dpad{position:fixed;bottom:16px;left:12px;z-index:200;display:grid;grid-template-columns:52px 52px 52px;grid-template-rows:52px 52px 52px;opacity:0.9;user-select:none;-webkit-user-select:none;}
-.dbtn{width:48px;height:48px;border-radius:10px;border:2px solid rgba(184,134,11,0.85);background:rgba(26,10,6,0.82);display:flex;align-items:center;justify-content:center;font-size:26px;color:#ffd700;margin:2px;}
-.dbtn:active{background:rgba(184,134,11,0.5);transform:scale(0.9)}
-.empty{background:transparent;border:none}
+/* Virtual joystick styles (bottom-left) - shifted right/up to avoid overlap */
+#joystick{position:fixed;bottom:30px;left:40px;z-index:250;width:140px;height:140px;pointer-events:auto;}
+.joy-base{position:absolute;left:0;top:0;width:140px;height:140px;border-radius:50%;background:rgba(26,10,6,0.6);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,0.45);transform:scale(0.98);transition:transform 120ms ease,opacity 150ms ease;opacity:0.6}
+.joy-thumb{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff7d6,#ffd700);box-shadow:0 6px 18px rgba(0,0,0,0.5);border:2px solid rgba(255,230,140,0.9);transition:transform 80ms cubic-bezier(.2,.9,.2,1);}
+.joy-base.active{transform:scale(1.02)}
+.joy-base:not(.active) .joy-thumb{transform:translate(-50%,-50%) scale(0.9);opacity:0.85}
+.joy-base.active .joy-thumb{transform:translate(-50%,-50%) scale(1);opacity:1}
+.joy-base .hint{position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);font-size:12px;color:#ffd700;background:transparent}
 #quiz-popup{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:88%;max-width:520px;background:rgba(255,248,220,0.97);border:3px solid #8B6914;border-radius:12px;padding:14px 18px;font-family:serif;font-size:15px;line-height:1.45;color:#3b2000;box-shadow:0 6px 28px rgba(0,0,0,0.6);z-index:300;pointer-events:auto;}
 #quiz-popup h4{margin-bottom:6px;font-size:16px;color:#5c3a00;border-bottom:1px solid #d4b96a;padding-bottom:6px;}
 #quiz-popup .q-question{margin-bottom:10px;font-weight:600;font-size:15px;}
@@ -52,10 +56,12 @@ canvas{display:block}
 </style>
 </head>
 <body>
-<div id="dpad">
-<div class="empty"></div><div class="dbtn" id="bu">▲</div><div class="empty"></div>
-<div class="dbtn" id="bl">◀</div><div class="empty"></div><div class="dbtn" id="br">▶</div>
-<div class="empty"></div><div class="dbtn" id="bd">▼</div><div class="empty"></div>
+<!-- Virtual joystick: base + thumb -->
+<div id="joystick">
+  <div class="joy-base" id="joyBase">
+    <div class="joy-thumb" id="joyThumb"></div>
+    <div class="hint">Điều khiển</div>
+  </div>
 </div>
 <div id="quiz-popup"><h4></h4><div class="q-question"></div><div class="q-options"></div><button class="q-close" onclick="closePopup('quiz-popup')">Đóng</button></div>
 <div id="hint-popup"><h4></h4><p></p><button class="h-close" onclick="closePopup('hint-popup')">Đóng</button></div>
@@ -72,6 +78,9 @@ var runUrls=[${runFrames}];
 var allUrls=[${allFrameUrls}];
 var spawnX=${spawn.x},spawnY=${spawn.y};
 var keys={up:false,down:false,left:false,right:false};
+// Analog joystick state: normalized vector (-1..1), magnitude
+var analogVec={x:0,y:0,mag:0};
+var analogActive=false;
 var SPEED=5;
 var INTERACT_DIST=70;
 var quizData=[];
@@ -91,12 +100,54 @@ window.closePopup=function(id) {
   if(id==='quiz-popup'){if(currentQuiz!==null){answeredIds.add(currentQuiz);}currentQuiz=null;isAnswering=false;}
 };
 
-['up','down','left','right'].forEach(function(d){
-  var b=document.getElementById('b'+d[0]);if(!b)return;
-  b.addEventListener('pointerdown',function(e){e.preventDefault();keys[d]=true;});
-  b.addEventListener('pointerup',function(e){e.preventDefault();keys[d]=false;});
-  b.addEventListener('pointerleave',function(e){keys[d]=false;});
-});
+// Virtual joystick handlers
+;(function(){
+  var joyContainer=document.getElementById('joystick');
+  var joyBase=document.getElementById('joyBase');
+  var joyThumb=document.getElementById('joyThumb');
+  if(!joyContainer||!joyBase||!joyThumb)return;
+  var baseSize=140; var baseRadius=56; // thumb travel radius
+  var activeId=null; var centerX=0,centerY=0;
+  var threshold=0.35; // when to set directional booleans
+
+  function showBase(){ joyBase.classList.add('active'); joyBase.style.opacity='1'; }
+  function hideBase(){ joyBase.classList.remove('active'); joyBase.style.opacity='0.6'; }
+
+  function setThumb(dx,dy){
+    // clamp to baseRadius
+    var dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist>baseRadius){dx=dx/dist*baseRadius;dy=dy/dist*baseRadius;dist=baseRadius;}
+    joyThumb.style.transform = 'translate(calc(-50% + '+dx+'px), calc(-50% + '+dy+'px))';
+    var nx = dx / baseRadius; var ny = dy / baseRadius; var mag = Math.min(1, Math.sqrt(nx*nx+ny*ny));
+    analogVec.x = nx; analogVec.y = ny; analogVec.mag = mag; analogActive = mag>0.01;
+    // update discrete keys for 8-direction fallback
+    keys.left = nx < -threshold; keys.right = nx > threshold; keys.up = ny < -threshold; keys.down = ny > threshold;
+  }
+
+  function resetThumb(){ joyThumb.style.transform='translate(calc(-50% + 0px), calc(-50% + 0px))'; analogVec.x=0;analogVec.y=0;analogVec.mag=0;analogActive=false; keys.up=keys.down=keys.left=keys.right=false; }
+
+  joyContainer.addEventListener('pointerdown', function(e){
+    e.preventDefault(); activeId = e.pointerId; showBase();
+    var rect = joyBase.getBoundingClientRect(); centerX = rect.left + rect.width/2; centerY = rect.top + rect.height/2;
+    var dx = e.clientX - centerX; var dy = e.clientY - centerY; setThumb(dx,dy);
+    joyBase.setPointerCapture && joyBase.setPointerCapture(activeId);
+    joyThumb.style.transition='transform 0ms';
+  });
+
+  function onMove(e){ if(activeId!==null && e.pointerId!==activeId) return; e.preventDefault();
+    var dx=e.clientX-centerX; var dy=e.clientY-centerY; setThumb(dx,dy);
+  }
+
+  function onUp(e){ if(activeId!==e.pointerId) return; e.preventDefault();
+    resetThumb(); hideBase(); activeId=null; joyBase.releasePointerCapture && joyBase.releasePointerCapture(e.pointerId);
+    // small release animation
+    joyThumb.style.transition='transform 220ms cubic-bezier(.2,.9,.2,1)';
+  }
+
+  document.addEventListener('pointermove', onMove, {passive:false});
+  document.addEventListener('pointerup', onUp, {passive:false});
+  document.addEventListener('pointercancel', onUp, {passive:false});
+})();
 
 function showQuiz(q){
   currentQuiz=q.id;
@@ -105,23 +156,49 @@ function showQuiz(q){
   el.querySelector('.q-question').textContent=q.question;
   var opts=el.querySelector('.q-options');
   opts.innerHTML='';
+  // Determine correct answer letter (if provided as 'A' or 'A. ...' or full text)
+  var correctLetter = (q.answer||'').trim().charAt(0).toUpperCase();
   ['A','B','C','D'].forEach(function(k){
     var ans=q['dapAn'+k];
     if(!ans)return;
     var btn=document.createElement('button');
     btn.className='q-opt';
     btn.textContent=k+'. '+ans;
+    btn.dataset.letter = k;
     btn.onclick=function(){
       if(isAnswering)return;
       isAnswering=true;
-      if(!answeredIds.has(q.id)){answeredIds.add(q.id);if(ans.trim().toLowerCase()===q.answer.trim().toLowerCase())correctCount++;updateScore();}
+      // mark answered and update score if correct
+      var isCorrect = false;
+      if(!answeredIds.has(q.id)){
+        // consider correct if selected letter matches correctLetter OR the answer text equals answer
+        if(k===correctLetter) isCorrect = true;
+        else if(ans.trim().toLowerCase()=== (q.answer||'').trim().toLowerCase()) isCorrect = true;
+        answeredIds.add(q.id);
+        if(isCorrect){ correctCount++; updateScore(); }
+      }
+      // disable all options and show visual feedback for correct/incorrect
       var all=opts.querySelectorAll('.q-opt');
-      all.forEach(function(a){
-        a.disabled=true;a.style.pointerEvents='none';
-        if(a.textContent.slice(0,1)===q.answer.slice(0,1))a.classList.add('correct');
-        else if(a===btn&&ans.trim().toLowerCase()!==q.answer.trim().toLowerCase())a.classList.add('wrong');
-      });
-      setTimeout(function(){el.style.display='none';isAnswering=false;currentQuiz=null;},2000);
+      all.forEach(function(a){ a.disabled=true; a.style.pointerEvents='none'; });
+      // highlight correct button: try letter first, then match by text
+      var correctBtn = null;
+      if(correctLetter) correctBtn = opts.querySelector('.q-opt[data-letter="'+correctLetter+'"]');
+      if(!correctBtn){
+        var allBtns = opts.querySelectorAll('.q-opt');
+        var answerText = (q.answer||'').trim().toLowerCase();
+        allBtns.forEach(function(a){
+          var txt = a.textContent.replace(/^[A-D]\.\s*/i,'').trim().toLowerCase();
+          if(txt===answerText) correctBtn = a;
+        });
+      }
+      if(correctBtn) correctBtn.classList.add('correct');
+      // always mark the clicked button as wrong if it's not the correct one
+      if(btn !== correctBtn){ btn.classList.add('wrong'); }
+
+      // hide question marker so it won't appear again
+      try{ if(q && q.sprite){ q.sprite.setVisible(false); } }catch(e){}
+
+      setTimeout(function(){ el.style.display='none'; isAnswering=false; currentQuiz=null; },2000);
     };
     opts.appendChild(btn);
   });
@@ -312,10 +389,16 @@ function create(){
 function update(){
   if(!player)return;
   var vx=0,vy=0;
-  if(cursors.left.isDown||keys.left)vx=-SPEED;
-  else if(cursors.right.isDown||keys.right)vx=SPEED;
-  if(cursors.up.isDown||keys.up)vy=-SPEED;
-  else if(cursors.down.isDown||keys.down)vy=SPEED;
+  // If analog input active use continuous vector for 360° movement
+  if(analogActive && analogVec && analogVec.mag>0.01){
+    vx = analogVec.x * SPEED;
+    vy = analogVec.y * SPEED;
+  }else{
+    if(cursors.left.isDown||keys.left)vx=-SPEED;
+    else if(cursors.right.isDown||keys.right)vx=SPEED;
+    if(cursors.up.isDown||keys.up)vy=-SPEED;
+    else if(cursors.down.isDown||keys.down)vy=SPEED;
+  }
   player.setVelocity(vx,vy);
 
   if(vx!==0||vy!==0){
@@ -325,27 +408,33 @@ function update(){
     if(idleUrls.length>0&&player.anims&&!player.anims.currentAnim?.key?.startsWith('idle')){try{player.play('idle');}catch(e){}}
   }
 
-  // Check proximity to questions/hints
-  if(!isAnswering&&player.body&&!currentQuiz&&!currentHintId){
+  // Always allow hiding quiz/hint if player moves away
+  if(player.body){
     var px=player.body.position.x,py=player.body.position.y;
-
-    for(var i=0;i<quizData.length;i++){
-      var q=quizData[i];
-      if(answeredIds.has(q.id))continue;
-      var dx=px-q.cx,dy=py-q.cy;
-      if(Math.sqrt(dx*dx+dy*dy)<INTERACT_DIST){
-        showQuiz(q);
-        return;
-      }
+    // If a quiz popup is open, hide it when player walks away
+    if(currentQuiz){
+      var qopen = quizData.find(function(q){return q.id===currentQuiz;});
+      if(qopen){ var dx=px-qopen.cx, dy=py-qopen.cy; if(Math.sqrt(dx*dx+dy*dy) > INTERACT_DIST){ document.getElementById('quiz-popup').style.display='none'; currentQuiz=null; isAnswering=false; } }
     }
-    for(var j=0;j<hintData.length;j++){
-      var h=hintData[j];
-      if(dismissedHints.has(h.id))continue;
-      if(currentHintId&&currentHintId!==h.id)continue;
-      var hdx=px-h.cx,hdy=py-h.cy;
-      if(Math.sqrt(hdx*hdx+hdy*hdy)<INTERACT_DIST){
-        showHint(h,h.id);
-        return;
+    // If a hint popup is open, hide it when player walks away
+    if(currentHintId){
+      var hopen = hintData.find(function(h){return h.id===currentHintId;});
+      if(hopen){ var hx=px-hopen.cx, hy=py-hopen.cy; if(Math.sqrt(hx*hx+hy*hy) > INTERACT_DIST){ document.getElementById('hint-popup').style.display='none'; dismissedHints.add(currentHintId); currentHintId=null; } }
+    }
+
+    // Only auto-show when not answering and no popup currently open
+    if(!isAnswering && !currentQuiz && !currentHintId){
+      for(var i=0;i<quizData.length;i++){
+        var q=quizData[i];
+        if(answeredIds.has(q.id))continue;
+        var dx=px-q.cx,dy=py-q.cy;
+        if(Math.sqrt(dx*dx+dy*dy)<INTERACT_DIST){ showQuiz(q); return; }
+      }
+      for(var j=0;j<hintData.length;j++){
+        var h=hintData[j];
+        if(dismissedHints.has(h.id))continue;
+        var hdx=px-h.cx,hdy=py-h.cy;
+        if(Math.sqrt(hdx*hdx+hdy*hdy)<INTERACT_DIST){ showHint(h,h.id); return; }
       }
     }
   }
