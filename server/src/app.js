@@ -16,6 +16,7 @@ const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const curriculumRoutes = require("./routes/curriculumRoutes");
 const friendRoutes = require("./routes/friendRoutes");
 const groupRoutes = require("./routes/groupRoutes");
+const chatbotRoutes = require("./routes/chatbotRoutes");
 const errorHandler = require("./middleware/errorHandler");
 const { setCsrfToken, requireCsrfToken } = require("./middleware/csrf");
 
@@ -81,6 +82,7 @@ app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/curriculum", curriculumRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/groups", groupRoutes);
+app.use("/api/chatbot", chatbotRoutes);
 app.use("/api", podcastRoutes);
 
 // Load subscription cron job
