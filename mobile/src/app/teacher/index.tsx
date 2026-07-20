@@ -23,7 +23,9 @@ import { teacherReviewApi, rejectionSuggestions, type TeacherReviewItem, type Re
 import { subscriptionApi } from '@/services/subscriptionApi';
 import type { LessonRequest } from '@/types/subscription';
 import { useRouter } from 'expo-router';
+import * as DocumentPicker from 'expo-document-picker';
 import { adminApi } from '@/services/adminApi';
+import { api, ensureCsrfToken } from '@/services/api';
 
 const STATUS_OPTIONS: Array<{ value: ReviewStatus | 'All'; label: string }> = [
   { value: 'Pending_Review', label: 'Chờ duyệt' },
@@ -88,6 +90,70 @@ export default function TeacherScreen() {
   const [availablePodcasts, setAvailablePodcasts] = useState<any[]>([]);
   const [requestModalVisible, setRequestModalVisible] = useState(false);
 
+  // ─── Accept + Create Podcast form ──────────────────
+  const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
+  const [acceptForm, setAcceptForm] = useState({
+    title: '',
+    description: '',
+    content: '',
+    level: 'Medium' as 'Easy' | 'Medium' | 'Hard',
+    category: '',
+    needsGameCreation: false,
+    pedagogicalNotes: '',
+    estimatedCompletionDate: '',
+    thumbnailFile: null as any,
+    audioFile: null as any,
+  });
+  const [acceptUploadProgress, setAcceptUploadProgress] = useState<number | null>(null);
+  const [acceptingSaving, setAcceptingSaving] = useState(false);
+
+  // Categories for the accept form
+  const [acceptCategories, setAcceptCategories] = useState<string[]>([]);
+  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  // Date picker
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerY, setDatePickerY] = useState(new Date().getFullYear());
+  const [datePickerM, setDatePickerM] = useState(new Date().getMonth() + 1);
+  const [datePickerD, setDatePickerD] = useState(new Date().getDate());
+
+  const confirmDate = () => {
+    const mm = String(datePickerM).padStart(2, '0');
+    const dd = String(datePickerD).padStart(2, '0');
+    setAcceptForm({ ...acceptForm, estimatedCompletionDate: `${datePickerY}-${mm}-${dd}` });
+    setShowDatePicker(false);
+  };
+
+  // ─── Edit Podcast form ──────────────────
+  const [editingPodcastId, setEditingPodcastId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    content: '',
+    level: 'Medium' as 'Easy' | 'Medium' | 'Hard',
+    category: '',
+    thumbnailFile: null as any,
+    audioFile: null as any,
+    existingThumbnail: '',
+    existingAudioUrl: '',
+  });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editCategories, setEditCategories] = useState<string[]>([]);
+  const [isAddingNewEditCategory, setIsAddingNewEditCategory] = useState(false);
+  const [newEditCategoryName, setNewEditCategoryName] = useState('');
+
+  // Load categories from existing podcasts
+  useEffect(() => {
+    if (!user) return;
+    import('@/services/podcastApi').then(({ podcastApi }) => {
+      podcastApi.getAll().then((res) => {
+        const cats = Array.from(new Set((res?.podcasts || []).map((p: any) => p.category).filter(Boolean))) as string[];
+        setAcceptCategories(cats);
+      }).catch(() => {});
+    });
+  }, [user]);
+
   const playPauseAudio = async (url: string) => {
     try {
       await Linking.openURL(url);
@@ -151,11 +217,92 @@ export default function TeacherScreen() {
   }), [items]);
 
   // ─── Request handlers ─────────────────────────────
-  const handleAcceptRequest = async (id: string) => {
-    setSaving(true);
-    try { await subscriptionApi.acceptLessonRequest(id); Alert.alert('OK', 'Đã nhận yêu cầu!'); loadRequests(); }
-    catch { Alert.alert('Lỗi', 'Không thể nhận yêu cầu.'); }
-    finally { setSaving(false); }
+  const handleAcceptRequest = (id: string) => {
+    // Open the accept + create podcast form modal
+    setAcceptingRequestId(id);
+    setAcceptForm({
+      title: '',
+      description: '',
+      content: '',
+      level: 'Medium',
+      category: '',
+      needsGameCreation: false,
+      pedagogicalNotes: '',
+      estimatedCompletionDate: '',
+      thumbnailFile: null,
+      audioFile: null,
+    });
+    setAcceptUploadProgress(null);
+    setFeedbackError('');
+    setIsAddingNewCategory(false);
+    setNewCategoryName('');
+  };
+
+  const handleAcceptRequestSubmit = async () => {
+    if (!acceptForm.title.trim()) { setFeedbackError('Vui lòng nhập tiêu đề podcast.'); return; }
+    if (!acceptForm.thumbnailFile || !acceptForm.audioFile) {
+      setFeedbackError('Vui lòng tải lên đầy đủ ảnh và âm thanh cho podcast.');
+      return;
+    }
+    setAcceptingSaving(true);
+    setFeedbackError('');
+    try {
+      // 1. Create podcast with proper React Native FormData
+      const formData = new FormData();
+      formData.append('title', acceptForm.title.trim());
+      formData.append('description', acceptForm.description.trim());
+      formData.append('content', acceptForm.content.trim());
+      formData.append('level', acceptForm.level);
+      formData.append('category', acceptForm.category.trim() || 'Yêu cầu VIP');
+      if (acceptingRequestId) formData.append('lessonRequestId', acceptingRequestId);
+
+      // React Native requires file objects as { uri, name, type }
+      const thumbFile = acceptForm.thumbnailFile;
+      const audioFile = acceptForm.audioFile;
+      formData.append('thumbnail', {
+        uri: thumbFile.uri,
+        name: thumbFile.name || 'thumbnail.jpg',
+        type: thumbFile.mimeType || 'image/jpeg',
+      } as any);
+      formData.append('audio', {
+        uri: audioFile.uri,
+        name: audioFile.name || 'audio.mp3',
+        type: audioFile.mimeType || 'audio/mpeg',
+      } as any);
+
+      const token = await ensureCsrfToken();
+      // Must delete default Content-Type so Axios auto-sets multipart/form-data with boundary
+      const uploadRes = await api.post<{ success: boolean; data: { _id: string } }>(
+        '/staff/podcasts',
+        formData,
+        {
+          headers: {
+            'x-csrf-token': token,
+            'Content-Type': undefined as any,
+          },
+          transformRequest: [(data: any) => data],
+        }
+      );
+
+      const newPodcastId = uploadRes.data.data._id;
+
+      // 2. Accept lesson request with podcast link
+      await subscriptionApi.acceptLessonRequest(acceptingRequestId!, {
+        needsGameCreation: acceptForm.needsGameCreation,
+        pedagogicalNotes: acceptForm.pedagogicalNotes.trim(),
+        estimatedCompletionDate: acceptForm.estimatedCompletionDate || undefined,
+        resultPodcastId: newPodcastId,
+      });
+
+      Alert.alert('OK', 'Đã nhận yêu cầu và tạo podcast thành công!');
+      setAcceptingRequestId(null);
+      loadRequests();
+    } catch (err: any) {
+      setFeedbackError(err.response?.data?.message || 'Lỗi khi nhận yêu cầu và tải lên podcast.');
+    } finally {
+      setAcceptingSaving(false);
+      setAcceptUploadProgress(null);
+    }
   };
 
   const handleStartRequest = async (id: string) => {
@@ -163,6 +310,84 @@ export default function TeacherScreen() {
     try { await subscriptionApi.startLessonRequest(id); Alert.alert('OK', 'Đã bắt đầu soạn thảo!'); loadRequests(); }
     catch { Alert.alert('Lỗi', 'Không thể bắt đầu.'); }
     finally { setSaving(false); }
+  };
+
+  // ─── Edit Podcast handlers ───────────────────────
+  const openEditPodcastModal = async (podcastId: string) => {
+    setSaving(true);
+    setFeedbackError('');
+    try {
+      const res = await api.get<{ success: boolean; data: any }>(`/staff/podcasts/${podcastId}`);
+      const podcast = res.data.data;
+      if (podcast) {
+        const draft = podcast.pendingDraft;
+        setEditingPodcastId(podcastId);
+        setEditForm({
+          title: draft?.title ?? podcast.title ?? '',
+          description: draft?.description ?? podcast.description ?? '',
+          content: draft?.content ?? podcast.content ?? '',
+          level: draft?.level ?? podcast.level ?? 'Medium',
+          category: draft?.category ?? podcast.category ?? '',
+          thumbnailFile: null,
+          audioFile: null,
+          existingThumbnail: draft?.thumbnail ?? podcast.thumbnail ?? '',
+          existingAudioUrl: draft?.audioUrl ?? podcast.audioUrl ?? '',
+        });
+        // Load categories for the edit form
+        const catsRes = await import('@/services/podcastApi').then(({ podcastApi }) => podcastApi.getAll());
+        const cats = Array.from(new Set((catsRes?.podcasts || []).map((p: any) => p.category).filter(Boolean))) as string[];
+        setEditCategories(cats);
+      }
+    } catch {
+      Alert.alert('Lỗi', 'Không thể tải thông tin podcast để chỉnh sửa.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditPodcastSubmit = async () => {
+    if (!editForm.title.trim()) { setFeedbackError('Vui lòng nhập tiêu đề podcast.'); return; }
+    setEditSaving(true);
+    setFeedbackError('');
+    try {
+      const formData = new FormData();
+      formData.append('title', editForm.title.trim());
+      formData.append('description', editForm.description.trim());
+      formData.append('content', editForm.content.trim());
+      formData.append('level', editForm.level);
+      formData.append('category', editForm.category.trim() || 'Chủ đề chung');
+      if (editForm.thumbnailFile) {
+        formData.append('thumbnail', {
+          uri: editForm.thumbnailFile.uri,
+          name: editForm.thumbnailFile.name || 'thumbnail.jpg',
+          type: editForm.thumbnailFile.mimeType || 'image/jpeg',
+        } as any);
+      }
+      if (editForm.audioFile) {
+        formData.append('audio', {
+          uri: editForm.audioFile.uri,
+          name: editForm.audioFile.name || 'audio.mp3',
+          type: editForm.audioFile.mimeType || 'audio/mpeg',
+        } as any);
+      }
+
+      const token = await ensureCsrfToken();
+      await api.put(`/staff/podcasts/${editingPodcastId}`, formData, {
+        headers: {
+          'x-csrf-token': token,
+          'Content-Type': undefined as any,
+        },
+        transformRequest: [(data: any) => data],
+      });
+
+      Alert.alert('OK', 'Cập nhật podcast thành công!');
+      setEditingPodcastId(null);
+      loadRequests();
+    } catch (err: any) {
+      setFeedbackError(err.response?.data?.message || 'Lỗi khi cập nhật podcast.');
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   const handleRejectRequestSubmit = async () => {
@@ -445,14 +670,22 @@ export default function TeacherScreen() {
                 ? req.requesterId
                 : 'N/A';
 
-            const statusColor = req.status === 'Pending' ? Colors.light.gold + '33'
+            const assignedTeacherId = req.assignedTeacherId && (typeof req.assignedTeacherId === 'object'
+              ? (req.assignedTeacherId as any)._id
+              : req.assignedTeacherId);
+            const isMyAssignment = assignedTeacherId === (user as any)?._id || assignedTeacherId === (user as any)?.id;
+
+            const statusColor = req.status === 'Pending' ? Colors.light.authBorder + '33'
               : req.status === 'InProgress' ? '#7bb3d933'
+              : req.status === 'Accepted' ? '#fef3c7'
               : '#d1fae5';
-            const statusTextColor = req.status === 'Pending' ? Colors.light.gold
+            const statusTextColor = req.status === 'Pending' ? Colors.light.authBorder
               : req.status === 'InProgress' ? '#1e5a8b'
+              : req.status === 'Accepted' ? '#92400e'
               : '#065f46';
             const statusLabel = req.status === 'Pending' ? 'Chờ nhận'
               : req.status === 'InProgress' ? 'Đang soạn'
+              : req.status === 'Accepted' ? 'Đã nhận'
               : req.status === 'Completed' ? 'Hoàn thành'
               : req.status === 'Rejected' ? 'Bị từ chối'
               : 'Đã nhận';
@@ -462,6 +695,70 @@ export default function TeacherScreen() {
               <Text style={styles.cardTitle}>{req.title}</Text>
               <Text style={styles.cardBody} numberOfLines={3}>{req.description}</Text>
               <Text style={styles.metaText}>Người yêu cầu: {requesterName}</Text>
+              {req.historicalPeriod ? (
+                <Text style={styles.metaText}>Thời kỳ: {req.historicalPeriod}</Text>
+              ) : null}
+              {/* Pedagogical notes */}
+              {req.pedagogicalNotes ? (
+                <View style={styles.pedagogicalBox}>
+                  <Text style={styles.pedagogicalText}>📝 {req.pedagogicalNotes}</Text>
+                </View>
+              ) : null}
+              {/* Game creation status */}
+              {req.needsGameCreation ? (
+                <View style={styles.gameStatusRow}>
+                  <Ionicons name="game-controller-outline" size={14} color={Colors.light.gold} />
+                  <Text style={styles.gameStatusText}>
+                    Game: {req.gameCreationStatus === 'Completed' ? '✅ Đã hoàn thành' : '⏳ Đang yêu cầu Staff'}
+                  </Text>
+                </View>
+              ) : null}
+              {/* Estimated completion */}
+              {req.estimatedCompletionDate ? (
+                <Text style={styles.metaText}>
+                  Dự kiến: {new Date(req.estimatedCompletionDate).toLocaleDateString('vi-VN')}
+                </Text>
+              ) : null}
+              {/* Link to created podcast */}
+              {req.resultPodcastId ? (
+                <TouchableOpacity
+                  style={styles.linkedContent}
+                  onPress={() => {
+                    const pid = typeof req.resultPodcastId === 'object'
+                      ? req.resultPodcastId._id
+                      : req.resultPodcastId;
+                    router.push(`/podcast/${pid}` as any);
+                  }}
+                >
+                  <Ionicons name="headset-outline" size={16} color="#065f46" />
+                  <Text style={styles.linkedContentText} numberOfLines={1}>
+                    Podcast: {typeof req.resultPodcastId === 'object'
+                      ? req.resultPodcastId.title
+                      : 'Xem chi tiết'}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={14} color="#065f46" />
+                </TouchableOpacity>
+              ) : null}
+              {/* Link to created game */}
+              {req.resultLessonId ? (
+                <TouchableOpacity
+                  style={styles.linkedContent}
+                  onPress={() => {
+                    const lid = typeof req.resultLessonId === 'object'
+                      ? req.resultLessonId._id
+                      : req.resultLessonId;
+                    router.push(`/lesson/${lid}` as any);
+                  }}
+                >
+                  <Ionicons name="game-controller-outline" size={16} color="#7c3aed" />
+                  <Text style={[styles.linkedContentText, { color: '#7c3aed' }]} numberOfLines={1}>
+                    Game: {typeof req.resultLessonId === 'object'
+                      ? req.resultLessonId.title
+                      : 'Xem chi tiết'}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={14} color="#7c3aed" />
+                </TouchableOpacity>
+              ) : null}
               <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
                 <Text style={[styles.statusText, { color: statusTextColor }]}>
                   {statusLabel}
@@ -474,11 +771,23 @@ export default function TeacherScreen() {
                     <GoldButton title="Từ chối" variant="secondary" onPress={() => { setRejectingRequestId(req._id); setRejectReason(''); }} style={{ flex: 1 }} />
                   </>
                 )}
-                {req.status === 'InProgress' && (
-                  <>
-                    <GoldButton title="Bắt đầu" onPress={() => handleStartRequest(req._id)} loading={saving} style={{ flex: 1 }} />
-                    <GoldButton title="Hoàn thành" variant="secondary" onPress={() => { setCompletingRequestId(req._id); setSelectedPodcastId(''); setRequestModalVisible(true); }} style={{ flex: 1 }} />
-                  </>
+                {req.status === 'Accepted' && isMyAssignment && (
+                  <GoldButton title="Bắt đầu soạn" onPress={() => handleStartRequest(req._id)} loading={saving} style={{ flex: 1 }} />
+                )}
+                {req.status === 'InProgress' && isMyAssignment && (
+                  <GoldButton title="Hoàn thành" variant="secondary" onPress={() => { setCompletingRequestId(req._id); setSelectedPodcastId(''); setRequestModalVisible(true); }} style={{ flex: 1 }} />
+                )}
+                {isMyAssignment && req.resultPodcastId && (
+                  <GoldButton
+                    title="Chỉnh sửa Podcast"
+                    onPress={() => {
+                      const podcastId = typeof req.resultPodcastId === 'object'
+                        ? (req.resultPodcastId as any)._id
+                        : req.resultPodcastId;
+                      openEditPodcastModal(podcastId);
+                    }}
+                    style={{ flex: 1 }}
+                  />
                 )}
               </View>
             </View>
@@ -791,6 +1100,258 @@ export default function TeacherScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ─── Accept + Create Podcast Modal ─────────── */}
+      <Modal visible={!!acceptingRequestId} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '95%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Đồng ý nhận soạn &amp; Tạo Podcast</Text>
+              <TouchableOpacity onPress={() => setAcceptingRequestId(null)}>
+                <Ionicons name="close" size={24} color={Colors.light.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ marginBottom: 12 }} showsVerticalScrollIndicator={false}>
+              {/* ── Section 1: Pedagogical info ── */}
+              <View style={{ gap: 6, marginBottom: 12 }}>
+                <Text style={styles.label}>Nhận định sư phạm của bạn</Text>
+                <TextInput style={[styles.modalInput, { height: 70, textAlignVertical: 'top' }]} placeholder="Nhận định của bạn về yêu cầu này..." placeholderTextColor={Colors.light.textDim} value={acceptForm.pedagogicalNotes} onChangeText={(t) => setAcceptForm({ ...acceptForm, pedagogicalNotes: t })} multiline />
+                <Text style={styles.label}>Ngày dự kiến hoàn thành</Text>
+                <TouchableOpacity
+                  style={styles.modalInput}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={{ color: acceptForm.estimatedCompletionDate ? Colors.light.textMain : Colors.light.textDim, fontSize: FontSizes.sm }}>
+                    {acceptForm.estimatedCompletionDate || 'Chọn ngày...'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={acceptStyles.checkRow} onPress={() => setAcceptForm({ ...acceptForm, needsGameCreation: !acceptForm.needsGameCreation })}>
+                  <Ionicons name={acceptForm.needsGameCreation ? 'checkbox' : 'square-outline'} size={20} color={Colors.light.gold} />
+                  <Text style={acceptStyles.checkText}>Yêu cầu Staff thiết kế Game (Lesson) đi kèm</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* ── Divider ── */}
+              <View style={acceptStyles.divider} />
+
+              {/* ── Section 2: Podcast info ── */}
+              <Text style={acceptStyles.sectionTitle}>Thông tin chi tiết Podcast</Text>
+              <View style={{ gap: 8 }}>
+                <View>
+                  <Text style={acceptStyles.fieldLabel}>Tiêu đề Podcast <Text style={acceptStyles.required}>*</Text></Text>
+                  <TextInput style={styles.modalInput} placeholder="Nhập tiêu đề podcast" placeholderTextColor={Colors.light.textDim} value={acceptForm.title} onChangeText={(t) => setAcceptForm({ ...acceptForm, title: t })} />
+                </View>
+                <View>
+                  <Text style={acceptStyles.fieldLabel}>Mô tả ngắn <Text style={acceptStyles.required}>*</Text></Text>
+                  <TextInput style={[styles.modalInput, { height: 60, textAlignVertical: 'top' }]} placeholder="Mô tả ngắn về nội dung podcast" placeholderTextColor={Colors.light.textDim} value={acceptForm.description} onChangeText={(t) => setAcceptForm({ ...acceptForm, description: t })} multiline />
+                </View>
+                <View>
+                  <Text style={acceptStyles.fieldLabel}>Nội dung chi tiết</Text>
+                  <TextInput style={[styles.modalInput, { height: 80, textAlignVertical: 'top' }]} placeholder="Nội dung chi tiết của podcast" placeholderTextColor={Colors.light.textDim} value={acceptForm.content} onChangeText={(t) => setAcceptForm({ ...acceptForm, content: t })} multiline />
+                </View>
+
+                {/* Độ khó */}
+                <Text style={acceptStyles.fieldLabel}>Độ khó</Text>
+                <View style={styles.levelRow}>
+                  {(['Easy', 'Medium', 'Hard'] as const).map((lvl) => {
+                    const label = lvl === 'Easy' ? 'Dễ' : lvl === 'Medium' ? 'Trung bình' : 'Khó';
+                    return (
+                      <TouchableOpacity key={lvl} style={[styles.levelChip, acceptForm.level === lvl && styles.levelChipActive]} onPress={() => setAcceptForm({ ...acceptForm, level: lvl })}>
+                        <Text style={[styles.levelChipText, acceptForm.level === lvl && styles.levelChipTextActive]}>{label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Thể loại/Chủ đề */}
+                <View>
+                  <Text style={acceptStyles.fieldLabel}>Thể loại/Chủ đề <Text style={acceptStyles.required}>*</Text></Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {acceptCategories.map((cat) => (
+                        <TouchableOpacity key={cat} style={[acceptStyles.catChip, acceptForm.category === cat && acceptStyles.catChipActive]} onPress={() => setAcceptForm({ ...acceptForm, category: cat })}>
+                          <Text style={[acceptStyles.catChipText, acceptForm.category === cat && acceptStyles.catChipTextActive]} numberOfLines={1}>{cat}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+                  <TouchableOpacity style={acceptStyles.addCatRow} onPress={() => setIsAddingNewCategory(!isAddingNewCategory)}>
+                    <Ionicons name={isAddingNewCategory ? 'remove-circle-outline' : 'add-circle-outline'} size={16} color={Colors.light.gold} />
+                    <Text style={acceptStyles.addCatText}>{isAddingNewCategory ? 'Ẩn' : 'Tạo mới'}</Text>
+                  </TouchableOpacity>
+                  {isAddingNewCategory && (
+                    <TextInput style={styles.modalInput} placeholder="Nhập tên chủ đề mới" placeholderTextColor={Colors.light.textDim} value={newCategoryName} onChangeText={setNewCategoryName} onSubmitEditing={() => { if (newCategoryName.trim()) { setAcceptForm({ ...acceptForm, category: newCategoryName.trim() }); setAcceptCategories([...acceptCategories, newCategoryName.trim()]); setIsAddingNewCategory(false); setNewCategoryName(''); } }} />
+                  )}
+                </View>
+
+                {/* File pickers */}
+                <View>
+                  <Text style={acceptStyles.fieldLabel}>Hình ảnh đại diện (Thumbnail) <Text style={acceptStyles.required}>*</Text></Text>
+                  <TouchableOpacity style={styles.pickerBtn} onPress={async () => { const r = await DocumentPicker.getDocumentAsync({ type: 'image/*' }); if (!r.canceled && r.assets?.[0]) setAcceptForm(prev => ({ ...prev, thumbnailFile: r.assets[0] })); }}>
+                    <Ionicons name="image-outline" size={20} color={Colors.light.gold} />
+                    <Text style={acceptStyles.pickerText}>{acceptForm.thumbnailFile ? `✅ ${acceptForm.thumbnailFile.name}` : 'Chọn hoặc kéo thả ảnh vào đây'}</Text>
+                  </TouchableOpacity>
+                  <Text style={acceptStyles.pickerHint}>Chấp nhận PNG, JPG, JPEG (Tối đa 5MB)</Text>
+                </View>
+                <View>
+                  <Text style={acceptStyles.fieldLabel}>Tệp âm thanh (Audio) <Text style={acceptStyles.required}>*</Text></Text>
+                  <TouchableOpacity style={styles.pickerBtn} onPress={async () => { const r = await DocumentPicker.getDocumentAsync({ type: 'audio/*' }); if (!r.canceled && r.assets?.[0]) setAcceptForm(prev => ({ ...prev, audioFile: r.assets[0] })); }}>
+                    <Ionicons name="musical-note-outline" size={20} color={Colors.light.gold} />
+                    <Text style={acceptStyles.pickerText}>{acceptForm.audioFile ? `✅ ${acceptForm.audioFile.name}` : 'Chọn hoặc kéo thả tệp âm thanh vào đây'}</Text>
+                  </TouchableOpacity>
+                  <Text style={acceptStyles.pickerHint}>Chấp nhận MP3, WAV, M4A (Tối đa 100MB)</Text>
+                </View>
+
+                {feedbackError ? <Text style={styles.errorMsg}>{feedbackError}</Text> : null}
+
+                {/* Buttons */}
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <TouchableOpacity style={acceptStyles.cancelBtn} onPress={() => setAcceptingRequestId(null)}>
+                    <Text style={acceptStyles.cancelBtnText}>Hủy</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={acceptStyles.submitBtn} onPress={handleAcceptRequestSubmit} disabled={acceptingSaving}>
+                    {acceptingSaving ? <ActivityIndicator size="small" color="#f0ddb7" /> : <Text style={acceptStyles.submitBtnText}>Nhận soạn &amp; Tạo Podcast</Text>}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ─── Edit Podcast Modal ─────────── */}
+      <Modal visible={!!editingPodcastId} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '95%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chỉnh sửa Podcast</Text>
+              <TouchableOpacity onPress={() => setEditingPodcastId(null)}>
+                <Ionicons name="close" size={24} color={Colors.light.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ marginBottom: 12 }} showsVerticalScrollIndicator={false}>
+              <View style={{ gap: 8 }}>
+                {editForm.existingThumbnail ? (
+                  <Image source={{ uri: editForm.existingThumbnail }} style={{ width: '100%', height: 160, borderRadius: BorderRadius.md, marginBottom: 4 }} resizeMode="cover" />
+                ) : null}
+                <View>
+                  <Text style={acceptStyles.fieldLabel}>Tiêu đề Podcast <Text style={acceptStyles.required}>*</Text></Text>
+                  <TextInput style={styles.modalInput} placeholder="Nhập tiêu đề podcast" placeholderTextColor={Colors.light.textDim} value={editForm.title} onChangeText={(t) => setEditForm(prev => ({ ...prev, title: t }))} />
+                </View>
+                <View>
+                  <Text style={acceptStyles.fieldLabel}>Mô tả ngắn</Text>
+                  <TextInput style={[styles.modalInput, { height: 60, textAlignVertical: 'top' }]} placeholder="Mô tả ngắn về nội dung podcast" placeholderTextColor={Colors.light.textDim} value={editForm.description} onChangeText={(t) => setEditForm(prev => ({ ...prev, description: t }))} multiline />
+                </View>
+                <View>
+                  <Text style={acceptStyles.fieldLabel}>Nội dung chi tiết</Text>
+                  <TextInput style={[styles.modalInput, { height: 80, textAlignVertical: 'top' }]} placeholder="Nội dung chi tiết của podcast" placeholderTextColor={Colors.light.textDim} value={editForm.content} onChangeText={(t) => setEditForm(prev => ({ ...prev, content: t }))} multiline />
+                </View>
+                <Text style={acceptStyles.fieldLabel}>Độ khó</Text>
+                <View style={styles.levelRow}>
+                  {(['Easy', 'Medium', 'Hard'] as const).map((lvl) => {
+                    const label = lvl === 'Easy' ? 'Dễ' : lvl === 'Medium' ? 'Trung bình' : 'Khó';
+                    return (
+                      <TouchableOpacity key={lvl} style={[styles.levelChip, editForm.level === lvl && styles.levelChipActive]} onPress={() => setEditForm(prev => ({ ...prev, level: lvl }))}>
+                        <Text style={[styles.levelChipText, editForm.level === lvl && styles.levelChipTextActive]}>{label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <View>
+                  <Text style={acceptStyles.fieldLabel}>Thể loại/Chủ đề</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {editCategories.map((cat) => (
+                        <TouchableOpacity key={cat} style={[acceptStyles.catChip, editForm.category === cat && acceptStyles.catChipActive]} onPress={() => setEditForm(prev => ({ ...prev, category: cat }))}>
+                          <Text style={[acceptStyles.catChipText, editForm.category === cat && acceptStyles.catChipTextActive]} numberOfLines={1}>{cat}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+                  <TouchableOpacity style={acceptStyles.addCatRow} onPress={() => setIsAddingNewEditCategory(!isAddingNewEditCategory)}>
+                    <Ionicons name={isAddingNewEditCategory ? 'remove-circle-outline' : 'add-circle-outline'} size={16} color={Colors.light.gold} />
+                    <Text style={acceptStyles.addCatText}>{isAddingNewEditCategory ? 'Ẩn' : 'Tạo mới'}</Text>
+                  </TouchableOpacity>
+                  {isAddingNewEditCategory && (
+                    <TextInput style={styles.modalInput} placeholder="Nhập tên chủ đề mới" placeholderTextColor={Colors.light.textDim} value={newEditCategoryName} onChangeText={setNewEditCategoryName} onSubmitEditing={() => { if (newEditCategoryName.trim()) { setEditForm(prev => ({ ...prev, category: newEditCategoryName.trim() })); setEditCategories([...editCategories, newEditCategoryName.trim()]); setIsAddingNewEditCategory(false); setNewEditCategoryName(''); } }} />
+                  )}
+                </View>
+                <View>
+                  <Text style={acceptStyles.fieldLabel}>Hình ảnh đại diện mới (nếu muốn thay)</Text>
+                  <TouchableOpacity style={styles.pickerBtn} onPress={async () => { const r = await DocumentPicker.getDocumentAsync({ type: 'image/*' }); if (!r.canceled && r.assets?.[0]) setEditForm(prev => ({ ...prev, thumbnailFile: r.assets[0] })); }}>
+                    <Ionicons name="image-outline" size={20} color={Colors.light.gold} />
+                    <Text style={acceptStyles.pickerText}>{editForm.thumbnailFile ? `✅ ${editForm.thumbnailFile.name}` : editForm.existingThumbnail ? '✅ Đang có ảnh (chọn để thay)' : 'Chọn ảnh mới'}</Text>
+                  </TouchableOpacity>
+                </View>
+                <View>
+                  <Text style={acceptStyles.fieldLabel}>Tệp âm thanh mới (nếu muốn thay)</Text>
+                  <TouchableOpacity style={styles.pickerBtn} onPress={async () => { const r = await DocumentPicker.getDocumentAsync({ type: 'audio/*' }); if (!r.canceled && r.assets?.[0]) setEditForm(prev => ({ ...prev, audioFile: r.assets[0] })); }}>
+                    <Ionicons name="musical-note-outline" size={20} color={Colors.light.gold} />
+                    <Text style={acceptStyles.pickerText}>{editForm.audioFile ? `✅ ${editForm.audioFile.name}` : editForm.existingAudioUrl ? '✅ Đang có audio (chọn để thay)' : 'Chọn audio mới'}</Text>
+                  </TouchableOpacity>
+                </View>
+                {feedbackError ? <Text style={styles.errorMsg}>{feedbackError}</Text> : null}
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <TouchableOpacity style={acceptStyles.cancelBtn} onPress={() => setEditingPodcastId(null)}>
+                    <Text style={acceptStyles.cancelBtnText}>Hủy</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={acceptStyles.submitBtn} onPress={handleEditPodcastSubmit} disabled={editSaving}>
+                    {editSaving ? <ActivityIndicator size="small" color="#f0ddb7" /> : <Text style={acceptStyles.submitBtnText}>Cập nhật Podcast</Text>}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Picker Modal */}
+      <Modal visible={showDatePicker} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chọn ngày</Text>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                <Ionicons name="close" size={24} color={Colors.light.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Ngày</Text>
+                <ScrollView style={{ maxHeight: 160 }}>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                    <TouchableOpacity key={d} style={[styles.podcastOption, datePickerD === d && styles.podcastOptionActive]} onPress={() => setDatePickerD(d)}>
+                      <Text style={[styles.podcastOptionText, datePickerD === d && styles.podcastOptionTextActive]}>{d}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Tháng</Text>
+                <ScrollView style={{ maxHeight: 160 }}>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                    <TouchableOpacity key={m} style={[styles.podcastOption, datePickerM === m && styles.podcastOptionActive]} onPress={() => setDatePickerM(m)}>
+                      <Text style={[styles.podcastOptionText, datePickerM === m && styles.podcastOptionTextActive]}>Tháng {m}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Năm</Text>
+                <ScrollView style={{ maxHeight: 160 }}>
+                  {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i).map((y) => (
+                    <TouchableOpacity key={y} style={[styles.podcastOption, datePickerY === y && styles.podcastOptionActive]} onPress={() => setDatePickerY(y)}>
+                      <Text style={[styles.podcastOptionText, datePickerY === y && styles.podcastOptionTextActive]}>{y}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+            <GoldButton title="Xác nhận" onPress={confirmDate} />
+          </View>
+        </View>
+      </Modal>
     </PageBackground>
   );
 }
@@ -1021,6 +1582,52 @@ const styles = StyleSheet.create({
   podcastOptionActive: { backgroundColor: '#fef3c7' },
   podcastOptionText: { color: Colors.light.textMain, fontSize: FontSizes.sm },
   podcastOptionTextActive: { color: Colors.light.goldDark, fontWeight: '700' },
+  // Linked content
+  pedagogicalBox: { backgroundColor: '#e0f2fe', borderRadius: BorderRadius.sm, padding: 8, marginTop: 6 },
+  pedagogicalText: { color: '#0c4a6e', fontSize: FontSizes.xs, lineHeight: 18 },
+  gameStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  gameStatusText: { color: Colors.light.textMuted, fontSize: FontSizes.xs },
+  linkedContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ecfdf5',
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 6,
+  },
+  linkedContentText: { color: '#065f46', fontSize: FontSizes.xs, fontWeight: '600', flex: 1 },
+  // Accept modal
+  modalInput: {
+    borderWidth: 1,
+    borderColor: Colors.light.panelBorder,
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    color: Colors.light.textMain,
+    fontSize: FontSizes.sm,
+    backgroundColor: Colors.light.backgroundCard,
+  },
+  pickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.light.backgroundCard,
+    padding: 12,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.light.panelBorder,
+    borderStyle: 'dashed',
+  },
+  pickerBtnText: { color: Colors.light.textMuted, fontSize: FontSizes.sm, flex: 1, marginLeft: 8 },
+  // Level chips
+  levelRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
+  levelChip: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.light.panelBorder, backgroundColor: Colors.light.backgroundCard },
+  levelChipActive: { backgroundColor: Colors.light.gold, borderColor: Colors.light.goldDark },
+  levelChipText: { color: Colors.light.textMuted, fontSize: FontSizes.xs, fontWeight: '600' },
+  levelChipTextActive: { color: Colors.light.backgroundDark },
 
   // ─── Detail modal enhanced ───────────────────────
   detailKicker: { color: Colors.light.gold, fontSize: FontSizes.xs, fontWeight: '600', marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
@@ -1095,4 +1702,26 @@ const styles = StyleSheet.create({
   },
   detailAudioDuration: { color: Colors.light.textMuted, fontSize: FontSizes.xs, marginTop: 4, fontStyle: 'italic' },
   detailPodcastInfoRow: { flexDirection: 'row', gap: 16, marginTop: 4 },
+});
+
+// ─── Accept form styles ────────────────────────────
+const acceptStyles = StyleSheet.create({
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
+  checkText: { color: Colors.light.textMuted, fontSize: FontSizes.sm },
+  divider: { height: 1, backgroundColor: Colors.light.panelBorder, marginVertical: 12 },
+  sectionTitle: { color: Colors.light.textMain, fontSize: FontSizes.md, fontWeight: '700', marginBottom: 10 },
+  fieldLabel: { color: Colors.light.textMuted, fontSize: FontSizes.sm, fontWeight: '600', marginBottom: 4 },
+  required: { color: Colors.light.error, fontWeight: '700' },
+  catChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: Colors.light.backgroundCard, borderWidth: 1, borderColor: Colors.light.panelBorder },
+  catChipActive: { backgroundColor: Colors.light.gold, borderColor: Colors.light.goldDark },
+  catChipText: { color: Colors.light.textMuted, fontSize: FontSizes.xs },
+  catChipTextActive: { color: Colors.light.backgroundDark, fontWeight: '700' },
+  addCatRow: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6 },
+  addCatText: { color: Colors.light.gold, fontSize: FontSizes.xs, fontWeight: '600' },
+  pickerText: { color: Colors.light.textMuted, fontSize: FontSizes.sm, flex: 1, marginLeft: 8 },
+  pickerHint: { color: Colors.light.textDim, fontSize: 10, marginTop: 2 },
+  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.light.panelBorder, backgroundColor: Colors.light.backgroundCard, alignItems: 'center' },
+  cancelBtnText: { color: Colors.light.textMuted, fontSize: FontSizes.sm, fontWeight: '600' },
+  submitBtn: { flex: 2, paddingVertical: 14, borderRadius: BorderRadius.md, backgroundColor: Colors.light.gold, alignItems: 'center' },
+  submitBtnText: { color: Colors.light.backgroundDark, fontSize: FontSizes.sm, fontWeight: '700' },
 });

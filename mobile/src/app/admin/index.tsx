@@ -21,8 +21,10 @@ import GoldButton from '@/components/ui/GoldButton';
 import AuthInput from '@/components/ui/AuthInput';
 import { adminApi, type AdminSubscriptionStats, type Coupon, type AdminLesson } from '@/services/adminApi';
 import { subscriptionApi } from '@/services/subscriptionApi';
+import AdminGiftCodesTab from '@/components/admin/AdminGiftCodesTab';
+import AdminLessonRequestsTab from '@/components/admin/AdminLessonRequestsTab';
 
-const TABS = ['Dashboard', 'Users', 'Subscriptions', 'Coupons'] as const;
+const TABS = ['Dashboard', 'Users', 'Subscriptions', 'Coupons', 'Gift Codes', 'Lesson Requests'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function AdminScreen() {
@@ -332,6 +334,16 @@ export default function AdminScreen() {
                 </View>
               ))}
             </>
+          )}
+
+          {/* Gift Codes Tab */}
+          {activeTab === 'Gift Codes' && (
+            <AdminGiftCodesTab />
+          )}
+
+          {/* Lesson Requests Tab */}
+          {activeTab === 'Lesson Requests' && (
+            <AdminLessonRequestsTab />
           )}
         </ScrollView>
       )}

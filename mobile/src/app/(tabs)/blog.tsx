@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Modal, ScrollView, Alert, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
 import { PageBackground } from '@/components/PageBackground';
@@ -41,6 +42,7 @@ export default function BlogFeedScreen() {
   const [createCat, setCreateCat] = useState('Chủ đề chung');
   const [createTags, setCreateTags] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
 
   const fetchPosts = useCallback(async (pg: number, cat: string, s: string, reset = false) => {
     if (reset) setLoading(true);
@@ -57,6 +59,29 @@ export default function BlogFeedScreen() {
 
   useEffect(() => { fetchPosts(1, category, search, true); }, [category, search]);
 
+  const handlePickImages = async () => {
+    if (selectedImages.length >= 3) {
+      Alert.alert('Giới hạn', 'Bạn chỉ được đính kèm tối đa 3 ảnh.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      quality: 0.8,
+      selectionLimit: 3 - selectedImages.length,
+    });
+    if (!result.canceled && result.assets) {
+      // Check file size (max 5MB each)
+      for (const asset of result.assets) {
+        if ((asset as any).fileSize && (asset as any).fileSize > 5 * 1024 * 1024) {
+          Alert.alert('Lỗi', 'Mỗi ảnh không được vượt quá 5MB.');
+          return;
+        }
+      }
+      setSelectedImages((prev) => [...prev, ...result.assets].slice(0, 3));
+    }
+  };
+
   const handleCreate = async () => {
     if (!createTitle.trim() || !createContent.trim()) { Alert.alert('Lỗi', 'Vui lòng nhập tiêu đề và nội dung.'); return; }
     setCreateLoading(true);
@@ -64,8 +89,16 @@ export default function BlogFeedScreen() {
       const fd = new FormData();
       fd.append('title', createTitle.trim()); fd.append('content', createContent.trim());
       fd.append('category', createCat); fd.append('tags', createTags);
+      // Append images
+      selectedImages.forEach((asset, idx) => {
+        const uri = asset.uri;
+        const name = asset.fileName || `blog_image_${idx}.jpg`;
+        const type = asset.mimeType || 'image/jpeg';
+        fd.append('images', { uri, name, type } as any);
+      });
       await blogApi.createPost(fd);
       setShowCreate(false); setCreateTitle(''); setCreateContent(''); setCreateCat('Chủ đề chung'); setCreateTags('');
+      setSelectedImages([]);
       Alert.alert('Thành công', 'Bài viết đã được gửi để duyệt!');
       fetchPosts(1, category, search, true);
     } catch { Alert.alert('Lỗi', 'Không thể tạo bài viết.'); }
@@ -117,6 +150,14 @@ export default function BlogFeedScreen() {
           <View style={S.headerBtns}>
             <TouchableOpacity style={S.btnOutline} onPress={() => router.push('/blog/my-posts' as any)}>
               <Text style={S.btnOutlineT}>Bài viết của tôi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={S.btnOutline} onPress={() => router.push('/blog/friends' as any)}>
+              <Ionicons name="people-outline" size={14} color={Colors.dark.maroonDark} />
+              <Text style={S.btnOutlineT}>Bạn bè</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={S.btnOutline} onPress={() => router.push('/blog/groups' as any)}>
+              <Ionicons name="people-circle-outline" size={14} color={Colors.dark.maroonDark} />
+              <Text style={S.btnOutlineT}>Nhóm</Text>
             </TouchableOpacity>
             <TouchableOpacity style={S.btnGold} onPress={() => setShowCreate(true)}>
               <Ionicons name="add" size={16} color={Colors.light.backgroundDark} />
@@ -178,6 +219,29 @@ export default function BlogFeedScreen() {
                 ))}
               </ScrollView>
               <AuthInput label="Tags" placeholder="Tags (phân cách bằng dấu phẩy)" value={createTags} onChangeText={setCreateTags} />
+              {/* Image picker */}
+              <View style={S.imageSection}>
+                <Text style={S.lbl}>Ảnh đính kèm (tối đa 3)</Text>
+                <View style={S.imageRow}>
+                  {selectedImages.map((asset, idx) => (
+                    <View key={idx} style={S.imagePreviewWrap}>
+                      <Image source={{ uri: asset.uri }} style={S.imagePreview} />
+                      <TouchableOpacity
+                        style={S.imageRemoveBtn}
+                        onPress={() => setSelectedImages((prev) => prev.filter((_, i) => i !== idx))}
+                      >
+                        <Ionicons name="close-circle" size={20} color={Colors.light.error} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  {selectedImages.length < 3 && (
+                    <TouchableOpacity style={S.addImageBtn} onPress={handlePickImages}>
+                      <Ionicons name="camera-outline" size={28} color={Colors.light.gold} />
+                      <Text style={S.addImageText}>Thêm ảnh</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
               <GoldButton title="Đăng Bài" onPress={handleCreate} loading={createLoading} />
             </ScrollView>
           </View>
@@ -230,4 +294,16 @@ const S = StyleSheet.create({
   mt: { color: Colors.light.textMain, fontSize: FontSizes.lg, fontWeight: '700' },
   mb: { padding: Spacing.lg },
   lbl: { color: Colors.light.textMuted, fontSize: FontSizes.sm, marginTop: 8 },
+  // Image picker
+  imageSection: { marginTop: 4 },
+  imageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  imagePreviewWrap: { position: 'relative' },
+  imagePreview: { width: 80, height: 80, borderRadius: BorderRadius.md },
+  imageRemoveBtn: { position: 'absolute', top: -6, right: -6 },
+  addImageBtn: {
+    width: 80, height: 80, borderRadius: BorderRadius.md,
+    borderWidth: 2, borderColor: Colors.light.gold, borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center', gap: 4,
+  },
+  addImageText: { color: Colors.light.gold, fontSize: 10 },
 });

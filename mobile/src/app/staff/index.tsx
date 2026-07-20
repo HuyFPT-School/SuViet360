@@ -23,8 +23,10 @@ import AuthInput from '@/components/ui/AuthInput';
 import { blogApi } from '@/services/blogApi';
 import { adminApi } from '@/services/adminApi';
 import type { BlogPost, BlogReport } from '@/types/blog';
+import ChapterTab from '@/components/staff/ChapterTab';
+import QuizTab from '@/components/staff/QuizTab';
 
-const TABS = ['Bài Học', 'Podcast', 'Diễn Đàn', 'Báo Cáo'] as const;
+const TABS = ['Bài Học', 'Podcast', 'Diễn Đàn', 'Báo Cáo', 'Chương Học', 'Ngân Hàng Quiz', 'Yêu cầu bài học'] as const;
 type Tab = (typeof TABS)[number];
 
 // ─── Helpers ──────────────────────────────────────────
@@ -96,6 +98,10 @@ export default function StaffScreen() {
   const [pendingPosts, setPendingPosts] = useState<BlogPost[]>([]);
   const [pendingReports, setPendingReports] = useState<BlogReport[]>([]);
 
+  // ─── Lesson Requests (admin view) ───────────────────
+  const [lessonRequests, setLessonRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+
   // ─── Categories management ──────────────────────────
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showLessonPicker, setShowLessonPicker] = useState(false);
@@ -133,8 +139,41 @@ export default function StaffScreen() {
       activeTab === 'Podcast' ? loadPodcasts() : Promise.resolve(),
       activeTab === 'Diễn Đàn' ? blogApi.getPendingPosts().then(r => setPendingPosts(r.data || [])).catch(() => { }) : Promise.resolve(),
       activeTab === 'Báo Cáo' ? blogApi.getPendingReports().then(r => setPendingReports(r.data || [])).catch(() => { }) : Promise.resolve(),
+      activeTab === 'Yêu cầu bài học' ? loadLessonRequests() : Promise.resolve(),
     ]).finally(() => setLoading(false));
   }, [user, activeTab]);
+
+  // ─── Lesson requests load ───────────────────────────
+  const loadLessonRequests = useCallback(async () => {
+    setLoadingRequests(true);
+    try {
+      const { subscriptionApi: subApi } = await import('@/services/subscriptionApi');
+      const data = await subApi.getAdminLessonRequests();
+      setLessonRequests(data);
+    } catch {
+      setMessage({ type: 'error', text: 'Không thể tải yêu cầu bài học.' });
+    } finally {
+      setLoadingRequests(false);
+    }
+  }, []);
+
+  // ─── Design game from lesson request ────────────────
+  const handleDesignGame = (req: any) => {
+    setLessonTitle(`Game cho: ${req.title}`);
+    setLessonContent(`Thiết kế game đồng hành cùng podcast "${req.title}" thuộc thời kỳ ${req.historicalPeriod || 'Yêu cầu VIP'}.`);
+    setSpawnX('400');
+    setSpawnY('300');
+    setTilesetNames([]);
+    setTilemapFile(null);
+    setTilesetFiles([]);
+    setIdleSprites([]);
+    setRunSprites([]);
+    setLessonFormMode('create');
+    setSelectedLessonId(null);
+    setSelectedLessonDetail(null);
+    setActiveTab('Bài Học');
+    setMessage({ type: 'success', text: `Đang tạo Game liên kết cho yêu cầu: "${req.title}"` });
+  };
 
   // ─── Lesson actions ─────────────────────────────────
   const resetLessonForm = () => {
@@ -851,6 +890,140 @@ export default function StaffScreen() {
               ))}
             </>
           )}
+
+          {/* ─── CHAPTER TAB ─── */}
+          {activeTab === 'Chương Học' && <ChapterTab />}
+
+          {/* ─── QUIZ TAB ─── */}
+          {activeTab === 'Ngân Hàng Quiz' && <QuizTab />}
+
+          {/* ─── LESSON REQUESTS TAB ─── */}
+          {activeTab === 'Yêu cầu bài học' && (
+            <View style={lrStyles.wrapper}>
+              <View style={lrStyles.headerRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={lrStyles.heading}>Theo dõi Yêu cầu bài học (Pro)</Text>
+                  <Text style={lrStyles.subheading}>Giám sát các yêu cầu soạn thảo bài học từ học viên Pro và trạng thái xử lý của Giáo viên</Text>
+                </View>
+                <View style={lrStyles.countBadge}>
+                  <Text style={lrStyles.countText}>{lessonRequests.filter((req) => req.needsGameCreation).length} Yêu cầu</Text>
+                </View>
+              </View>
+
+              {loadingRequests ? (
+                <View style={styles.center}><ActivityIndicator size="large" color={Colors.light.gold} /></View>
+              ) : lessonRequests.filter((req) => req.needsGameCreation).length === 0 ? (
+                <Text style={lrStyles.emptyMsg}>Chưa có yêu cầu bài học nào trên hệ thống.</Text>
+              ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View>
+                    {/* Table header */}
+                    <View style={lrStyles.thead}>
+                      <Text style={[lrStyles.th, { width: 115 }]}>Học sinh</Text>
+                      <Text style={[lrStyles.th, { width: 230 }]}>Chi tiết yêu cầu</Text>
+                      <Text style={[lrStyles.th, { width: 85 }]}>Thời kỳ</Text>
+                      <Text style={[lrStyles.th, { width: 115 }]}>Giáo viên</Text>
+                      <Text style={[lrStyles.th, { width: 105 }]}>Y/c Game</Text>
+                      <Text style={[lrStyles.th, { width: 90 }]}>Trạng thái</Text>
+                      <Text style={[lrStyles.th, { width: 80 }]}>Ngày gửi</Text>
+                    </View>
+
+                    {/* Table body */}
+                    {lessonRequests.filter((req) => req.needsGameCreation).map((req: any) => (
+                      <View key={req._id} style={lrStyles.trow}>
+                        {/* Học sinh */}
+                        <View style={{ width: 115, paddingRight: 8 }}>
+                          <Text style={lrStyles.studentName} numberOfLines={1}>{req.requesterId?.name || 'Học viên Pro'}</Text>
+                          <Text style={lrStyles.studentEmail} numberOfLines={1}>{req.requesterId?.email || ''}</Text>
+                        </View>
+
+                        {/* Chi tiết */}
+                        <View style={{ width: 230, paddingRight: 8 }}>
+                          <Text style={lrStyles.reqTitle} numberOfLines={2}>{req.title}</Text>
+                          <Text style={lrStyles.reqDesc} numberOfLines={2}>{req.description}</Text>
+                          {req.pedagogicalNotes ? (
+                            <View style={lrStyles.infoBlock}>
+                              <Text style={lrStyles.infoLabel}>Nhận định sư phạm:</Text>
+                              <Text style={lrStyles.infoValue} numberOfLines={3}>{req.pedagogicalNotes}</Text>
+                            </View>
+                          ) : null}
+                          {req.estimatedCompletionDate ? (
+                            <Text style={lrStyles.metaLine}>Dự kiến hoàn tất: <Text style={{ fontWeight: '700' }}>{new Date(req.estimatedCompletionDate).toLocaleDateString('vi-VN')}</Text></Text>
+                          ) : null}
+                          {req.resultPodcastId ? (
+                            <View style={lrStyles.successBlock}>
+                              <Text style={lrStyles.successText} numberOfLines={1}>
+                                🎧 Podcast: {typeof req.resultPodcastId === 'object' ? (req.resultPodcastId as any).title : req.resultPodcastId}
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
+
+                        {/* Thời kỳ */}
+                        <View style={{ width: 85, paddingRight: 4, justifyContent: 'center' }}>
+                          <Text style={lrStyles.cell} numberOfLines={2}>{req.historicalPeriod || '—'}</Text>
+                        </View>
+
+                        {/* Giáo viên */}
+                        <View style={{ width: 115, paddingRight: 8 }}>
+                          <Text style={lrStyles.teacherName} numberOfLines={1}>{req.assignedTeacherId?.name || 'Chưa nhận'}</Text>
+                          <Text style={lrStyles.teacherEmail} numberOfLines={1}>{req.assignedTeacherId?.email || ''}</Text>
+                        </View>
+
+                        {/* Yêu cầu Game */}
+                        <View style={{ width: 105, paddingRight: 6, justifyContent: 'center' }}>
+                          {req.needsGameCreation ? (
+                            <>
+                              <View style={[lrStyles.gameChip, req.gameCreationStatus === 'Completed' ? lrStyles.gameChipDone : lrStyles.gameChipPending]}>
+                                <Text style={req.gameCreationStatus === 'Completed' ? lrStyles.gameChipDoneText : lrStyles.gameChipPendingText}>
+                                  {req.gameCreationStatus === 'Completed' ? '✓ Đã thiết kế' : 'Cần thiết kế'}
+                                </Text>
+                              </View>
+                              {req.gameCreationStatus !== 'Completed' && (
+                                <TouchableOpacity style={lrStyles.designNowBtn} onPress={() => handleDesignGame(req)} activeOpacity={0.7}>
+                                  <Text style={lrStyles.designNowText}>Thiết kế ngay</Text>
+                                </TouchableOpacity>
+                              )}
+                            </>
+                          ) : (
+                            <Text style={lrStyles.muted}>Không</Text>
+                          )}
+                        </View>
+
+                        {/* Trạng thái */}
+                        <View style={{ width: 90, justifyContent: 'center' }}>
+                          <View style={[
+                            lrStyles.statusPill,
+                            req.status === 'Pending' && lrStyles.statusPending,
+                            req.status === 'Accepted' && lrStyles.statusAccepted,
+                            req.status === 'InProgress' && lrStyles.statusInProgress,
+                            req.status === 'Completed' && lrStyles.statusCompleted,
+                            (req.status === 'Rejected' || (!['Pending','Accepted','InProgress','Completed'].includes(req.status))) && lrStyles.statusRejected,
+                          ]}>
+                            <Text style={[
+                              lrStyles.statusPillText,
+                              req.status === 'Pending' && lrStyles.statusPendingText,
+                              req.status === 'Accepted' && lrStyles.statusAcceptedText,
+                              req.status === 'InProgress' && lrStyles.statusInProgressText,
+                              req.status === 'Completed' && lrStyles.statusCompletedText,
+                              (req.status === 'Rejected' || (!['Pending','Accepted','InProgress','Completed'].includes(req.status))) && lrStyles.statusRejectedText,
+                            ]}>
+                              {req.status === 'Pending' ? 'Chờ duyệt' : req.status === 'Accepted' ? 'Đã nhận' : req.status === 'InProgress' ? 'Đang soạn' : req.status === 'Completed' ? 'Hoàn thành' : 'Từ chối'}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Ngày gửi */}
+                        <View style={{ width: 80, justifyContent: 'center' }}>
+                          <Text style={lrStyles.dateCell}>{new Date(req.createdAt).toLocaleDateString('vi-VN')}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              )}
+            </View>
+          )}
         </ScrollView>
       )}
     </PageBackground>
@@ -889,6 +1062,7 @@ const styles = StyleSheet.create({
   // Section
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.md, marginBottom: Spacing.sm },
   sectionTitle: { color: Colors.dark.authBorder, fontSize: FontSizes.md, fontWeight: '700', marginTop: Spacing.sm, marginBottom: Spacing.sm },
+  sectionDesc: { color: Colors.light.textMuted, fontSize: FontSizes.xs, marginBottom: Spacing.sm },
   newBtn: { backgroundColor: Colors.light.gold, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BorderRadius.sm },
   newBtnFull: { backgroundColor: Colors.light.gold, paddingHorizontal: 16, paddingVertical: 10, borderRadius: BorderRadius.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: Spacing.sm },
   newBtnText: { color: Colors.light.backgroundDark, fontSize: FontSizes.xs, fontWeight: '700' },
@@ -1045,5 +1219,155 @@ const styles = StyleSheet.create({
   assetThumbImg: { width: 48, height: 48, borderRadius: BorderRadius.sm, borderWidth: 1, borderColor: Colors.light.panelBorder, backgroundColor: '#fff' },
   assetThumbName: { color: Colors.light.textDim, fontSize: 9, marginTop: 2, textAlign: 'center' },
   podcastThumbPreview: { width: 80, height: 60, borderRadius: BorderRadius.sm, borderWidth: 1, borderColor: Colors.light.panelBorder, backgroundColor: '#fff' },
+});
+
+const lrStyles = StyleSheet.create({
+  // Card wrapper
+  wrapper: {
+    backgroundColor: '#FFFBF2',
+    borderWidth: 2,
+    borderColor: '#92400e',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.md,
+  },
+  heading: {
+    color: '#78350f',
+    fontSize: FontSizes.md,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  subheading: {
+    color: '#92400e',
+    fontSize: FontSizes.xs,
+    marginTop: 2,
+  },
+  countBadge: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: '#d97706',
+  },
+  countText: {
+    color: '#78350f',
+    fontSize: FontSizes.xs,
+    fontWeight: '700',
+  },
+
+  // Table
+  thead: {
+    flexDirection: 'row',
+    borderBottomWidth: 2,
+    borderBottomColor: '#92400e',
+    paddingBottom: 10,
+    marginBottom: 6,
+  },
+  th: {
+    color: '#78350f',
+    fontWeight: '800',
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    paddingHorizontal: 4,
+  },
+  trow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#fde68a',
+    paddingVertical: 12,
+  },
+
+  // Student
+  studentName: { color: '#78350f', fontWeight: '700', fontSize: 12 },
+  studentEmail: { color: '#a8a29e', fontSize: 10, marginTop: 1 },
+
+  // Request detail
+  reqTitle: { color: '#78350f', fontWeight: '700', fontSize: 13, marginBottom: 3 },
+  reqDesc: { color: '#78716c', fontSize: 11, lineHeight: 15, marginBottom: 4 },
+  infoBlock: {
+    backgroundColor: '#fef3c7',
+    borderLeftWidth: 3,
+    borderLeftColor: '#d97706',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginTop: 4,
+  },
+  infoLabel: { color: '#92400e', fontSize: 10, fontWeight: '700' },
+  infoValue: { color: '#78350f', fontSize: 10, marginTop: 1 },
+  metaLine: { color: '#a8a29e', fontSize: 10, marginTop: 4 },
+  successBlock: {
+    backgroundColor: '#d1fae5',
+    borderLeftWidth: 3,
+    borderLeftColor: '#10b981',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    marginTop: 4,
+  },
+  successText: { color: '#065f46', fontSize: 10, fontWeight: '600' },
+
+  // Cell
+  cell: { color: '#57534e', fontSize: 11 },
+
+  // Teacher
+  teacherName: { color: '#78350f', fontWeight: '600', fontSize: 11 },
+  teacherEmail: { color: '#a8a29e', fontSize: 10, marginTop: 1 },
+
+  // Game
+  gameChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  gameChipPending: { backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#d97706' },
+  gameChipDone: { backgroundColor: '#d1fae5', borderWidth: 1, borderColor: '#10b981' },
+  gameChipPendingText: { color: '#92400e', fontSize: 10, fontWeight: '700' },
+  gameChipDoneText: { color: '#065f46', fontSize: 10, fontWeight: '700' },
+  designNowBtn: {
+    backgroundColor: '#b45309',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  designNowText: { color: '#fef3c7', fontSize: 10, fontWeight: '700' },
+  muted: { color: '#d6d3d1', fontSize: 10, fontStyle: 'italic' },
+
+  // Status
+  statusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  statusPending: { backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#d97706' },
+  statusAccepted: { backgroundColor: '#dbeafe', borderWidth: 1, borderColor: '#3b82f6' },
+  statusInProgress: { backgroundColor: '#ede9fe', borderWidth: 1, borderColor: '#8b5cf6' },
+  statusCompleted: { backgroundColor: '#d1fae5', borderWidth: 1, borderColor: '#10b981' },
+  statusRejected: { backgroundColor: '#fee2e2', borderWidth: 1, borderColor: '#ef4444' },
+  statusPillText: { fontSize: 10, fontWeight: '800' },
+  statusPendingText: { color: '#92400e' },
+  statusAcceptedText: { color: '#1e40af' },
+  statusInProgressText: { color: '#6d28d9' },
+  statusCompletedText: { color: '#065f46' },
+  statusRejectedText: { color: '#9b1c1c' },
+
+  // Date
+  dateCell: { color: '#a8a29e', fontSize: 11 },
+
+  // Empty
+  emptyMsg: { color: '#a8a29e', fontSize: FontSizes.sm, textAlign: 'center', fontStyle: 'italic', paddingVertical: 24 },
 });
 

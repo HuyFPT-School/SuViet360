@@ -80,7 +80,7 @@ export default function HanhTrinhScreen() {
     if (search && !i.title.toLowerCase().includes(search.toLowerCase()) && !i.category.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
-  const groups = [...new Set(filtered.map((i) => i.category))];
+  const groups = [...new Set(filtered.map((i) => i.category))].filter((g) => g !== 'Yêu cầu VIP');
   const grouped: Record<string, JourneyItem[]> = {};
   groups.forEach((g) => { grouped[g] = filtered.filter((i) => i.category === g); });
 

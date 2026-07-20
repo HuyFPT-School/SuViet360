@@ -6,7 +6,7 @@ import {
 import { PageBackground } from '@/components/PageBackground';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useChat } from '@/hooks/useChat';
-import { useAppDispatch } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { setActiveConversation } from '@/store/features/chatSlice';
 import { useAuth } from '@/hooks/useAuth';
 import { chatApi } from '@/services/chatApi';
@@ -99,6 +99,8 @@ export default function ChatScreen() {
   const rec = aConv ? getO(aConv) : null;
   const msgs = aId ? (chat.messages[aId] || []) : [];
   const online = rec ? chat.onlineUsers.includes(rec._id) : false;
+  const typingUserId = useAppSelector((s) => aId ? s.chat.typingUsers[aId] : null);
+  const isTyping = !!(typingUserId && rec && typingUserId === rec._id);
 
   if (aId && rec) {
     return (
@@ -106,7 +108,13 @@ export default function ChatScreen() {
         <View style={D.hd}>
           <TouchableOpacity onPress={() => dispatch(setActiveConversation(null))} style={D.back}><Ionicons name="chevron-back" size={24} color={Colors.light.goldLight} /></TouchableOpacity>
           <Av uri={rec.avatar} name={rec.name} s={36} online={online} />
-          <View style={{ flex: 1 }}><Text style={D.name} numberOfLines={1}>{rec.name || 'Unknown'}</Text><Text style={D.role}>{roleLbl(rec.role)}</Text></View>
+          <View style={{ flex: 1 }}><Text style={D.name} numberOfLines={1}>{rec.name || 'Unknown'}</Text>
+            {isTyping ? (
+              <Text style={D.typing}>Đang nhập...</Text>
+            ) : (
+              <Text style={D.role}>{roleLbl(rec.role)}</Text>
+            )}
+          </View>
         </View>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
           <FlatList data={msgs} renderItem={({ item }) => <Bubble item={item} isMe={(typeof item.sender === 'string' ? item.sender : item.sender?._id) === user?.id} rec={rec} />}
@@ -269,6 +277,7 @@ const D = StyleSheet.create({
   hd: { backgroundColor: Colors.light.chatBgSecondary, borderBottomWidth: 1, borderBottomColor: Colors.light.chatGlassBorder, paddingTop: 50, paddingBottom: 10, paddingHorizontal: Spacing.md, flexDirection: 'row', alignItems: 'center', gap: 10 },
   back: { padding: 4 }, name: { color: Colors.light.chatGoldLight, fontSize: FontSizes.md, fontWeight: '600' },
   role: { color: Colors.light.goldMuted, fontSize: FontSizes.xs },
+  typing: { color: Colors.light.gold, fontSize: FontSizes.xs, fontStyle: 'italic' },
 });
 
 // Messages

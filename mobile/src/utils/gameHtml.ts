@@ -198,7 +198,11 @@ function showQuiz(q){
       // hide question marker so it won't appear again
       try{ if(q && q.sprite){ q.sprite.setVisible(false); } }catch(e){}
 
-      setTimeout(function(){ el.style.display='none'; isAnswering=false; currentQuiz=null; },2000);
+      // Trigger score submission if all quizzes answered
+  if(answeredIds.size===quizData.length){
+    updateScore();
+  }
+  setTimeout(function(){ el.style.display='none'; isAnswering=false; currentQuiz=null; },2000);
     };
     opts.appendChild(btn);
   });
@@ -214,7 +218,21 @@ function showHint(h,id){
 }
 
 function updateScore(){
-  document.getElementById('score-bar').textContent='🏆 '+correctCount+'/'+quizData.length;
+  var total=quizData.length;
+  var el=document.getElementById('score-bar');
+  el.textContent='🏆 '+correctCount+'/'+total;
+  // When all quizzes are answered, send score to React Native
+  if(total>0 && answeredIds.size>=total && !window.__scoreSubmitted){
+    window.__scoreSubmitted=true;
+    el.style.background='rgba(34,139,34,0.75)';
+    el.textContent='🏆 '+correctCount+'/'+total+' ✅';
+    // Send result to React Native via postMessage
+    var msg=JSON.stringify({type:'quiz_complete',score:correctCount,total:total});
+    try{
+      if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(msg);
+      else if(window.parent) window.parent.postMessage(msg,'*');
+    }catch(e){}
+  }
 }
 
 var config={

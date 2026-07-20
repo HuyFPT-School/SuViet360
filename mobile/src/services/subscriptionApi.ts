@@ -133,9 +133,31 @@ export const subscriptionApi = {
     return res.data.data;
   },
 
-  acceptLessonRequest: async (id: string) => {
+  getAllLessonRequests: async (): Promise<LessonRequest[]> => {
+    const res = await api.get<{ success: boolean; data: LessonRequest[] }>('/subscriptions/lesson-requests');
+    return res.data.data;
+  },
+
+  getAdminLessonRequests: async (): Promise<LessonRequest[]> => {
+    const res = await api.get<{ success: boolean; data: LessonRequest[] }>('/subscriptions/admin/lesson-requests');
+    return res.data.data;
+  },
+
+  acceptLessonRequest: async (
+    id: string,
+    options?: {
+      needsGameCreation?: boolean;
+      pedagogicalNotes?: string;
+      estimatedCompletionDate?: string;
+      resultPodcastId?: string;
+    }
+  ) => {
     const token = await ensureCsrfToken();
-    const res = await api.put<{ success: boolean; data: any }>(`/subscriptions/lesson-requests/${id}/accept`, {}, { headers: { 'x-csrf-token': token } });
+    const res = await api.put<{ success: boolean; data: any }>(
+      `/subscriptions/lesson-requests/${id}/accept`,
+      options || {},
+      { headers: { 'x-csrf-token': token } }
+    );
     return res.data.data;
   },
 

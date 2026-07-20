@@ -13,6 +13,7 @@ import { PageBackground } from '@/components/PageBackground';
 import HeaderBar from '@/components/ui/HeaderBar';
 import { useAppSelector } from '@/store';
 import { api } from '@/services/api';
+import { connectSocket } from '@/services/socketClient';
 
 const REGIONS = ['Hà Nội', 'Huế', 'Đà Nẵng', 'TP. HCM', 'Hải Phòng', 'Cần Thơ', 'Nha Trang', 'Hạ Long'];
 const PAGE_SIZE = 12;
@@ -90,6 +91,22 @@ export default function LeaderboardScreen() {
   }, []);
 
   useEffect(() => { fetchLeaderboard(1, true); }, []);
+
+  // ─── Real-time leaderboard updates via socket ─────
+  useEffect(() => {
+    let socket: ReturnType<typeof connectSocket> | null = null;
+    try {
+      socket = connectSocket();
+      socket.on('leaderboard_updated', () => {
+        fetchLeaderboard(1, true);
+      });
+    } catch { /* socket not available */ }
+    return () => {
+      if (socket) {
+        socket.off('leaderboard_updated');
+      }
+    };
+  }, [fetchLeaderboard]);
 
   const handleLoadMore = () => {
     if (hasMore && !loading) {

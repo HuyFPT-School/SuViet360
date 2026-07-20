@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { lessonApi } from '@/services/lessonApi';
+import { curriculumApi } from '@/services/curriculumApi';
 import { generateGameHtml } from '@/utils/gameHtml';
 import { Colors, FontSizes } from '@/constants/theme';
 
@@ -14,6 +15,8 @@ export default function GameScreen() {
   const [html, setHtml] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const submittedRef = useRef(false);
 
   useEffect(() => {
     lockLandscape();
@@ -22,6 +25,7 @@ export default function GameScreen() {
 
   useEffect(() => {
     if (!id) return;
+    submittedRef.current = false;
     loadLesson();
   }, [id]);
 
@@ -54,6 +58,38 @@ export default function GameScreen() {
       setLoading(false);
     }
   };
+
+  /** Handle quiz completion message from WebView */
+  const handleMessage = useCallback(
+    async (event: any) => {
+      if (submittedRef.current || submitting) return;
+      try {
+        const data = JSON.parse(event.nativeEvent.data);
+        if (data.type !== 'quiz_complete') return;
+
+        const { score, total } = data;
+        if (!id || score === undefined || total === undefined) return;
+
+        submittedRef.current = true;
+        setSubmitting(true);
+
+        const result = await curriculumApi.submitLessonProgress(id, score, total);
+
+        Alert.alert(
+          '🎉 Chúc mừng!',
+          `Bạn đã trả lời đúng ${score}/${total} câu hỏi.\n\n` +
+            `+${result.quizXpGained} XP (quiz) + ${result.lessonXpGained} XP (hoàn thành)\n` +
+            `Tổng: +${result.totalXpGained} XP`,
+          [{ text: 'OK', onPress: handleClose }]
+        );
+      } catch {
+        Alert.alert('Lỗi', 'Không thể lưu kết quả. Vui lòng thử lại.');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [id, submitting]
+  );
 
   const handleClose = () => {
     unlockOrientation();
@@ -93,10 +129,17 @@ export default function GameScreen() {
         scrollEnabled={false}
         bounces={false}
         overScrollMode="never"
+        onMessage={handleMessage}
       />
       <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
         <Ionicons name="close-circle" size={32} color="rgba(255,255,255,0.7)" />
       </TouchableOpacity>
+      {submitting && (
+        <View style={styles.submittingOverlay}>
+          <ActivityIndicator size="large" color={Colors.light.gold} />
+          <Text style={styles.submittingText}>Đang lưu kết quả...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -119,4 +162,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.gold, borderRadius: 8,
   },
   backBtnText: { color: '#1a0a06', fontWeight: '700', fontSize: FontSizes.sm },
+  submittingOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 200,
+  },
+  submittingText: { color: Colors.light.gold, fontSize: FontSizes.md, marginTop: 12 },
 });
