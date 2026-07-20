@@ -22,8 +22,10 @@ export const chatbotApi = {
   ask: async (question: string): Promise<ChatbotResponse> => {
     const token = await ensureCsrfToken();
     const res = await api.post("/chatbot/ask", { question }, {
-      headers: { "x-csrf-token": token }
+      headers: { "x-csrf-token": token },
+      timeout: 400000, // 400s timeout cho phép backend poll RunPod cold start (tối đa ~360s)
     });
     return res.data;
   }
 };
+

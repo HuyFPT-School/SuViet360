@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { chatbotApi, ChatbotSource } from "@/lib/chatbotApi";
 
@@ -21,7 +21,9 @@ export default function AIChatBot() {
     },
   ]);
   const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("AI đang tìm cứu sử liệu...");
   const [showSourcesIdx, setShowSourcesIdx] = useState<number | null>(null);
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -41,15 +43,38 @@ export default function AIChatBot() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  if (!user) return null; // Only show to logged in users
+  // Dọn dẹp loading timer khi unmount
+  useEffect(() => {
+    return () => {
+      if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
+    };
+  }, []);
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!question.trim() || loading) return;
 
     const currentQuestion = question.trim();
     setQuestion("");
     setMessages((prev) => [...prev, { role: "user", text: currentQuestion }]);
     setLoading(true);
+    setLoadingText("AI đang tìm cứu sử liệu...");
+
+    // Cập nhật thông báo loading theo thời gian chờ (cold start 3-5 phút)
+    loadingTimerRef.current = setTimeout(() => {
+      setLoadingText("Mô hình AI đang khởi động, xin chờ thêm...");
+    }, 8000);
+
+    const secondTimer = setTimeout(() => {
+      setLoadingText("Đang tải mô hình AI lên GPU, quá trình này mất 2-4 phút...");
+    }, 20000);
+
+    const thirdTimer = setTimeout(() => {
+      setLoadingText("Mô hình đang nạp dữ liệu lịch sử, sắp hoàn tất...");
+    }, 90000);
+
+    const fourthTimer = setTimeout(() => {
+      setLoadingText("Gần xong rồi, chỉ còn chút nữa thôi...");
+    }, 180000);
 
     try {
       const response = await chatbotApi.ask(currentQuestion);
@@ -58,27 +83,48 @@ export default function AIChatBot() {
         ...prev,
         {
           role: "ai",
-          text: response.success ? response.answer : "Xin lỗi, đã xảy ra lỗi trong quá trình xử lý câu trả lời.",
+          text: response.success 
+            ? response.answer 
+            : (response.answer || "Xin lỗi, đã xảy ra lỗi trong quá trình xử lý câu trả lời."),
           sources: response.sources,
         },
       ]);
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      console.warn("AIChatBot network notice:", err);
+      
+      // Phân loại lỗi cho thông báo phù hợp
+      let errorText = "Không thể kết nối với máy chủ AI. Vui lòng thử lại sau.";
+      const axiosErr = err as { code?: string; response?: { data?: { message?: string } } };
+      
+      if (axiosErr.code === "ECONNABORTED" || axiosErr.code === "ERR_CANCELED") {
+        errorText = "Yêu cầu quá thời gian chờ. Mô hình AI có thể đang khởi động. Vui lòng thử lại sau 30 giây.";
+      } else if (axiosErr.response?.data?.message) {
+        errorText = axiosErr.response.data.message;
+      }
+      
       setMessages((prev) => [
         ...prev,
         {
           role: "ai",
-          text: "Không thể kết nối với máy chủ AI. Vui lòng kiểm tra cấu hình mạng hoặc thử lại sau.",
+          text: errorText,
         },
       ]);
     } finally {
       setLoading(false);
+      setLoadingText("AI đang tìm cứu sử liệu...");
+      if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
+      clearTimeout(secondTimer);
+      clearTimeout(thirdTimer);
+      clearTimeout(fourthTimer);
     }
-  };
+  }, [question, loading]);
 
   const toggleSources = (idx: number) => {
     setShowSourcesIdx(showSourcesIdx === idx ? null : idx);
   };
+
+  if (!user) return null; // Only show to logged in users
+
 
   return (
     <div className="fixed bottom-6 right-6 z-50 font-sans">
@@ -169,7 +215,7 @@ export default function AIChatBot() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                <span>AI đang tìm cứu sử liệu...</span>
+                <span>{loadingText}</span>
               </div>
             )}
             <div ref={messagesEndRef} />
