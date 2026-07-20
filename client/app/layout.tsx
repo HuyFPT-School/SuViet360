@@ -4,6 +4,7 @@ import Providers from "@/components/providers";
 import UserMenu from "@/components/user-menu";
 import ChatNavBadge from "@/components/chat/ChatNavBadge";
 import NotificationBell from "@/components/notification/NotificationBell";
+import AIChatBot from "@/components/AIChatBot";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -57,6 +58,7 @@ export default function RootLayout({
             </nav>
           </header>
           <main className="sv-main">{children}</main>
+          <AIChatBot />
         </Providers>
       </body>
     </html>
