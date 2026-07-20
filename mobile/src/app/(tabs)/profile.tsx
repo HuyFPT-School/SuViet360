@@ -15,6 +15,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/hooks/useAuth';
 import { profileApi, type ProfileUpdatePayload } from '@/services/profileApi';
 import { subscriptionApi } from '@/services/subscriptionApi';
+import { curriculumApi, type ProgressDashboard } from '@/services/curriculumApi';
 import { setUser } from '@/store/features/authSlice';
 import { useAppDispatch } from '@/store';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
@@ -47,6 +48,7 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<ProfileUpdatePayload>({});
   const [subInfo, setSubInfo] = useState<any>(null);
+  const [progress, setProgress] = useState<ProgressDashboard | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -61,6 +63,12 @@ export default function ProfileScreen() {
       subscriptionApi.getMySubscription()
         .then(setSubInfo)
         .catch(() => {});
+      // Fetch progress dashboard for XP/level display
+      if (user.role === 'user') {
+        curriculumApi.getProgressDashboard()
+          .then(setProgress)
+          .catch(() => {});
+      }
     }
   }, [user]);
 
@@ -144,7 +152,44 @@ export default function ProfileScreen() {
             </Text>
           </View>
         )}
+        {/* XP Progress Bar */}
+        {progress && (
+          <View style={styles.xpSection}>
+            <View style={styles.xpHeaderRow}>
+              <Text style={styles.xpLevel}>Cấp {progress.level}</Text>
+              <Text style={styles.xpValue}>{progress.xp} XP</Text>
+            </View>
+            <View style={styles.xpBarTrack}>
+              <View
+                style={[
+                  styles.xpBarFill,
+                  { width: `${progress.xpToNextLevel > 0 ? Math.min(100, (progress.xp / (progress.xp + progress.xpToNextLevel)) * 100) : 100}%` },
+                ]}
+              />
+            </View>
+            <View style={styles.xpStatsRow}>
+              <Text style={styles.xpStat}>
+                🎯 {progress.completedLessons?.length || 0} bài học
+              </Text>
+              <Text style={styles.xpStat}>
+                📖 {progress.completedUnits?.length || 0} bài lý thuyết
+              </Text>
+              <Text style={styles.xpStat}>
+                🔥 {progress.streak || 0} ngày streak
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
+
+      {/* Edit Profile Button */}
+      <TouchableOpacity
+        style={styles.editBtn}
+        onPress={() => setIsEditing(!isEditing)}
+      >
+        <Ionicons name={isEditing ? 'close-outline' : 'create-outline'} size={16} color={Colors.light.backgroundDark} />
+        <Text style={styles.editBtnText}>{isEditing ? 'Hủy' : 'Cập nhật thông tin'}</Text>
+      </TouchableOpacity>
 
       {/* Quick Nav */}
       <View style={styles.quickNav}>
@@ -184,26 +229,115 @@ export default function ProfileScreen() {
         {/* Personal Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
-          <View style={styles.infoGrid}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Số điện thoại</Text>
-              <Text style={styles.infoValue}>{user.phone || 'Chưa cập nhật'}</Text>
+
+          {isEditing ? (
+            <View style={styles.editForm}>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Họ tên</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={form.name}
+                  onChangeText={(t) => setForm({ ...form, name: t })}
+                  placeholder="Nhập họ tên"
+                  placeholderTextColor={Colors.light.textDim}
+                />
+              </View>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Số điện thoại</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={form.phone}
+                  onChangeText={(t) => setForm({ ...form, phone: t })}
+                  placeholder="Chưa cập nhật"
+                  placeholderTextColor={Colors.light.textDim}
+                  keyboardType="phone-pad"
+                />
+              </View>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Ngày sinh</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={form.birthDate ? String(form.birthDate).slice(0, 10) : ''}
+                  onChangeText={(t) => setForm({ ...form, birthDate: t })}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={Colors.light.textDim}
+                />
+              </View>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Giới tính</Text>
+                <View style={styles.genderRow}>
+                  {(['male', 'female', 'other'] as const).map((g) => (
+                    <TouchableOpacity
+                      key={g}
+                      style={[styles.genderPill, form.gender === g && styles.genderPillActive]}
+                      onPress={() => setForm({ ...form, gender: g })}
+                    >
+                      <Text style={[styles.genderPillT, form.gender === g && styles.genderPillTActive]}>
+                        {g === 'male' ? 'Nam' : g === 'female' ? 'Nữ' : 'Khác'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Địa chỉ</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={form.address}
+                  onChangeText={(t) => setForm({ ...form, address: t })}
+                  placeholder="Chưa cập nhật"
+                  placeholderTextColor={Colors.light.textDim}
+                />
+              </View>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Giới thiệu</Text>
+                <TextInput
+                  style={[styles.editInput, styles.editInputMultiline]}
+                  value={form.bio}
+                  onChangeText={(t) => setForm({ ...form, bio: t })}
+                  placeholder="Giới thiệu về bản thân"
+                  placeholderTextColor={Colors.light.textDim}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.saveBtn}
+                onPress={handleSaveProfile}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                    <Text style={styles.saveBtnText}>Lưu thay đổi</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Ngày sinh</Text>
-              <Text style={styles.infoValue}>
-                {user.birthDate ? new Date(user.birthDate).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
-              </Text>
+          ) : (
+            <View style={styles.infoGrid}>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Số điện thoại</Text>
+                <Text style={styles.infoValue}>{user.phone || 'Chưa cập nhật'}</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Ngày sinh</Text>
+                <Text style={styles.infoValue}>
+                  {user.birthDate ? new Date(user.birthDate).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+                </Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Giới tính</Text>
+                <Text style={styles.infoValue}>{GENDER_MAP[user.gender || ''] || 'Chưa cập nhật'}</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Địa chỉ</Text>
+                <Text style={styles.infoValue}>{user.address || 'Chưa cập nhật'}</Text>
+              </View>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Giới tính</Text>
-              <Text style={styles.infoValue}>{GENDER_MAP[user.gender || ''] || 'Chưa cập nhật'}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Địa chỉ</Text>
-              <Text style={styles.infoValue}>{user.address || 'Chưa cập nhật'}</Text>
-            </View>
-          </View>
+          )}
         </View>
 
         {/* Achievements */}
@@ -315,7 +449,112 @@ const styles = StyleSheet.create({
     fontFamily: 'Cinzel',
   },
   subBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  subText: { color: Colors.light.goldLight, fontSize: FontSizes.xs },
+  subText: { color: Colors.light.text, fontSize: FontSizes.sm, fontWeight: '600' },
+  // Edit button
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#5c3a21',
+    marginHorizontal: Spacing.lg,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+  },
+  editBtnText: { color: '#f0ddb7', fontSize: FontSizes.sm, fontWeight: '700' },
+  // Edit form
+  editForm: { gap: 16 },
+  editField: { gap: 6 },
+  editLabel: {
+    fontSize: FontSizes.sm,
+    fontWeight: '600',
+    color: Colors.light.textMuted,
+    marginBottom: 2,
+  },
+  editInput: {
+    width: '100%',
+    backgroundColor: Colors.light.backgroundCardAlt,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.light.panelBorder,
+    color: Colors.light.textMain,
+    fontSize: FontSizes.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  editInputMultiline: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  genderRow: { flexDirection: 'row', gap: 10 },
+  genderPill: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.light.backgroundCardAlt,
+    borderWidth: 1,
+    borderColor: Colors.light.panelBorder,
+  },
+  genderPillActive: { backgroundColor: Colors.light.gold, borderColor: Colors.light.goldDark },
+  genderPillT: { color: Colors.light.textMuted, fontSize: FontSizes.xs },
+  genderPillTActive: { color: Colors.light.backgroundDark, fontWeight: '700' },
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#5c3a21',
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: BorderRadius.md,
+  },
+  saveBtnText: { color: '#f0ddb7', fontSize: FontSizes.md, fontWeight: '700' },
+  // XP Progress Bar
+  xpSection: {
+    width: '100%',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 8,
+    gap: 6,
+  },
+  xpHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  xpLevel: {
+    fontFamily: 'Cinzel',
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+    color: Colors.light.gold,
+  },
+  xpValue: {
+    fontSize: FontSizes.xs,
+    color: Colors.light.textMuted,
+  },
+  xpBarTrack: {
+    width: '100%',
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(201, 161, 90, 0.15)',
+    overflow: 'hidden',
+  },
+  xpBarFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: Colors.light.gold,
+  },
+  xpStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingTop: 4,
+  },
+  xpStat: {
+    fontSize: FontSizes.xs,
+    color: Colors.light.textDim,
+  },
   quickNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',

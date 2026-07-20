@@ -299,16 +299,92 @@ export default function SubscriptionScreen() {
                 <ActivityIndicator size="small" color={Colors.light.gold} style={{ marginTop: 20 }} />
               ) : lessonRequests.length > 0 ? (
                 <View style={styles.requestsSection}>
-                  <Text style={styles.sectionTitle}>Yêu Cầu Của Bạn</Text>
-                  {lessonRequests.map((r) => (
-                    <View key={r._id} style={styles.requestCard}>
-                      <Text style={styles.requestTitle}>{r.title}</Text>
-                      <Text style={styles.requestDesc} numberOfLines={2}>{r.description}</Text>
-                      <View style={styles.requestStatus}>
-                        <Text style={styles.requestStatusText}>{r.status}</Text>
+                  <Text style={styles.sectionTitle}>Yêu Cầu Đã Gửi</Text>
+                  {lessonRequests.map((r) => {
+                    const statusLabel =
+                      r.status === 'Pending' ? 'Chờ duyệt' :
+                      r.status === 'Accepted' ? 'Đã nhận' :
+                      r.status === 'InProgress' ? 'Đang soạn' :
+                      r.status === 'Completed' ? 'Đã hoàn thành' :
+                      r.status === 'Rejected' ? 'Bị từ chối' : r.status;
+                    const statusColor =
+                      r.status === 'Completed' ? '#065f46' :
+                      r.status === 'Pending' ? '#92400e' :
+                      r.status === 'InProgress' ? '#1e5a8b' :
+                      r.status === 'Rejected' ? '#991b1b' :
+                      Colors.light.gold;
+
+                    return (
+                    <View key={r._id} style={[styles.redeemCard, { gap: 10 }]}>
+                      {/* Title + Status */}
+                      <View style={styles.reqHeaderRow}>
+                        <Text style={styles.reqTitle} numberOfLines={2}>{r.title}</Text>
+                        <View style={[styles.reqStatusBadge, { backgroundColor: statusColor + '18', borderColor: statusColor + '40' }]}>
+                          <Text style={[styles.reqStatusText, { color: statusColor }]}>{statusLabel}</Text>
+                        </View>
                       </View>
+                      {/* Description */}
+                      <Text style={styles.reqDesc}>{r.description}</Text>
+                      {/* Info rows */}
+                      <View style={styles.reqInfoGrid}>
+                        <View style={styles.reqInfoRow}>
+                          <Text style={styles.reqInfoLabel}>Thời kỳ:</Text>
+                          <Text style={styles.reqInfoValue}>{r.historicalPeriod || '—'}</Text>
+                        </View>
+                        <View style={styles.reqInfoRow}>
+                          <Text style={styles.reqInfoLabel}>Ngày gửi:</Text>
+                          <Text style={styles.reqInfoValue}>{new Date(r.createdAt).toLocaleDateString('vi-VN')}</Text>
+                        </View>
+                        {r.estimatedCompletionDate ? (
+                          <View style={styles.reqInfoRow}>
+                            <Text style={styles.reqInfoLabel}>Dự kiến hoàn tất:</Text>
+                            <Text style={[styles.reqInfoValue, styles.reqInfoBold]}>{new Date(r.estimatedCompletionDate).toLocaleDateString('vi-VN')}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      {/* Pedagogical notes */}
+                      {r.pedagogicalNotes ? (
+                        <View style={styles.reqPedagogicalBox}>
+                          <Text style={styles.reqPedagogicalLabel}>Nhận định sư phạm của Giáo viên:</Text>
+                          <Text style={styles.reqPedagogicalText}>{r.pedagogicalNotes}</Text>
+                        </View>
+                      ) : null}
+                      {/* Game creation status */}
+                      {r.needsGameCreation ? (
+                        <View style={styles.reqGameRow}>
+                          <Ionicons name="game-controller-outline" size={14} color={Colors.light.gold} />
+                          <Text style={styles.reqGameLabel}>Thiết kế Game/Bài học đi kèm:</Text>
+                          <Text style={[styles.reqGameStatus, { color: r.gameCreationStatus === 'Completed' ? '#065f46' : '#92400e' }]}>
+                            {r.gameCreationStatus === 'Completed' ? 'Đã thiết kế' : 'Đang yêu cầu'}
+                          </Text>
+                        </View>
+                      ) : null}
+                      {/* Podcast link */}
+                      {r.resultPodcastId ? (
+                        <View style={styles.reqPodcastSection}>
+                          <Text style={styles.reqPodcastLabel}>Podcast riêng tư của bạn (Chỉ duy nhất tài khoản bạn được nghe):</Text>
+                          <TouchableOpacity
+                            style={styles.reqPodcastLink}
+                            onPress={() => {
+                              const pid = typeof r.resultPodcastId === 'object'
+                                ? r.resultPodcastId._id
+                                : r.resultPodcastId;
+                              router.push(`/podcast/${pid}` as any);
+                            }}
+                          >
+                            <Ionicons name="headset" size={16} color={Colors.light.gold} />
+                            <Text style={styles.reqPodcastLinkText} numberOfLines={2}>
+                              {typeof r.resultPodcastId === 'object'
+                                ? r.resultPodcastId.title
+                                : 'Xem Podcast'}
+                            </Text>
+                            <Ionicons name="arrow-forward" size={14} color={Colors.light.gold} />
+                          </TouchableOpacity>
+                        </View>
+                      ) : null}
                     </View>
-                  ))}
+                    );
+                  })}
                 </View>
               ) : null}
             </>
@@ -426,16 +502,100 @@ const styles = StyleSheet.create({
   redeemResultTitle: { color: Colors.light.gold, fontSize: FontSizes.md, fontWeight: '700' },
   redeemResultText: { color: Colors.light.textMain, fontSize: FontSizes.sm },
   requestsSection: { marginTop: Spacing.md },
-  requestCard: {
-    backgroundColor: Colors.light.backgroundCard,
+  // Request detail cards (matching Yêu Cầu Bài Học Mới form style)
+  reqHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  reqTitle: {
+    color: Colors.light.textMain,
+    fontSize: FontSizes.md,
+    fontWeight: '700',
+    flex: 1,
+  },
+  reqStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+  },
+  reqStatusText: { fontSize: FontSizes.xs, fontWeight: '700' },
+  reqDesc: {
+    color: Colors.light.textMuted,
+    fontSize: FontSizes.sm,
+    lineHeight: 20,
+  },
+  reqInfoGrid: { gap: 2 },
+  reqInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  reqInfoLabel: {
+    color: Colors.light.textMuted,
+    fontSize: FontSizes.xs,
+  },
+  reqInfoValue: {
+    color: Colors.light.textMain,
+    fontSize: FontSizes.xs,
+  },
+  reqInfoBold: { fontWeight: '700', color: Colors.light.gold },
+  reqPedagogicalBox: {
+    backgroundColor: Colors.light.backgroundCardAlt,
+    borderRadius: BorderRadius.sm,
+    padding: 10,
+    gap: 4,
+  },
+  reqPedagogicalLabel: {
+    color: Colors.light.gold,
+    fontSize: FontSizes.xs,
+    fontWeight: '700',
+  },
+  reqPedagogicalText: {
+    color: Colors.light.textMuted,
+    fontSize: FontSizes.sm,
+    fontStyle: 'italic',
+    lineHeight: 20,
+  },
+  reqGameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  reqGameLabel: {
+    color: Colors.light.textMuted,
+    fontSize: FontSizes.xs,
+    flex: 1,
+  },
+  reqGameStatus: {
+    fontSize: FontSizes.xs,
+    fontWeight: '700',
+  },
+  reqPodcastSection: {
+    gap: 6,
+  },
+  reqPodcastLabel: {
+    color: Colors.light.textMuted,
+    fontSize: FontSizes.xs,
+    fontStyle: 'italic',
+  },
+  reqPodcastLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.light.backgroundCardAlt,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: Colors.light.panelBorder,
-    padding: Spacing.sm,
-    marginBottom: Spacing.xs,
+    borderColor: Colors.light.goldDark,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  requestTitle: { color: Colors.light.textMain, fontSize: FontSizes.sm, fontWeight: '600' },
-  requestDesc: { color: Colors.light.textMuted, fontSize: FontSizes.xs, marginTop: 4 },
-  requestStatus: { marginTop: 6 },
-  requestStatusText: { color: Colors.light.gold, fontSize: FontSizes.xs, fontWeight: '600' },
+  reqPodcastLinkText: {
+    color: Colors.light.gold,
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+    flex: 1,
+  },
 });

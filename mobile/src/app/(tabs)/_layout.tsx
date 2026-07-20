@@ -1,10 +1,11 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import type { ColorValue } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '@/constants/theme';
 import { useAppSelector } from '@/store';
+import AIChatBot from '@/components/AIChatBot';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -32,15 +33,16 @@ export default function TabLayout() {
   const totalUnread = useAppSelector((state) => state.chat.totalUnread);
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: Colors.light.gold,
-        tabBarInactiveTintColor: Colors.light.goldMuted,
-        tabBarShowLabel: false,
-      }}
-    >
+    <View style={{ flex: 1 }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: styles.tabBar,
+          tabBarActiveTintColor: Colors.light.gold,
+          tabBarInactiveTintColor: Colors.light.goldMuted,
+          tabBarShowLabel: false,
+        }}
+      >
       <Tabs.Screen
         name="index"
         options={{
@@ -114,6 +116,8 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    <AIChatBot />
+    </View>
   );
 }
 

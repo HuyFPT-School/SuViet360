@@ -12,6 +12,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { PageBackground } from '@/components/PageBackground';
+import NotificationBell from '@/components/NotificationBell';
 
 const { width } = Dimensions.get('window');
 
@@ -37,6 +38,7 @@ const QUICK_LINKS: Array<{
   icon: IoniconName;
 }> = [
   { label: 'Hành Trình', route: '/(tabs)/podcasts', icon: 'compass-outline' },
+  { label: 'Học Tập', route: '/study', icon: 'book-outline' },
   { label: 'Diễn Đàn', route: '/(tabs)/blog', icon: 'newspaper-outline' },
   { label: 'Hỏi Đáp', route: '/(tabs)/chat', icon: 'chatbubble-ellipses-outline' },
   { label: 'Bảng Vàng', route: '/leaderboard', icon: 'trophy-outline' },
@@ -75,9 +77,12 @@ export default function HomeScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerBrand}>Hành Trình Sử Việt</Text>
-        {user && (
-          <Text style={styles.headerUser}>{user.name}</Text>
-        )}
+        <View style={styles.headerRight}>
+          {user && <NotificationBell />}
+          {user && (
+            <Text style={styles.headerUser}>{user.name}</Text>
+          )}
+        </View>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
@@ -222,6 +227,11 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.sm,
     color: Colors.light.goldMuted,
     marginTop: 2,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   scroll: {
     flex: 1,
