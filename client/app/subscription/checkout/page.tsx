@@ -11,11 +11,19 @@ import "../subscription.css";
 function CheckoutForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refreshUser } = useAuth();
+  const { user, isLoading: authLoading, refreshUser } = useAuth();
 
   // Query params
   const tierId = searchParams.get("tierId") || "";
   const cycle = (searchParams.get("cycle") as "monthly" | "yearly") || "monthly";
+
+  // Redirect if unauthenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      const checkoutUrl = `/subscription/checkout?tierId=${tierId}&cycle=${cycle}`;
+      router.push(`/login?redirect=${encodeURIComponent(checkoutUrl)}`);
+    }
+  }, [user, authLoading, tierId, cycle, router]);
 
   // Tier info state
   const [tier, setTier] = useState<SubscriptionTier | null>(null);
