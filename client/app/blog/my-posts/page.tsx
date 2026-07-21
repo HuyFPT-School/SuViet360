@@ -23,6 +23,7 @@ export default function MyBlogPostsPage() {
   
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [historyModalPost, setHistoryModalPost] = useState<BlogPost | null>(null);
 
   // Edit Modal States
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
@@ -73,8 +74,8 @@ export default function MyBlogPostsPage() {
   // Open Edit Modal
   const openEditModal = (post: BlogPost) => {
     setEditingPost(post);
-    setEditTitle(post.title);
-    setEditContent(post.content);
+    setEditTitle(post.hasPendingDraft && post.pendingDraft?.title ? post.pendingDraft.title : post.title);
+    setEditContent(post.hasPendingDraft && post.pendingDraft?.content ? post.pendingDraft.content : post.content);
     setEditCategory(post.category);
     setEditTags(post.tags.join(", "));
     setKeepImages(post.images.map(img => img.publicId));
@@ -223,13 +224,29 @@ export default function MyBlogPostsPage() {
             <div key={post._id} className="blog-post-card !cursor-default space-y-4">
               {/* Header Info */}
               <div className="flex items-center justify-between border-b border-[#c7ab73]/20 pb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className={`blog-status-badge ${post.status.toLowerCase().replace("_", "")}`}>
                     {getStatusLabel(post.status)}
                   </span>
+                  {post.hasPendingDraft && (
+                    <span className="text-xs text-amber-900 bg-amber-200/80 font-bold px-2 py-0.5 rounded-md border border-amber-400">
+                      Bản sửa đổi chờ duyệt
+                    </span>
+                  )}
                   <span className="text-xs text-[#a37636] font-semibold bg-[#c9a15a]/10 px-2 py-0.5 rounded-full">{post.category}</span>
                 </div>
-                <span className="text-xs text-[#a37636]/60">Đăng lúc {formatDate(post.createdAt)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#a37636]/60">Đăng lúc {formatDate(post.createdAt)}</span>
+                  {(post.isEdited || (post.editHistory && post.editHistory.length > 0)) && (
+                    <button
+                      type="button"
+                      onClick={() => setHistoryModalPost(post)}
+                      className="text-xs text-[#a84d28] font-bold underline hover:text-[#8a3c1e] transition-colors cursor-pointer"
+                    >
+                      (Đã chỉnh sửa)
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Content Area */}
@@ -358,61 +375,51 @@ export default function MyBlogPostsPage() {
                 />
               </div>
 
-              {/* Manage Existing Images */}
-              {editingPost.images && editingPost.images.length > 0 && (
-                <div className="blog-form-group">
-                  <label className="blog-form-label">Quản lý ảnh hiện tại (Nhấn vào ảnh để giữ lại/gỡ bỏ)</label>
-                  <div className="flex gap-3 flex-wrap">
-                    {editingPost.images.map((img) => {
-                      const isKept = keepImages.includes(img.publicId);
-                      return (
-                        <div
-                          key={img.publicId}
-                          onClick={() => toggleKeepImage(img.publicId)}
-                          className={`relative width-20 height-20 border-2 rounded-lg cursor-pointer transition ${isKept ? "border-[#c9a15a] opacity-100" : "border-rose-900 opacity-40"}`}
-                        >
-                          <img src={img.url} alt="current image" className="w-20 h-20 object-cover rounded-md" />
-                          <div className={`absolute inset-0 flex items-center justify-center font-bold text-xs ${isKept ? "bg-[#c9a15a]/20 text-[#f0ddb7]" : "bg-black/75 text-rose-500"}`}>
-                            {isKept ? "GIỮ LẠI" : "GỠ BỎ"}
-                          </div>
-                        </div>
-                      );
-                    })}
+              {/* Single / Existing Image Lock Rule Notice */}
+              {editingPost.images && editingPost.images.length > 0 ? (
+                <div className="blog-form-group p-3 bg-[#fdf8ed] border border-[#c9a15a]/50 rounded-xl text-xs text-[#5c4a3d] leading-relaxed">
+                  <div className="flex items-center gap-2 font-bold text-[#a84d28] mb-1">
+                    <svg className="w-4 h-4 text-[#c9a15a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    Bài viết đã có hình ảnh cố định
                   </div>
+                  Theo quy định của diễn đàn, sau khi bài đã được đăng có đính kèm hình ảnh, bạn <strong>không thể thay bằng ảnh/video khác</strong>. Bạn chỉ có thể chỉnh sửa phần tiêu đề và nội dung bài viết (hoặc xóa hẳn bài viết nếu muốn thay đổi hình ảnh khác).
+                </div>
+              ) : (
+                /* Upload new images if post originally had 0 images */
+                <div className="blog-form-group">
+                  <label className="blog-form-label">Tải thêm ảnh minh họa (Tối đa 3 ảnh, ≤5MB)</label>
+                  <div className="blog-image-upload-area relative">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      disabled={selectedFiles.length >= 3}
+                    />
+                    <svg className="w-8 h-8 mx-auto mb-2 text-[#c9a15a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p className="text-xs text-amber-900/60 font-medium">Click để chọn ảnh mới tải lên</p>
+                  </div>
+
+                  {previews.length > 0 && (
+                    <div className="blog-preview-thumbnails">
+                      {previews.map((url, idx) => (
+                        <div key={url} className="blog-preview-thumbnail-wrapper">
+                          <img src={url} alt="upload preview" className="blog-preview-thumbnail" />
+                          <button type="button" onClick={() => removeSelectedFile(idx)} className="blog-remove-preview-btn">
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
-
-              {/* Upload new images */}
-              <div className="blog-form-group">
-                <label className="blog-form-label">Tải thêm ảnh mới (Tối đa 3 ảnh bao gồm ảnh cũ giữ lại)</label>
-                <div className="blog-image-upload-area relative">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    disabled={keepImages.length + selectedFiles.length >= 3}
-                  />
-                  <svg className="w-8 h-8 mx-auto mb-2 text-[#c9a15a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <p className="text-xs text-amber-900/60 font-medium">Click để chọn ảnh mới tải lên</p>
-                </div>
-
-                {previews.length > 0 && (
-                  <div className="blog-preview-thumbnails">
-                    {previews.map((url, idx) => (
-                      <div key={url} className="blog-preview-thumbnail-wrapper">
-                        <img src={url} alt="upload preview" className="blog-preview-thumbnail" />
-                        <button type="button" onClick={() => removeSelectedFile(idx)} className="blog-remove-preview-btn">
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
               <div className="flex justify-end gap-3 mt-8">
                 <button
@@ -431,6 +438,59 @@ export default function MyBlogPostsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit History Modal */}
+      {historyModalPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#fdf9f1] border-2 border-[#c9a15a] rounded-2xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative text-[#2c1a0e] max-h-[85vh] flex flex-col">
+            <button
+              onClick={() => setHistoryModalPost(null)}
+              className="absolute top-4 right-4 text-[#8c6a34] hover:text-[#4a1f24] font-bold text-base cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-xl font-extrabold text-[#4a1f24] uppercase mb-4 border-b border-[#e8d5b5] pb-3" style={{ fontFamily: '"Cinzel", serif' }}>
+              LỊCH SỬ CHỈNH SỬA BÀI VIẾT
+            </h3>
+
+            <div className="overflow-y-auto pr-2 space-y-4 flex-1">
+              {historyModalPost.editHistory && historyModalPost.editHistory.length > 0 ? (
+                historyModalPost.editHistory.map((item, idx) => (
+                  <div key={idx} className="bg-white border border-[#e8d5b5] rounded-xl p-4 space-y-2 shadow-sm">
+                    <div className="flex items-center justify-between text-xs text-[#a84d28] font-bold">
+                      <span>Phiên bản gốc #{idx + 1}</span>
+                      <span>{formatDate(item.editedAt)}</span>
+                    </div>
+                    {item.title && (
+                      <h4 className="font-bold text-sm text-[#3a2312] border-b border-amber-100 pb-1">
+                        {item.title}
+                      </h4>
+                    )}
+                    <p className="text-xs text-[#5c4a3d] leading-relaxed whitespace-pre-wrap">
+                      {item.content}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-[#8c6a34] italic text-center py-6">
+                  Bài viết chưa ghi nhận lần chỉnh sửa nào trước đó.
+                </p>
+              )}
+            </div>
+
+            <div className="pt-4 mt-2 border-t border-[#e8d5b5] flex justify-end">
+              <button
+                onClick={() => setHistoryModalPost(null)}
+                className="px-5 py-2 rounded-xl bg-[#2c1216] text-[#f6e1ba] border border-[#c9a15a]/50 font-bold text-xs uppercase tracking-wider hover:bg-[#4a1f24] transition cursor-pointer"
+                style={{ fontFamily: '"Cinzel", serif' }}
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}

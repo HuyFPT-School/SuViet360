@@ -104,14 +104,42 @@ export default function BlogTab({ setMessage, onUpdateCounts }: BlogTabProps) {
                 <div key={post._id} className="p-5 hover:bg-amber-50/30 transition">
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1">
-                      <span className="inline-block text-[10px] uppercase font-bold text-amber-700 bg-amber-150 px-2 py-0.5 rounded mb-2">
-                        {post.category}
-                      </span>
-                      <h3 className="font-semibold text-amber-950 mb-1">{post.title}</h3>
-                      <p className="text-[11px] text-amber-800/80 mb-2">
-                        Người đăng: <strong>{post.author.name}</strong> • Lúc {new Date(post.createdAt).toLocaleString("vi-VN")}
-                      </p>
-                      <p className="text-xs text-gray-700 line-clamp-3 mb-3 whitespace-pre-wrap">{post.content}</p>
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="inline-block text-[10px] uppercase font-bold text-amber-700 bg-amber-150 px-2 py-0.5 rounded">
+                          {post.category}
+                        </span>
+                        {post.hasPendingDraft ? (
+                          <span className="text-[10px] uppercase font-bold text-amber-900 bg-amber-200 px-2 py-0.5 rounded border border-amber-400">
+                            Bản chỉnh sửa chờ ghi đè
+                          </span>
+                        ) : (
+                          <span className="text-[10px] uppercase font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
+                            Bài mới tạo
+                          </span>
+                        )}
+                      </div>
+
+                      {post.hasPendingDraft && post.pendingDraft ? (
+                        <div className="space-y-2 mb-3 bg-amber-50/70 p-3 rounded-lg border border-amber-200 text-xs">
+                          <div>
+                            <span className="font-bold text-amber-900 block mb-0.5">Tiêu đề & Nội dung mới (Chờ ghi đè):</span>
+                            <h4 className="font-bold text-amber-950">{post.pendingDraft.title || post.title}</h4>
+                            <p className="text-gray-800 line-clamp-4 whitespace-pre-wrap">{post.pendingDraft.content}</p>
+                          </div>
+                          <div className="pt-2 border-t border-amber-200/60 text-[11px] text-gray-500">
+                            <span className="font-semibold text-gray-700">Nội dung đang hiển thị công khai trên web:</span>
+                            <p className="line-clamp-2 italic">{post.content}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <h3 className="font-semibold text-amber-950 mb-1">{post.title}</h3>
+                          <p className="text-[11px] text-amber-800/80 mb-2">
+                            Người đăng: <strong>{post.author.name}</strong> • Lúc {new Date(post.createdAt).toLocaleString("vi-VN")}
+                          </p>
+                          <p className="text-xs text-gray-700 line-clamp-3 mb-3 whitespace-pre-wrap">{post.content}</p>
+                        </>
+                      )}
                       
                       {post.images && post.images.length > 0 && (
                         <div className="flex gap-2 mb-3">
