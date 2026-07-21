@@ -44,9 +44,9 @@ router.get("/podcast-comments/:podcastId", getComments);
 // ─── Authenticated User Routes ───────────────────────────────────────
 router.use(protect);
 
-// Teacher/Admin review routes
-router.put("/podcasts/:id/approve", authorize("admin", "teacher"), approvePodcast);
-router.put("/podcasts/:id/reject", authorize("admin", "teacher"), rejectPodcast);
+// Teacher review routes
+router.put("/podcasts/:id/approve", authorize("teacher"), approvePodcast);
+router.put("/podcasts/:id/reject", authorize("teacher"), rejectPodcast);
 router.get("/staff/podcasts/:id", authorize("admin", "staff", "teacher"), getStaffPodcastById);
 
 // Notes (User specific)
@@ -60,8 +60,8 @@ router.post("/podcast-comments", createComment);
 router.put("/podcast-comments/:id", updateComment);
 router.delete("/podcast-comments/:id", deleteComment);
 
-// ─── Staff Only Management Routes ────────────────────────────────────
-router.use(authorize("admin", "staff", "teacher"));
+// ─── Staff & Teacher Management Routes ───────────────────────────────
+router.use(authorize("staff", "teacher"));
 
 // Direct Cloudinary uploads
 router.post("/upload/image", upload.single("image"), uploadImageOnly);
