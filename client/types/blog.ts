@@ -23,6 +23,18 @@ export interface BlogPost {
   likeCount: number;
   commentCount: number;
   viewCount: number;
+  isEdited?: boolean;
+  editHistory?: {
+    title?: string;
+    content: string;
+    editedAt: string;
+  }[];
+  hasPendingDraft?: boolean;
+  pendingDraft?: {
+    title?: string;
+    content?: string;
+    updatedAt?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

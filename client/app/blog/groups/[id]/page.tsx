@@ -58,6 +58,13 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
   const [previews, setPreviews] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Edit group modal states
+  const [showEditGroupModal, setShowEditGroupModal] = useState(false);
+  const [editGroupName, setEditGroupName] = useState("");
+  const [editGroupDesc, setEditGroupDesc] = useState("");
+  const [editGroupIsPublic, setEditGroupIsPublic] = useState(true);
+  const [updatingGroup, setUpdatingGroup] = useState(false);
+
   // Moderation feedback state
   const [rejectFeedback, setRejectFeedback] = useState<Record<string, string>>({});
   const [moderatingId, setModeratingId] = useState<string | null>(null);
@@ -183,6 +190,42 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     }
   };
 
+  const openEditGroupModal = () => {
+    if (!group) return;
+    setEditGroupName(group.name);
+    setEditGroupDesc(group.description || "");
+    setEditGroupIsPublic(group.isPublic !== false);
+    setShowEditGroupModal(true);
+  };
+
+  const handleUpdateGroupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editGroupName.trim()) {
+      alert("Tên nhóm không được để trống!");
+      return;
+    }
+
+    setUpdatingGroup(true);
+    try {
+      const res = await groupApi.updateGroup(id, {
+        name: editGroupName.trim(),
+        description: editGroupDesc.trim(),
+        isPublic: editGroupIsPublic,
+      });
+
+      if (res.success) {
+        alert("Cập nhật thông tin nhóm thành công!");
+        setShowEditGroupModal(false);
+        loadGroupDetails();
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || "Đã xảy ra lỗi khi cập nhật nhóm.");
+    } finally {
+      setUpdatingGroup(false);
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString("vi-VN", {
@@ -244,17 +287,28 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
 
-          <button
-            onClick={handleJoinLeave}
-            disabled={joinLoading}
-            className={`px-6 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all cursor-pointer ${
-              isMember
-                ? "bg-transparent border-2 border-red-700/60 text-red-800 hover:bg-red-500/10"
-                : "bg-[#1f0a0d] text-[#f0ddb7] border-2 border-[#1f0a0d] hover:bg-[#3d1c21]"
-            }`}
-          >
-            {joinLoading ? "Đang xử lý..." : isMember ? "Rời nhóm" : "Tham gia nhóm"}
-          </button>
+          <div className="flex items-center gap-3 flex-wrap">
+            {isAdmin && (
+              <button
+                onClick={openEditGroupModal}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-[#c9a15a] hover:bg-[#b08b47] text-[#1f0a0d] border border-[#a8823d] shadow-sm transition-all cursor-pointer"
+              >
+                <EditIcon />
+                Chỉnh sửa thông tin nhóm
+              </button>
+            )}
+            <button
+              onClick={handleJoinLeave}
+              disabled={joinLoading}
+              className={`px-6 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all cursor-pointer ${
+                isMember
+                  ? "bg-transparent border-2 border-red-700/60 text-red-800 hover:bg-red-500/10"
+                  : "bg-[#1f0a0d] text-[#f0ddb7] border-2 border-[#1f0a0d] hover:bg-[#3d1c21]"
+              }`}
+            >
+              {joinLoading ? "Đang xử lý..." : isMember ? "Rời nhóm" : "Tham gia nhóm"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -509,6 +563,73 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                   className="blog-comment-submit-btn"
                 >
                   {postLoading ? "Đang gửi..." : "Đăng bài"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Group Info Modal */}
+      {showEditGroupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#fdf9f1] border-2 border-[#c9a15a] rounded-2xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative text-[#2c1a0e]">
+            <button
+              onClick={() => setShowEditGroupModal(false)}
+              className="absolute top-4 right-4 text-[#8c6a34] hover:text-[#4a1f24] font-bold text-base cursor-pointer"
+            >
+              ✕
+            </button>
+            <h3 className="text-xl font-extrabold text-[#4a1f24] uppercase mb-4 border-b border-[#e8d5b5] pb-3" style={{ fontFamily: '"Cinzel", serif' }}>
+              CHỈNH SỬA THÔNG TIN NHÓM
+            </h3>
+            <form onSubmit={handleUpdateGroupSubmit}>
+              <div className="blog-form-group mb-4">
+                <label className="blog-form-label font-bold text-xs uppercase text-[#8c6a34] block mb-1">Tên nhóm</label>
+                <input
+                  type="text"
+                  required
+                  value={editGroupName}
+                  onChange={(e) => setEditGroupName(e.target.value)}
+                  className="blog-form-input w-full p-2.5 rounded-xl border border-[#c7ab73] bg-white text-sm"
+                />
+              </div>
+              <div className="blog-form-group mb-4">
+                <label className="blog-form-label font-bold text-xs uppercase text-[#8c6a34] block mb-1">Mô tả nhóm</label>
+                <textarea
+                  rows={4}
+                  value={editGroupDesc}
+                  onChange={(e) => setEditGroupDesc(e.target.value)}
+                  className="blog-form-textarea w-full p-2.5 rounded-xl border border-[#c7ab73] bg-white text-sm"
+                  placeholder="Giới thiệu về mục đích và chủ đề thảo luận của nhóm..."
+                />
+              </div>
+              <div className="blog-form-group mb-6">
+                <label className="blog-form-label font-bold text-xs uppercase text-[#8c6a34] block mb-1">Quyền riêng tư</label>
+                <select
+                  value={editGroupIsPublic ? "public" : "private"}
+                  onChange={(e) => setEditGroupIsPublic(e.target.value === "public")}
+                  className="blog-form-select w-full p-2.5 rounded-xl border border-[#c7ab73] bg-white text-sm"
+                >
+                  <option value="public">Nhóm Công khai (Mọi người đều tìm thấy & tham gia)</option>
+                  <option value="private">Nhóm Riêng tư (Chỉ thành viên xem bài viết)</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#e8d5b5]">
+                <button
+                  type="button"
+                  onClick={() => setShowEditGroupModal(false)}
+                  className="px-4 py-2 rounded-xl border border-[#c7ab73] text-[#8c6a34] font-semibold text-xs hover:bg-[#c9a15a]/10"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingGroup}
+                  className="px-5 py-2 rounded-xl bg-[#2c1216] text-[#f6e1ba] border border-[#c9a15a]/50 font-bold text-xs uppercase tracking-wider hover:bg-[#4a1f24] transition cursor-pointer"
+                  style={{ fontFamily: '"Cinzel", serif' }}
+                >
+                  {updatingGroup ? "Đang lưu..." : "Lưu thay đổi"}
                 </button>
               </div>
             </form>

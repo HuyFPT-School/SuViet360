@@ -33,7 +33,7 @@ function getRoleBadge(role: string): string {
     case "admin":
       return "Quản trị";
     case "staff":
-      return "Nhân viên";
+      return "Biên tập viên";
     case "student":
       return "Học viên";
     default:

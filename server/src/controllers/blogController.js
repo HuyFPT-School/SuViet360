@@ -197,10 +197,28 @@ const updatePost = asyncHandler(async (req, res) => {
     throw new AppError("You do not own this post", 403);
   }
 
+  // --- Rule: Posts with images cannot replace images after posting ---
+  if (post.images && post.images.length > 0 && req.files && req.files.length > 0) {
+    throw new AppError("Bài viết đã chứa hình ảnh cố định. Không thể thay thế bằng ảnh/video khác sau khi đã đăng. Bạn chỉ có thể chỉnh sửa phần chữ hoặc xóa bài.", 400);
+  }
+
   const { title, content, category, tags, keepImages } = req.body;
 
-  if (title !== undefined) post.title = title;
-  if (content !== undefined) post.content = content;
+  // --- Draft Revision Rule: Published posts remain live with old content while edits are saved to pendingDraft ---
+  if (post.status === "Published") {
+    post.hasPendingDraft = true;
+    post.pendingDraft = {
+      title: title !== undefined ? title : post.title,
+      content: content !== undefined ? content : post.content,
+      updatedAt: new Date(),
+    };
+  } else {
+    // For non-published posts, update content directly
+    if (title !== undefined) post.title = title;
+    if (content !== undefined) post.content = content;
+    post.status = "Pending_Review";
+  }
+
   if (category !== undefined) post.category = category;
   if (tags !== undefined) {
     post.tags = Array.isArray(tags) ? tags : tags.split(",").map(t => t.trim()).filter(Boolean);
@@ -209,9 +227,7 @@ const updatePost = asyncHandler(async (req, res) => {
   // Handle images (Issue #13)
   let keptImages = [];
   if (keepImages !== undefined) {
-    // keepImages could be a JSON string or array of publicIds to keep
     const keepList = typeof keepImages === "string" ? JSON.parse(keepImages) : keepImages;
-    // Delete removed images from Cloudinary
     for (const img of post.images) {
       if (!keepList.includes(img.publicId)) {
         await deleteCloudinaryResource(img.publicId, "image");
@@ -220,12 +236,10 @@ const updatePost = asyncHandler(async (req, res) => {
       }
     }
   } else if (req.files && req.files.length > 0) {
-    // If keepImages is not specified but new files are uploaded, delete all old images
     for (const img of post.images) {
       await deleteCloudinaryResource(img.publicId, "image");
     }
   } else {
-    // If keepImages is not specified AND no new files are uploaded, keep all old images
     keptImages = [...post.images];
   }
 
@@ -241,9 +255,6 @@ const updatePost = asyncHandler(async (req, res) => {
     }
   }
   post.images = newImages;
-
-  // Reset status to Pending Review on edit
-  post.status = "Pending_Review";
   post.reviewFeedback = "";
 
   await post.save();
@@ -293,7 +304,10 @@ const deletePost = asyncHandler(async (req, res) => {
 
 // Get Pending Posts
 const getPendingPosts = asyncHandler(async (req, res) => {
-  const posts = await BlogPost.find({ status: "Pending_Review", group: null })
+  const posts = await BlogPost.find({
+    $or: [{ status: "Pending_Review" }, { hasPendingDraft: true }],
+    group: null
+  })
     .populate("author", "name avatar role")
     .sort({ createdAt: -1 });
 
@@ -309,6 +323,24 @@ const approvePost = asyncHandler(async (req, res) => {
 
   if (!post) {
     throw new AppError("Blog post not found", 404);
+  }
+
+  // If approving a pending draft update on a published post
+  if (post.hasPendingDraft && post.pendingDraft) {
+    // Record current live version to history
+    if (!post.editHistory) post.editHistory = [];
+    post.editHistory.push({
+      title: post.title,
+      content: post.content,
+      editedAt: new Date(),
+    });
+
+    // Overwrite live content with approved draft
+    if (post.pendingDraft.title) post.title = post.pendingDraft.title;
+    if (post.pendingDraft.content) post.content = post.pendingDraft.content;
+    post.isEdited = true;
+    post.hasPendingDraft = false;
+    post.pendingDraft = { title: "", content: "" };
   }
 
   post.status = "Published";
@@ -334,8 +366,17 @@ const rejectPost = asyncHandler(async (req, res) => {
     throw new AppError("Blog post not found", 404);
   }
 
-  post.status = "Rejected";
-  post.reviewFeedback = feedback;
+  // If rejecting a draft edit on an already published post, keep live post published and clear draft
+  if (post.hasPendingDraft) {
+    post.hasPendingDraft = false;
+    post.pendingDraft = { title: "", content: "" };
+    post.reviewFeedback = feedback;
+  } else {
+    // Rejecting new post submission
+    post.status = "Rejected";
+    post.reviewFeedback = feedback;
+  }
+
   await post.save();
 
   res.status(200).json({
