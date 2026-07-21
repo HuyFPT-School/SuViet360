@@ -21,12 +21,12 @@ router.get("/staff", protect, authorize("admin", "staff"), getAllLessons);
 router.get("/review", protect, authorize("admin", "teacher"), getAllLessons);
 router.get("/:id", getLessonById);
 
-// Teacher/Admin review routes
-router.put("/:id/approve", protect, authorize("admin", "teacher"), approveLesson);
-router.put("/:id/reject", protect, authorize("admin", "teacher"), rejectLesson);
+// Teacher review routes
+router.put("/:id/approve", protect, authorize("teacher"), approveLesson);
+router.put("/:id/reject", protect, authorize("teacher"), rejectLesson);
 
-// Admin only: create, update, delete
-router.use(protect, authorize("admin", "staff"));
+// Staff & Teacher management: create, update, delete
+router.use(protect, authorize("staff", "teacher"));
 
 router.post(
   "/",
