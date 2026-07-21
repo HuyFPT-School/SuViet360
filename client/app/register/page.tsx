@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthForm from "@/components/auth-form";
 import { authApi } from "@/lib/authApi";
 import { setUser } from "@/store/features/authSlice";
 import { useAppDispatch } from "@/store";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
@@ -109,5 +109,19 @@ export default function RegisterPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#1f0a0d] text-[#f0ddb7]">
+          <div className="inline-block w-8 h-8 border-4 border-[#c9a15a] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      }
+    >
+      <RegisterForm />
+    </Suspense>
   );
 }
