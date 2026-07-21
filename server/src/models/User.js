@@ -107,6 +107,14 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    dailyAIQueriesCount: {
+      type: Number,
+      default: 0,
+    },
+    lastAIQueryDate: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,

@@ -1,3 +1,4 @@
+const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 
 // --- RunPod Polling Helpers ---
@@ -101,10 +102,57 @@ const askChatbot = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "Câu hỏi không được để trống." });
   }
 
+  // --- Enforce Daily AI Query Limits based on Subscription Tier ---
+  let userToUpdate = null;
+  if (req.user) {
+    const user = await User.findById(req.user._id);
+    if (user) {
+      const todayStr = new Date().toISOString().split("T")[0];
+      if (user.lastAIQueryDate !== todayStr) {
+        user.lastAIQueryDate = todayStr;
+        user.dailyAIQueriesCount = 0;
+      }
+
+      const isSubActive =
+        user.subscriptionTier &&
+        user.subscriptionTier !== "Free" &&
+        user.subscriptionExpiry &&
+        new Date(user.subscriptionExpiry) > new Date();
+
+      const effectiveTier = isSubActive ? user.subscriptionTier : "Free";
+
+      let dailyLimit = 3;
+      if (effectiveTier === "Student Pro") {
+        dailyLimit = 999999;
+      } else if (effectiveTier === "Student Plus") {
+        dailyLimit = 20;
+      }
+
+      if (user.dailyAIQueriesCount >= dailyLimit) {
+        return res.status(403).json({
+          success: false,
+          answer: `Bạn đã sử dụng hết ${dailyLimit}/${dailyLimit} lượt hỏi AI hôm nay của gói ${effectiveTier}. Vui lòng nâng cấp lên gói Student Plus (20 lượt/ngày) hoặc Student Pro (Không giới hạn) để tiếp tục trò chuyện cùng AI Sử Việt!`,
+          message: `Đã đạt giới hạn truy vấn AI trong ngày (${dailyLimit}/${dailyLimit}).`,
+          tierLimitReached: true,
+        });
+      }
+
+      userToUpdate = user;
+    }
+  }
+
+  const recordSuccessfulQuery = async () => {
+    if (userToUpdate) {
+      userToUpdate.dailyAIQueriesCount += 1;
+      await userToUpdate.save();
+    }
+  };
+
   const chatbotUrl = (process.env.CHATBOT_API_URL || process.env.RUNPOD_API_URL || "").trim();
   const chatbotKey = (process.env.CHATBOT_API_KEY || process.env.RUNPOD_API_KEY || "").trim();
 
   if (!chatbotUrl) {
+    await recordSuccessfulQuery();
     // Return a helpful mock response in development mode when keys are missing
     return res.status(200).json({
       success: true,
@@ -157,6 +205,7 @@ const askChatbot = asyncHandler(async (req, res) => {
     }
 
     if (result) {
+      await recordSuccessfulQuery();
       return res.status(200).json({
         success: result.success !== undefined ? result.success : true,
         answer: result.answer || "Không nhận được câu trả lời từ mô hình.",
