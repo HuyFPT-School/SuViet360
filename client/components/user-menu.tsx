@@ -31,7 +31,7 @@ export default function UserMenu() {
             href="/admin"
             className="rounded border border-[#c9a15a]/50 bg-transparent px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#f0ddb7] transition hover:bg-[#c9a15a]/25 hover:text-[#f0ddb7] whitespace-nowrap"
           >
-            Admin
+            Quản trị
           </Link>
         )}
         {showStaff && (
@@ -39,7 +39,7 @@ export default function UserMenu() {
             href="/staff"
             className="rounded border border-[#c9a15a]/50 bg-transparent px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#f0ddb7] transition hover:bg-[#c9a15a]/25 hover:text-[#f0ddb7] whitespace-nowrap"
           >
-            Staff
+            Biên tập
           </Link>
         )}
         {showTeacher && (
@@ -47,7 +47,7 @@ export default function UserMenu() {
             href="/teacher"
             className="rounded border border-[#c9a15a]/50 bg-transparent px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#f0ddb7] transition hover:bg-[#c9a15a]/25 hover:text-[#f0ddb7] whitespace-nowrap"
           >
-            Teacher
+            Giáo viên
           </Link>
         )}
         <Link

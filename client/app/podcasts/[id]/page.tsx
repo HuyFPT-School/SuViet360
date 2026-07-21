@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import dynamic from "next/dynamic";
@@ -76,9 +76,16 @@ const MOCK_COMMENTS: any[] = [];
 
 export default function PodcastDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id as string;
 
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && !user && id) {
+      router.push(`/login?redirect=${encodeURIComponent(`/podcasts/${id}`)}`);
+    }
+  }, [user, authLoading, id, router]);
   const [podcast, setPodcast] = useState<Record<string, any> | null>(null);
   const [notes, setNotes] = useState<Record<string, any>[]>([]);
   const [comments, setComments] = useState<Record<string, any>[]>([]);

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AuthForm from "@/components/auth-form";
 import { authApi } from "@/lib/authApi";
 import { setUser } from "@/store/features/authSlice";
@@ -10,7 +10,16 @@ import { useAppDispatch } from "@/store";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
+
+  const redirectParam = searchParams.get("redirect");
+  const registerLink = redirectParam ? `/register?redirect=${encodeURIComponent(redirectParam)}` : "/register";
+
+  const getDestination = (role: string) => {
+    if (redirectParam) return redirectParam;
+    return role === "staff" ? "/staff" : role === "teacher" ? "/teacher" : "/";
+  };
 
   useEffect(() => {
     document.body.classList.add("sv-auth-mode");
@@ -64,7 +73,7 @@ export default function LoginPage() {
               >
                 Đăng nhập
               </Link>
-              <Link href="/register" className="sv-auth-tab">
+              <Link href={registerLink} className="sv-auth-tab">
                 Đăng ký
               </Link>
             </div>
@@ -84,23 +93,19 @@ export default function LoginPage() {
                 );
                 dispatch(setUser(response.data.user));
                 const role = response.data.user.role;
-                router.push(
-                  role === "staff" ? "/staff" : role === "teacher" ? "/teacher" : "/"
-                );
+                router.push(getDestination(role));
               }}
               onGoogleSuccess={async (credential) => {
                 const response = await authApi.googleLogin(credential);
                 dispatch(setUser(response.data.user));
                 const role = response.data.user.role;
-                router.push(
-                  role === "staff" ? "/staff" : role === "teacher" ? "/teacher" : "/"
-                );
+                router.push(getDestination(role));
               }}
             />
 
             <p className="sv-auth-footer">
               Chưa có tài khoản?{" "}
-              <Link href="/register" className="sv-auth-footer-link">
+              <Link href={registerLink} className="sv-auth-footer-link">
                 Đăng ký ngay
               </Link>
             </p>

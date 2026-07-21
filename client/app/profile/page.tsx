@@ -400,7 +400,7 @@ export default function ProfilePage() {
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                       </svg>
                     )}
-                    Gói: {user?.subscriptionTier || "Free"}
+                    Gói: {user?.subscriptionTier && user.subscriptionTier !== "Free" ? user.subscriptionTier : "Miễn phí"}
                   </span>
                   {(user?.subscriptionTier || "Free") !== "Free" && user?.subscriptionExpiry && (
                     <span className="text-[10px] text-stone-400">

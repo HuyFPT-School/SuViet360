@@ -199,7 +199,7 @@ export default function StudyPage() {
                                   {unit.duration} phút
                                 </span>
                                 <span className="text-[10px] bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
-                                  Level: {unit.difficulty === "Easy" ? "Dễ" : unit.difficulty === "Medium" ? "Vừa" : "Khó"}
+                                  Cấp độ: {unit.difficulty === "Easy" ? "Dễ" : unit.difficulty === "Medium" ? "Vừa" : "Khó"}
                                 </span>
                               </div>
                             </div>

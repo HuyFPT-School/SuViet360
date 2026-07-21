@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AuthForm from "@/components/auth-form";
 import { authApi } from "@/lib/authApi";
 import { setUser } from "@/store/features/authSlice";
@@ -10,7 +10,12 @@ import { useAppDispatch } from "@/store";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
+
+  const redirectParam = searchParams.get("redirect");
+  const loginLink = redirectParam ? `/login?redirect=${encodeURIComponent(redirectParam)}` : "/login";
+  const registerLink = redirectParam ? `/register?redirect=${encodeURIComponent(redirectParam)}` : "/register";
 
   useEffect(() => {
     document.body.classList.add("sv-auth-mode");
@@ -58,11 +63,11 @@ export default function RegisterPage() {
             </div>
 
             <div className="sv-auth-tabs">
-              <Link href="/login" className="sv-auth-tab">
+              <Link href={loginLink} className="sv-auth-tab">
                 Đăng nhập
               </Link>
               <Link
-                href="/register"
+                href={registerLink}
                 className="sv-auth-tab sv-auth-tab-active"
               >
                 Đăng ký
@@ -90,13 +95,13 @@ export default function RegisterPage() {
               onGoogleSuccess={async (credential) => {
                 const response = await authApi.googleLogin(credential);
                 dispatch(setUser(response.data.user));
-                router.push("/");
+                router.push(redirectParam || "/");
               }}
             />
 
             <p className="sv-auth-footer">
               Đã có tài khoản?{" "}
-              <Link href="/login" className="sv-auth-footer-link">
+              <Link href={loginLink} className="sv-auth-footer-link">
                 Đăng nhập ngay
               </Link>
             </p>

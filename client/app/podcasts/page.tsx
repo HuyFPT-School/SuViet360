@@ -2,11 +2,18 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { notificationApi } from "@/lib/notificationApi";
 
 // SVG Icons
+const LockIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
 const SearchIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
 );
@@ -106,7 +113,8 @@ export const translateLevel = (level: string) => {
 };
 
 export default function PodcastListingPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
   const [podcasts, setPodcasts] = useState<Record<string, any>[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -115,6 +123,9 @@ export default function PodcastListingPage() {
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [stats, setStats] = useState({ categories: {}, levels: {} });
+
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [selectedPodcastId, setSelectedPodcastId] = useState<string | null>(null);
 
   const [followedCategories, setFollowedCategories] = useState<string[]>([]);
   const [followLoadingMap, setFollowLoadingMap] = useState<Record<string, boolean>>({});
@@ -416,6 +427,14 @@ export default function PodcastListingPage() {
                                 <Link 
                                    key={ep._id} 
                                    href={`/podcasts/${ep._id}`}
+                                   onClick={(e) => {
+                                     if (authLoading) return;
+                                     if (!user) {
+                                       e.preventDefault();
+                                       setSelectedPodcastId(ep._id);
+                                       setShowAuthModal(true);
+                                     }
+                                   }}
                                    className="bg-white border border-[#e8d5b5] rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:border-[#c9a15a] transition-all shadow-sm group cursor-pointer block"
                                 >
                                    {/* Serial Number */}
@@ -521,6 +540,59 @@ export default function PodcastListingPage() {
           </div>
         </div>
       </div>
+
+      {/* --- Authentication Required Modal for Unregistered Users --- */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#fdf9f1] border-2 border-[#c9a15a] rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl relative text-center text-[#2c1a0e]">
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-4 right-4 text-[#8c6a34] hover:text-[#4a1f24] font-bold text-base"
+              aria-label="Đóng"
+            >
+              ✕
+            </button>
+
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#4a1f24] text-[#f6e1ba] border-2 border-[#c9a15a] flex items-center justify-center shadow-lg">
+              <LockIcon className="w-8 h-8 text-[#e5b869]" />
+            </div>
+
+            <h3 className="text-xl font-extrabold text-[#4a1f24] uppercase mb-2" style={{ fontFamily: '"Cinzel", serif' }}>
+              YÊU CẦU ĐĂNG NHẬP / ĐĂNG KÝ
+            </h3>
+
+            <p className="text-sm text-[#6b4a2b] mb-6 leading-relaxed" style={{ fontFamily: '"Cormorant Garamond", serif' }}>
+              Vui lòng đăng nhập hoặc đăng ký tài khoản SuViet360 để lắng nghe chi tiết các bài học Podcast hào hùng và làm bài tập trắc nghiệm tích lũy XP.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => {
+                  setShowAuthModal(false);
+                  const redirectPath = selectedPodcastId ? `/podcasts/${selectedPodcastId}` : "/podcasts";
+                  router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`);
+                }}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#c9a15a] to-[#9a702e] text-[#1a0f0a] font-bold text-xs uppercase tracking-wider shadow hover:brightness-110 transition cursor-pointer"
+                style={{ fontFamily: '"Cinzel", serif' }}
+              >
+                Đăng Nhập Ngay
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowAuthModal(false);
+                  const redirectPath = selectedPodcastId ? `/podcasts/${selectedPodcastId}` : "/podcasts";
+                  router.push(`/register?redirect=${encodeURIComponent(redirectPath)}`);
+                }}
+                className="px-6 py-2.5 rounded-xl bg-[#2c1216] text-[#f6e1ba] border border-[#c9a15a]/50 font-bold text-xs uppercase tracking-wider hover:bg-[#4a1f24] transition cursor-pointer"
+                style={{ fontFamily: '"Cinzel", serif' }}
+              >
+                Đăng Ký Tài Khoản
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
