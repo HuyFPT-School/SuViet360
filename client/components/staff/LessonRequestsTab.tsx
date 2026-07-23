@@ -39,17 +39,18 @@ export default function LessonRequestsTab({
   const pendingRequestsCount = lessonRequests.filter((req) => req.needsGameCreation).length;
 
   return (
-    <div className="bg-[#FFFBF2] border-2 border-amber-700 rounded-xl p-6 shadow-md mt-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="staff-card-v2 font-sans">
+      <div className="staff-card-header-v2">
         <div>
-          <h3 className="font-semibold text-lg text-amber-900 tracking-wider uppercase" style={{ fontFamily: "Cinzel, serif" }}>
-            Theo dõi Yêu cầu bài học (Pro)
+          <h3 className="staff-card-title-v2 font-sans">
+            <span>📖</span>
+            <span>Theo dõi Yêu cầu bài học (Gói VIP)</span>
           </h3>
-          <p className="text-xs text-amber-800">
-            Giám sát các yêu cầu soạn thảo bài học từ học viên Pro và trạng thái xử lý của Giáo viên
+          <p className="text-xs text-[#8C6A34] mt-0.5">
+            Giám sát các yêu cầu soạn thảo bài học từ học viên gói VIP và trạng thái xử lý của Giáo viên
           </p>
         </div>
-        <span className="bg-amber-100 text-amber-900 px-3 py-1 rounded text-xs font-bold border border-amber-200">
+        <span className="bg-[#FAF4E8] text-[#8C6A34] px-3.5 py-1.5 rounded-full text-xs font-bold border border-[#E6D8BC]">
           {pendingRequestsCount} Yêu cầu
         </span>
       </div>
@@ -76,7 +77,7 @@ export default function LessonRequestsTab({
               {lessonRequests.filter((req) => req.needsGameCreation).map((req) => (
                 <tr key={req._id} className="border-b border-amber-200 hover:bg-amber-50/50">
                   <td className="py-3 px-3">
-                    <strong className="text-amber-950 block">{req.requesterId?.name || "Học viên Pro"}</strong>
+                    <strong className="text-amber-950 block">{req.requesterId?.name || "Học viên VIP"}</strong>
                     <span className="text-[10px] text-stone-500">{req.requesterId?.email || ""}</span>
                   </td>
                   <td className="py-3 px-3" style={{ maxWidth: "350px" }}>
