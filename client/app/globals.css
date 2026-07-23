@@ -1588,7 +1588,7 @@ body, .sv-body {
 /* â”€â”€ Top layout â”€â”€ */
 .profile-top {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 1fr;
   gap: 24px;
   margin-bottom: 28px;
 }
@@ -1926,10 +1926,7 @@ body, .sv-body {
 .leaderboard-page {
   min-height: 100vh;
   padding: 36px 24px 80px;
-  background:
-    radial-gradient(circle at top left, rgba(201, 161, 90, 0.12), transparent 55%),
-    radial-gradient(circle at 85% 20%, rgba(78, 36, 28, 0.25), transparent 60%),
-    transparent;
+  background: transparent;
   color: var(--foreground);
 }
 
