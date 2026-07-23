@@ -97,232 +97,343 @@ export default function StaffPage() {
     setMessage({ type: "success", text: `Đang tạo Game liên kết cho yêu cầu: "${req.title}"` });
   };
 
+// High quality SVG icons matching the SuViet360 theme (NO EMOJIS)
+function FeatherIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-8 h-8 shrink-0 ${className}`} style={{ width: "32px", height: "32px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L3 13Simplifyv5h5l9.24-9.26z" />
+      <path d="M16 8L2 22" />
+      <path d="M17.5 15H9" />
+    </svg>
+  );
+}
+
+function GamepadIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="6" y1="12" x2="10" y2="12" />
+      <line x1="8" y1="10" x2="8" y2="14" />
+      <circle cx="15" cy="13" r="1" />
+      <circle cx="18" cy="11" r="1" />
+      <rect x="2" y="6" width="20" height="12" rx="6" />
+    </svg>
+  );
+}
+
+function MicIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" y1="19" x2="12" y2="22" />
+    </svg>
+  );
+}
+
+function MessageSquareIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function BookIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  );
+}
+
+function RefreshIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 4v6h-6" />
+      <path d="M1 20v-6h6" />
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+    </svg>
+  );
+}
+
+function LockIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-10 h-10 shrink-0 ${className}`} style={{ width: "40px", height: "40px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+
   if (authLoading || isHydrating) {
     return (
-      <section className="px-6 py-12">
-        <p className="text-center text-amber-800 text-lg">Đang tải tài khoản...</p>
+      <section className="min-h-screen bg-cover bg-center bg-fixed flex items-center justify-center p-6" style={{ backgroundImage: 'url("/textures/paper.jpg")', fontFamily: '"Playfair Display", "Cinzel", "Cormorant Garamond", serif' }}>
+        <div className="bg-[#FFFDF8] border border-[#D8C49A] p-8 rounded-2xl shadow-lg text-center space-y-4 max-w-md">
+          <FeatherIcon className="w-12 h-12 text-[#8C6A34] mx-auto animate-spin" />
+          <p className="text-lg font-bold text-[#2A1407]">
+            Đang tải dữ liệu Biên Tập Viên...
+          </p>
+        </div>
       </section>
     );
   }
 
   if (!user) {
     return (
-      <section className="px-6 py-12 text-center space-y-3">
-        <h1 className="text-2xl font-semibold text-amber-900">Cần đăng nhập</h1>
-        <p className="text-amber-700">Vui lòng đăng nhập để truy cập khu vực Staff.</p>
-        <Link href="/login" className="text-amber-900 font-semibold underline">
-          Đến trang đăng nhập
-        </Link>
+      <section className="min-h-screen bg-cover bg-center bg-fixed flex items-center justify-center p-6" style={{ backgroundImage: 'url("/textures/paper.jpg")', fontFamily: '"Playfair Display", "Cinzel", "Cormorant Garamond", serif' }}>
+        <div className="bg-[#FFFDF8] border border-[#D8C49A] p-8 rounded-2xl shadow-lg text-center space-y-4 max-w-md">
+          <LockIcon className="w-12 h-12 text-[#8C6A34] mx-auto" />
+          <h1 className="text-xl font-bold text-[#2A1407]">Khu Vực Biên Tập Viên</h1>
+          <p className="text-sm text-stone-600">Vui lòng đăng nhập bằng tài khoản Staff để truy cập giao diện quản trị.</p>
+          <Link href="/login" className="inline-block px-6 py-2.5 bg-[#53270D] hover:bg-[#3C1E0A] text-white font-bold text-sm rounded-xl transition-all shadow-md">
+            Đăng nhập ngay
+          </Link>
+        </div>
       </section>
     );
   }
 
   if (!canAccess) {
     return (
-      <section className="px-6 py-12 text-center space-y-3">
-        <h1 className="text-2xl font-semibold text-amber-900">Không có quyền truy cập</h1>
-        <p className="text-amber-700">Tài khoản của bạn không có quyền quản lý khu vực này.</p>
-        <Link href="/" className="text-amber-900 font-semibold underline">
-          Quay về trang chủ
-        </Link>
+      <section className="min-h-screen bg-cover bg-center bg-fixed flex items-center justify-center p-6" style={{ backgroundImage: 'url("/textures/paper.jpg")', fontFamily: '"Playfair Display", "Cinzel", "Cormorant Garamond", serif' }}>
+        <div className="bg-[#FFFDF8] border border-[#D8C49A] p-8 rounded-2xl shadow-lg text-center space-y-4 max-w-md">
+          <LockIcon className="w-12 h-12 text-rose-700 mx-auto" />
+          <h1 className="text-xl font-bold text-[#2A1407]">Không Có Quyền Truy Cập</h1>
+          <p className="text-sm text-stone-600">Tài khoản của bạn không có quyền quản lý khu vực Staff Biên tập.</p>
+          <Link href="/" className="inline-block px-6 py-2.5 bg-[#53270D] hover:bg-[#3C1E0A] text-white font-bold text-sm rounded-xl transition-all shadow-md">
+            Quay về trang chủ
+          </Link>
+        </div>
       </section>
     );
   }
 
   return (
-    <div className="w-full min-h-screen" style={{ backgroundImage: "linear-gradient(rgba(247, 243, 233, 0.45), rgba(247, 243, 233, 0.45)), url('/textures/paper.jpg')", backgroundSize: "cover", backgroundAttachment: "fixed" }}>
-      <section className="mx-auto w-full max-w-6xl px-6 py-10 space-y-8">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-amber-600">Staff workspace</p>
-            <h1 className="text-3xl font-display font-semibold text-amber-950">
-              Bảng điều phối trò chơi
-            </h1>
+    <section className="min-h-screen bg-cover bg-center bg-fixed p-4 md:p-6 lg:p-8" style={{ backgroundImage: 'url("/textures/paper.jpg")', fontFamily: '"Playfair Display", "Cinzel", "Cormorant Garamond", serif' }}>
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        {/* LEFT SIDEBAR NAVIGATION CARD */}
+        <aside className="lg:col-span-3 space-y-5">
+          <div className="bg-[#FFFDF8] border border-[#D8C49A] p-5 rounded-2xl shadow-sm space-y-5">
+            {/* Header Brand */}
+            <div className="flex items-center gap-3 border-b border-[#E6D8BC] pb-4">
+              <div className="w-12 h-12 rounded-xl bg-[#F5EBD4] border border-[#D8C49A] flex items-center justify-center text-[#53270D] shrink-0">
+                <FeatherIcon />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-[#8C6A34] tracking-widest uppercase">SUVIET360</p>
+                <h2 className="text-base font-bold text-[#2A1407]">Bàn Biên Tập Viên</h2>
+              </div>
+            </div>
+
+            {/* Staff Account Info */}
+            <div className="bg-[#FDF8ED] border border-[#E6D8BC] p-3.5 rounded-xl space-y-1">
+              <span className="text-[10px] font-bold text-[#8C6A34] tracking-wider uppercase block">TÀI KHOẢN STAFF</span>
+              <strong className="text-sm font-bold text-[#2A1407] block truncate" title={user.name}>{user.name}</strong>
+              <small className="text-xs text-stone-500 block truncate" title={user.email}>{user.email}</small>
+            </div>
+
+            {/* Navigation Tabs */}
+            <nav className="space-y-2">
+              <button
+                type="button"
+                onClick={() => { setActiveTab("lessons"); setMessage(null); }}
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                  activeTab === "lessons"
+                    ? "bg-[#53270D] text-white shadow-md"
+                    : "bg-[#FDF8ED] text-[#53270D] hover:bg-[#F5EBD4] border border-[#E6D8BC]"
+                }`}
+              >
+                <GamepadIcon />
+                <span>Quản lý trò chơi (Game)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setActiveTab("podcasts"); setMessage(null); }}
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                  activeTab === "podcasts"
+                    ? "bg-[#53270D] text-white shadow-md"
+                    : "bg-[#FDF8ED] text-[#53270D] hover:bg-[#F5EBD4] border border-[#E6D8BC]"
+                }`}
+              >
+                <MicIcon />
+                <span>Quản lý Podcast</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setActiveTab("blog"); setMessage(null); }}
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                  activeTab === "blog"
+                    ? "bg-[#53270D] text-white shadow-md"
+                    : "bg-[#FDF8ED] text-[#53270D] hover:bg-[#F5EBD4] border border-[#E6D8BC]"
+                }`}
+              >
+                <MessageSquareIcon />
+                <span>Kiểm duyệt diễn đàn</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setActiveTab("lesson-requests"); setMessage(null); }}
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                  activeTab === "lesson-requests"
+                    ? "bg-[#53270D] text-white shadow-md"
+                    : "bg-[#FDF8ED] text-[#53270D] hover:bg-[#F5EBD4] border border-[#E6D8BC]"
+                }`}
+              >
+                <BookIcon />
+                <span>Yêu cầu bài học</span>
+              </button>
+            </nav>
+
+            {/* Staff Role Info */}
+            <div className="bg-[#FDF8ED] border border-[#E6D8BC] p-3.5 rounded-xl space-y-2 text-xs text-[#53270D]">
+              <strong className="font-bold uppercase tracking-wider block text-[11px]">NHIỆM VỤ BIÊN TẬP</strong>
+              <div className="space-y-1.5 leading-relaxed text-stone-700">
+                <p className="flex items-center gap-1.5">• Soạn thảo & tải bản đồ Game 2D</p>
+                <p className="flex items-center gap-1.5">• Upload Audio & kịch bản Podcast</p>
+                <p className="flex items-center gap-1.5">• Kiểm duyệt bài viết & báo cáo Blog</p>
+                <p className="flex items-center gap-1.5">• Thiết kế Game liên kết từ VIP Pro</p>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-3 text-sm">
-            <div className="rounded-xl border border-amber-200 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-sm">
-              <p className="text-amber-500 text-xs uppercase tracking-widest">
+        </aside>
+
+        {/* RIGHT MAIN CONTENT PANEL */}
+        <main className="lg:col-span-9 space-y-6">
+
+          {/* Header Bar */}
+          <div className="bg-[#FFFDF8] border border-[#D8C49A] p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-bold text-[#2A1407]">
                 {activeTab === "lessons"
-                  ? "Tổng trò chơi"
+                  ? "Bảng Điều Phối Trò Chơi 2D"
                   : activeTab === "podcasts"
-                    ? "Tổng podcast"
-                    : activeTab === "lesson-requests"
-                      ? "Tổng yêu cầu"
-                      : activeTab === "chapters"
-                        ? "Tổng chương"
-                        : activeTab === "quizzes"
-                          ? "Tổng Quiz"
-                          : "Chờ duyệt / Báo cáo"}
-              </p>
-              <p className="text-amber-900 text-lg font-semibold">
-                {activeTab === "lessons"
-                  ? stats.total
-                  : activeTab === "podcasts"
-                    ? podcasts.length
-                    : activeTab === "lesson-requests"
-                      ? requestsCount
-                      : activeTab === "chapters"
-                        ? chaptersCount
-                        : activeTab === "quizzes"
-                          ? quizzesCount
-                          : `${blogCounts.pending} / ${blogCounts.reports}`}
+                  ? "Quản Lý Podcast Âm Thanh"
+                  : activeTab === "blog"
+                  ? "Kiểm Duyệt Bài Viết Diễn Đàn"
+                  : "Yêu Cầu Bài Học Từ VIP Pro"}
+              </h1>
+              <p className="text-xs text-[#8C6A34] mt-0.5">
+                Khu vực biên tập nội dung, upload tài nguyên và thiết kế bài học Lịch sử Sử Việt
               </p>
             </div>
-            <div className="rounded-xl border border-amber-200 bg-white/90 backdrop-blur-sm px-4 py-2 shadow-sm">
-              <p className="text-amber-500 text-xs uppercase tracking-widest">Cập nhật gần nhất</p>
-              <p className="text-amber-900 text-sm font-semibold">
-                {activeTab === "lessons"
-                  ? stats.latest ? new Date(stats.latest).toLocaleDateString("vi-VN") : "-"
-                  : activeTab === "podcasts"
+
+            <div className="flex items-center gap-3">
+              <div className="bg-[#FDF8ED] border border-[#D8C49A] px-3.5 py-2 rounded-xl text-center shadow-xs">
+                <span className="text-[10px] font-bold text-[#8C6A34] uppercase tracking-wider block">
+                  {activeTab === "lessons"
+                    ? "TỔNG TRÒ CHƠI"
+                    : activeTab === "podcasts"
+                    ? "TỔNG PODCAST"
+                    : activeTab === "lesson-requests"
+                    ? "TỔNG YÊU CẦU"
+                    : "CHỜ DUYỆT / BÁO CÁO"}
+                </span>
+                <strong className="text-sm font-bold text-[#2A1407] block">
+                  {activeTab === "lessons"
+                    ? stats.total
+                    : activeTab === "podcasts"
+                    ? podcasts.length
+                    : activeTab === "lesson-requests"
+                    ? requestsCount
+                    : `${blogCounts.pending} / ${blogCounts.reports}`}
+                </strong>
+              </div>
+
+              <div className="bg-[#FDF8ED] border border-[#D8C49A] px-3.5 py-2 rounded-xl text-center shadow-xs hidden sm:block">
+                <span className="text-[10px] font-bold text-[#8C6A34] uppercase tracking-wider block">GẦN NHẤT</span>
+                <strong className="text-sm font-bold text-[#2A1407] block">
+                  {activeTab === "lessons"
+                    ? stats.latest ? new Date(stats.latest).toLocaleDateString("vi-VN") : "-"
+                    : activeTab === "podcasts"
                     ? podcasts[0]?.updatedAt || podcasts[0]?.createdAt
                       ? new Date(podcasts[0]?.updatedAt || podcasts[0]?.createdAt).toLocaleDateString("vi-VN")
                       : "-"
                     : "-"}
-              </p>
+                </strong>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  loadLessons();
+                  loadPodcasts();
+                }}
+                className="p-2.5 bg-[#FDF8ED] hover:bg-[#F5EBD4] text-[#53270D] border border-[#D8C49A] rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center shrink-0"
+                title="Tải lại dữ liệu"
+              >
+                <RefreshIcon />
+              </button>
             </div>
           </div>
-        </div>
 
-        <div className="flex border-b border-amber-200 flex-wrap gap-y-2">
-          <button
-            onClick={() => { setActiveTab("lessons"); setMessage(null); }}
-            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "lessons"
-                ? "border-amber-700 text-amber-950 font-bold"
-                : "border-transparent text-amber-650 hover:text-amber-800"
+          {/* Alert Message */}
+          {message && (
+            <div
+              className={`p-4 rounded-xl border text-xs font-bold flex items-center justify-between shadow-sm ${
+                message.type === "success"
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                  : "bg-rose-50 border-rose-300 text-rose-800"
               }`}
-          >
-            Quản lý trò chơi
-          </button>
-          <button
-            onClick={() => { setActiveTab("podcasts"); setMessage(null); }}
-            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "podcasts"
-                ? "border-amber-700 text-amber-950 font-bold"
-                : "border-transparent text-amber-650 hover:text-amber-800"
-              }`}
-          >
-            Quản lý podcast
-          </button>
-          {/* <button
-            onClick={() => { setActiveTab("chapters"); setMessage(null); }}
-            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "chapters"
-                ? "border-amber-700 text-amber-950 font-bold"
-                : "border-transparent text-amber-650 hover:text-amber-800"
-              }`}
-          >
-            Quản lý chương
-          </button>
-          <button
-            onClick={() => { setActiveTab("study-units"); setMessage(null); }}
-            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "study-units"
-                ? "border-amber-700 text-amber-950 font-bold"
-                : "border-transparent text-amber-650 hover:text-amber-800"
-              }`}
-          >
-            Bài học lý thuyết
-          </button>
-          <button
-            onClick={() => { setActiveTab("quizzes"); setMessage(null); }}
-            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "quizzes"
-                ? "border-amber-700 text-amber-950 font-bold"
-                : "border-transparent text-amber-650 hover:text-amber-800"
-              }`}
-          >
-            Ngân hàng Quiz
-          </button> */}
-          <button
-            onClick={() => { setActiveTab("blog"); setMessage(null); }}
-            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "blog"
-                ? "border-amber-700 text-amber-950 font-bold"
-                : "border-transparent text-amber-650 hover:text-amber-800"
-              }`}
-          >
-            Kiểm duyệt diễn đàn
-          </button>
-          <button
-            onClick={() => { setActiveTab("lesson-requests"); setMessage(null); }}
-            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${activeTab === "lesson-requests"
-                ? "border-amber-700 text-amber-950 font-bold"
-                : "border-transparent text-amber-650 hover:text-amber-800"
-              }`}
-          >
-            Yêu cầu bài học
-          </button>
-        </div>
+            >
+              <span>{message.text}</span>
+              <button
+                type="button"
+                onClick={() => setMessage(null)}
+                className="ml-4 text-xs font-bold px-2 py-0.5 rounded hover:bg-black/10 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
-        {message && (
-          <div
-            className={`rounded-xl border px-4 py-3 text-sm ${message.type === "success"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-red-200 bg-red-50 text-red-700"
-              }`}
-          >
-            {message.text}
+          {/* MAIN TAB CONTENT WORKSPACE */}
+          <div className="bg-[#FFFDF8] border border-[#D8C49A] p-5 md:p-6 rounded-2xl shadow-sm">
+            {activeTab === "lessons" && (
+              <GameTab
+                user={user}
+                lessons={lessons}
+                lessonsLoading={lessonsLoading}
+                onRefreshLessons={loadLessons}
+                prefilledGameForm={prefilledGameForm}
+                onClearPrefilledGameForm={() => setPrefilledGameForm(null)}
+                setMessage={setMessage}
+              />
+            )}
+
+            {activeTab === "podcasts" && (
+              <PodcastTab
+                user={user}
+                lessons={lessons}
+                podcasts={podcasts}
+                podcastsLoading={podcastsLoading}
+                onRefreshPodcasts={loadPodcasts}
+                setMessage={setMessage}
+              />
+            )}
+
+            {activeTab === "blog" && (
+              <BlogTab
+                setMessage={setMessage}
+                onUpdateCounts={(pending, reports) => setBlogCounts({ pending, reports })}
+              />
+            )}
+
+            {activeTab === "lesson-requests" && (
+              <LessonRequestsTab
+                onDesignGame={handleDesignGame}
+                setMessage={setMessage}
+                onUpdateCounts={setRequestsCount}
+              />
+            )}
           </div>
-        )}
 
-        <div className="mt-6">
-          {activeTab === "lessons" && (
-            <GameTab
-              user={user}
-              lessons={lessons}
-              lessonsLoading={lessonsLoading}
-              onRefreshLessons={loadLessons}
-              prefilledGameForm={prefilledGameForm}
-              onClearPrefilledGameForm={() => setPrefilledGameForm(null)}
-              setMessage={setMessage}
-            />
-          )}
-
-          {activeTab === "podcasts" && (
-            <PodcastTab
-              user={user}
-              lessons={lessons}
-              podcasts={podcasts}
-              podcastsLoading={podcastsLoading}
-              onRefreshPodcasts={loadPodcasts}
-              setMessage={setMessage}
-            />
-          )}
-
-          {/* {activeTab === "chapters" && (
-            <ChapterTab
-              setMessage={setMessage}
-              onUpdateCounts={setChaptersCount}
-            />
-          )}
-
-          {activeTab === "study-units" && (
-            <StudyUnitTab
-              user={user}
-              lessons={lessons}
-              podcasts={podcasts}
-              setMessage={setMessage}
-            />
-          )}
-
-          {activeTab === "quizzes" && (
-            <QuizTab
-              user={user}
-              setMessage={setMessage}
-            />
-          )} */}
-
-          {activeTab === "blog" && (
-            <BlogTab
-              setMessage={setMessage}
-              onUpdateCounts={(pending, reports) => setBlogCounts({ pending, reports })}
-            />
-          )}
-
-          {activeTab === "lesson-requests" && (
-            <LessonRequestsTab
-              onDesignGame={handleDesignGame}
-              setMessage={setMessage}
-              onUpdateCounts={setRequestsCount}
-            />
-          )}
-        </div>
-      </section>
-    </div>
+        </main>
+      </div>
+    </section>
   );
 }
