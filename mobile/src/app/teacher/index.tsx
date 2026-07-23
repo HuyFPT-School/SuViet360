@@ -26,6 +26,9 @@ import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import { adminApi } from '@/services/adminApi';
 import { api, ensureCsrfToken } from '@/services/api';
+import { WebView } from 'react-native-webview';
+import { generateGameHtml } from '@/utils/gameHtml';
+import * as ScreenOrientation from 'expo-screen-orientation';
 
 const STATUS_OPTIONS: Array<{ value: ReviewStatus | 'All'; label: string }> = [
   { value: 'Pending_Review', label: 'Chờ duyệt' },
@@ -76,6 +79,22 @@ export default function TeacherScreen() {
 
   // Details modal
   const [viewingItem, setViewingItem] = useState<TeacherReviewItem | null>(null);
+
+  // Game preview
+  const [showGamePreview, setShowGamePreview] = useState(false);
+  const [gamePreviewHtml, setGamePreviewHtml] = useState('');
+
+  // Lock landscape when game preview is open
+  useEffect(() => {
+    if (showGamePreview) {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+    } else {
+      ScreenOrientation.unlockAsync().catch(() => {});
+    }
+    return () => {
+      ScreenOrientation.unlockAsync().catch(() => {});
+    };
+  }, [showGamePreview]);
 
   // ─── Dashboard tabs ──────────────────────────────────
   const [activeTab, setActiveTab] = useState<'reviews' | 'requests'>('reviews');
@@ -469,7 +488,7 @@ export default function TeacherScreen() {
     <TouchableOpacity style={styles.itemCard} onPress={() => setViewingItem(item)}>
       <View style={styles.itemHeader}>
         <View style={{ flex: 1, paddingRight: 8 }}>
-          <Text style={styles.itemType}>{item.type === 'Lesson' ? 'Bài Học' : 'Podcast'}</Text>
+          <Text style={styles.itemType}>{item.type === 'Lesson' ? 'Bài học' : 'Podcast'}</Text>
           <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: item.status === 'Pending_Review' ? Colors.light.gold + '33' : item.status === 'Published' ? Colors.light.successBg : Colors.light.errorBg }]}>
@@ -862,9 +881,29 @@ export default function TeacherScreen() {
               {viewingItem?.type === 'Lesson' && viewingItem.game && (
                 <View style={styles.detailGameSection}>
                   <View style={styles.detailGameHeader}>
-                    <Text style={styles.detailSectionTitle}>Game trong lesson</Text>
-                    <Text style={styles.detailGameSubtitle}>Tilemap + assets</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.detailSectionTitle}>Game trong lesson</Text>
+                      <Text style={styles.detailGameSubtitle}>Tilemap + assets</Text>
+                    </View>
                   </View>
+
+                  {/* ─── Play test button ─── */}
+                  <GoldButton
+                    title="Chơi thử Game"
+                    onPress={() => {
+                      try {
+                        const html = generateGameHtml({
+                          title: viewingItem!.title,
+                          game: viewingItem!.game!,
+                        });
+                        setGamePreviewHtml(html);
+                        setShowGamePreview(true);
+                      } catch {
+                        Alert.alert('Lỗi', 'Không thể tạo bản xem trước game.');
+                      }
+                    }}
+                    style={{ marginBottom: 16 }}
+                  />
 
                   {/* Điểm xuất hiện */}
                   <View style={styles.detailSection}>
@@ -1352,6 +1391,37 @@ export default function TeacherScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ─── Game Preview Modal ─────────────────────── */}
+      <Modal visible={showGamePreview} animationType="slide" transparent={false} statusBarTranslucent>
+        <View style={styles.gamePreviewContainer}>
+          <View style={styles.gamePreviewWebView}>
+            {gamePreviewHtml ? (
+              <WebView
+                source={{ html: gamePreviewHtml }}
+                style={{ flex: 1 }}
+                javaScriptEnabled
+                domStorageEnabled
+                allowsFullscreenVideo
+                scrollEnabled={false}
+                bounces={false}
+              />
+            ) : (
+              <View style={styles.center}>
+                <ActivityIndicator size="large" color={Colors.light.gold} />
+                <Text style={styles.errorText}>Đang tải game...</Text>
+              </View>
+            )}
+          </View>
+          {/* Floating close button */}
+          <TouchableOpacity
+            style={styles.gamePreviewCloseBtn}
+            onPress={() => setShowGamePreview(false)}
+          >
+            <Ionicons name="close" size={28} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </PageBackground>
   );
 }
@@ -1702,6 +1772,23 @@ const styles = StyleSheet.create({
   },
   detailAudioDuration: { color: Colors.light.textMuted, fontSize: FontSizes.xs, marginTop: 4, fontStyle: 'italic' },
   detailPodcastInfoRow: { flexDirection: 'row', gap: 16, marginTop: 4 },
+  // ─── Game Preview ────────────────────────────────────
+  gamePreviewContainer: { flex: 1, backgroundColor: '#000' },
+  gamePreviewWebView: { flex: 1 },
+  gamePreviewCloseBtn: {
+    position: 'absolute',
+    top: 48,
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+  },
 });
 
 // ─── Accept form styles ────────────────────────────

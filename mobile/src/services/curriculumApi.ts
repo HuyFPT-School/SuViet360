@@ -43,12 +43,21 @@ export interface QuizQuestion {
 export interface ProgressDashboard {
   xp: number;
   level: number;
-  xpToNextLevel: number;
-  completedUnits: string[];
   completedLessons: string[];
+  completedUnits: string[];
+  completedPodcasts: string[];
+  quizPerformances: { quizId: string; passed: boolean; score: number; total: number }[];
+  unlockedLessons: string[];
   streak: number;
   totalQuizzesTaken: number;
   totalQuizzesPassed: number;
+  stats: {
+    totalLessons: number;
+    totalPodcasts: number;
+    completedLessonsCount: number;
+    completedPodcastsCount: number;
+  };
+  xpHistory: { amount: number; reason: string; createdAt: string }[];
 }
 
 export const curriculumApi = {

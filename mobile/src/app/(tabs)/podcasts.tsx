@@ -8,6 +8,9 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  Image,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PageBackground } from '@/components/PageBackground';
@@ -84,19 +87,34 @@ export default function HanhTrinhScreen() {
   const grouped: Record<string, JourneyItem[]> = {};
   groups.forEach((g) => { grouped[g] = filtered.filter((i) => i.category === g); });
 
-  if (loading) return <PageBackground style={S.ct}><View style={S.hd}><View style={S.hr}><Ionicons name="compass-outline" size={22} color={Colors.light.goldLight} /><Text style={S.ht}>Hành Trình</Text></View></View><View style={S.ce}><ActivityIndicator size="large" color={Colors.light.gold} /></View></PageBackground>;
+  if (loading) return <PageBackground style={S.ct}><View style={S.ce}><ActivityIndicator size="large" color={Colors.light.gold} /></View></PageBackground>;
 
   return (
     <PageBackground style={S.ct}>
-      <View style={S.hd}>
-        <View style={S.hr}><Ionicons name="compass-outline" size={22} color={Colors.light.goldLight} /><Text style={S.ht}>Hành Trình</Text></View>
-        <Text style={S.hs}>Khám phá lịch sử Việt Nam qua game, podcast &amp; bài học</Text>
-      </View>
-      <View style={S.sb}><TextInput style={S.si} placeholder="Tìm kiếm hành trình..." placeholderTextColor={Colors.light.textDim} value={search} onChangeText={setSearch} /></View>
-      {error ? <View style={S.eb}><Text style={S.et}>{error}</Text></View> : null}
       <ScrollView style={S.sc} contentContainerStyle={S.scc}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); /* trigger reload via key? Simple approach: just reset */ setRefreshing(false); }} tintColor={Colors.light.gold} />}>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); setRefreshing(false); }} tintColor={Colors.light.gold} />}>
 
+        {/* ─── Hero Section ─── */}
+        <View style={S.hero}>
+          <View style={S.heroContent}>
+            <Text style={S.heroKicker}>Podcast lịch sử</Text>
+            <Text style={S.heroTitle}>
+              Khám phá lịch sử Việt Nam{'\n'}qua những câu chuyện
+            </Text>
+            <Text style={S.heroDesc}>
+              Lắng nghe những câu chuyện lịch sử hào hùng được tái hiện sống động qua giọng kể. Mỗi tập podcast là một hành trình trở về quá khứ, giúp bạn hiểu hơn về dân tộc, đất nước và con người Việt Nam.
+            </Text>
+          </View>
+          <View style={S.heroImageWrap}>
+            <Image source={{ uri: 'https://www.suviet.io.vn/images/podcast_banner.png' }} style={S.heroImage} resizeMode="contain" />
+          </View>
+        </View>
+
+        {/* Search */}
+        <View style={S.sb}><TextInput style={S.si} placeholder="Tìm kiếm hành trình..." placeholderTextColor={Colors.light.textDim} value={search} onChangeText={setSearch} /></View>
+        {error ? <View style={S.eb}><Text style={S.et}>{error}</Text></View> : null}
+
+        {/* Stats */}
         <View style={S.sr}>
           <View style={S.si2}><Text style={S.sv}>{groups.length}</Text><Text style={S.sl}>Chủ đề</Text></View>
           <View style={S.si2}><Text style={S.sv}>{filtered.length}</Text><Text style={S.sl}>Bài học</Text></View>
@@ -138,10 +156,26 @@ export default function HanhTrinhScreen() {
 
 const S = StyleSheet.create({
   ct: { flex: 1 }, ce: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  hd: { backgroundColor: Colors.light.backgroundDark, borderBottomWidth: 2, borderBottomColor: Colors.light.goldDark, paddingTop: 50, paddingBottom: 12, paddingHorizontal: Spacing.md },
-  hr: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  ht: { fontFamily: 'Cinzel', fontSize: FontSizes.lg, fontWeight: '700', color: Colors.light.goldLight, letterSpacing: 1.5 },
-  hs: { fontFamily: 'Cormorant Garamond', fontSize: FontSizes.sm, color: Colors.light.goldMuted, fontStyle: 'italic', marginTop: 2 },
+  // ─── Hero Header ──────────────────────────────────
+  hero: {
+    flexDirection: 'row',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 16 : 50,
+    paddingBottom: 20,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: 'transparent',
+    gap: 16,
+  },
+  heroContent: { flex: 1, justifyContent: 'center' },
+  heroKicker: { color: '#a84d28', fontSize: FontSizes.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6 },
+  heroTitle: { color: '#3a2312', fontSize: 24, fontWeight: '700', lineHeight: 32, marginBottom: 10 },
+  heroDesc: { color: '#5c4a3d', fontSize: FontSizes.sm, lineHeight: 22 },
+  heroImageWrap: {
+    width: 130, height: 130, borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(255,251,242,0.7)', borderWidth: 1, borderColor: '#e8d5b5',
+    padding: 6, alignItems: 'center', justifyContent: 'center',
+  },
+  heroImage: { width: 110, height: 110 },
+  // ─── Search ─────────────────────────────────────
   sb: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.light.panel, borderBottomWidth: 1, borderBottomColor: Colors.light.panelBorder },
   si: { backgroundColor: Colors.light.authInputBg, borderRadius: BorderRadius.full, paddingHorizontal: 16, paddingVertical: 10, fontSize: FontSizes.sm, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.authBorder },
   eb: { margin: Spacing.md, padding: Spacing.sm, backgroundColor: Colors.light.errorBg, borderRadius: BorderRadius.md },
