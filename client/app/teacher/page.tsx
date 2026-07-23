@@ -52,13 +52,23 @@ function getStatusLabel(status: ReviewStatus) {
 
 function formatCreatorDisplay(createdByStr: string) {
   if (!createdByStr) return { name: "Staff", email: "" };
-  const parts = createdByStr.split(" (");
-  if (parts.length === 2) {
-    return {
-      name: parts[0],
-      email: parts[1].replace(")", ""),
-    };
+  
+  // Extract email inside parentheses if present
+  const emailMatch = createdByStr.match(/\(([^)]+@[^)]+)\)/);
+  if (emailMatch) {
+    const email = emailMatch[1];
+    const name = createdByStr.replace(emailMatch[0], "").trim();
+    return { name, email };
   }
+
+  // Fallback to last opening parenthesis
+  const lastParenIndex = createdByStr.lastIndexOf(" (");
+  if (lastParenIndex !== -1) {
+    const name = createdByStr.slice(0, lastParenIndex).trim();
+    const email = createdByStr.slice(lastParenIndex + 2).replace(/\)$/, "").trim();
+    return { name, email };
+  }
+
   return { name: createdByStr, email: "" };
 }
 
@@ -546,6 +556,19 @@ export default function TeacherPage() {
     }
   };
 
+  // Pagination States for Reviews Tab
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewLimit, setReviewLimit] = useState(5);
+
+  // Pagination States for Requests Tab
+  const [requestPage, setRequestPage] = useState(1);
+  const [requestLimit, setRequestLimit] = useState(5);
+
+  // Reset page when query or status filter changes
+  useEffect(() => {
+    setReviewPage(1);
+  }, [query, statusFilter]);
+
   const filteredItems = useMemo(() => {
     const term = query.trim().toLowerCase();
 
@@ -560,6 +583,24 @@ export default function TeacherPage() {
       return matchesStatus && matchesQuery;
     });
   }, [items, query, statusFilter]);
+
+  const paginatedReviewItems = useMemo(() => {
+    const start = (reviewPage - 1) * reviewLimit;
+    return filteredItems.slice(start, start + reviewLimit);
+  }, [filteredItems, reviewPage, reviewLimit]);
+
+  const totalReviewPages = useMemo(() => {
+    return Math.ceil(filteredItems.length / reviewLimit) || 1;
+  }, [filteredItems, reviewLimit]);
+
+  const paginatedRequests = useMemo(() => {
+    const start = (requestPage - 1) * requestLimit;
+    return requests.slice(start, start + requestLimit);
+  }, [requests, requestPage, requestLimit]);
+
+  const totalRequestPages = useMemo(() => {
+    return Math.ceil(requests.length / requestLimit) || 1;
+  }, [requests, requestLimit]);
 
   const stats = useMemo(
     () => ({
@@ -626,22 +667,137 @@ export default function TeacherPage() {
     }
   };
 
+function HelmIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-9 h-9 shrink-0 ${className}`} style={{ width: "36px", height: "36px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+      <path d="M6 6h10" />
+      <path d="M6 10h8" />
+    </svg>
+  );
+}
+
+function ReviewAuditIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+function BookIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  );
+}
+
+function HourglassIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 22h14" />
+      <path d="M5 2h14" />
+      <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22" />
+      <path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" />
+    </svg>
+  );
+}
+
+function CheckCircleIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  );
+}
+
+function XCircleIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
+  );
+}
+
+function FileTextIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
+  );
+}
+
+function SearchIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+function RefreshIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 4v6h-6" />
+      <path d="M1 20v-6h6" />
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+    </svg>
+  );
+}
+
+function CalendarIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function EyeIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
   if (loading || isLoading) {
     return (
-      <section className="admin-page admin-page--center">
-        <div className="admin-loading">Đang tải Teacher Review Dashboard...</div>
+      <section className="min-h-screen bg-cover bg-center bg-fixed flex items-center justify-center p-6" style={{ backgroundImage: 'url("/textures/paper.jpg")', fontFamily: '"Playfair Display", "Cinzel", "Cormorant Garamond", serif' }}>
+        <div className="bg-[#FFFDF8] border border-[#D8C49A] p-8 rounded-2xl shadow-lg text-center space-y-4 max-w-md">
+          <HelmIcon className="w-12 h-12 text-[#8C6A34] mx-auto animate-spin" />
+          <p className="text-lg font-bold text-[#2A1407]">
+            Đang tải dữ liệu Hội Đồng Thẩm Định...
+          </p>
+        </div>
       </section>
     );
   }
 
   if (!user) {
     return (
-      <section className="admin-page admin-page--center">
-        <div className="admin-access-card">
-          <h1>Teacher Review</h1>
-          <p>Bạn cần đăng nhập bằng tài khoản Teacher để duyệt bài học.</p>
-          <Link href="/login" className="admin-primary-link">
-            Đăng nhập
+      <section className="min-h-screen bg-cover bg-center bg-fixed flex items-center justify-center p-6" style={{ backgroundImage: 'url("/textures/paper.jpg")', fontFamily: '"Playfair Display", "Cinzel", "Cormorant Garamond", serif' }}>
+        <div className="bg-[#FFFDF8] border border-[#D8C49A] p-8 rounded-2xl shadow-lg text-center space-y-4 max-w-md">
+          <HelmIcon className="w-12 h-12 text-[#8C6A34] mx-auto" />
+          <h1 className="text-xl font-bold text-[#2A1407]">Hội Đồng Thẩm Định</h1>
+          <p className="text-sm text-stone-600">Bạn cần đăng nhập bằng tài khoản Giáo viên để truy cập dashboard.</p>
+          <Link href="/login" className="inline-block px-6 py-2.5 bg-[#53270D] hover:bg-[#3C1E0A] text-white font-bold text-sm rounded-xl transition-all shadow-md">
+            Đăng nhập ngay
           </Link>
         </div>
       </section>
@@ -650,12 +806,13 @@ export default function TeacherPage() {
 
   if (!["teacher", "admin"].includes(user.role)) {
     return (
-      <section className="admin-page admin-page--center">
-        <div className="admin-access-card">
-          <h1>Không có quyền truy cập</h1>
-          <p>Trang này chỉ dành cho Teacher duyệt game & podcast Staff gửi lên.</p>
-          <Link href="/" className="admin-primary-link">
-            Về trang chủ
+      <section className="min-h-screen bg-cover bg-center bg-fixed flex items-center justify-center p-6" style={{ backgroundImage: 'url("/textures/paper.jpg")', fontFamily: '"Playfair Display", "Cinzel", "Cormorant Garamond", serif' }}>
+        <div className="bg-[#FFFDF8] border border-[#D8C49A] p-8 rounded-2xl shadow-lg text-center space-y-4 max-w-md">
+          <XCircleIcon className="w-12 h-12 text-rose-700 mx-auto" />
+          <h1 className="text-xl font-bold text-[#2A1407]">Không Có Quyền Truy Cập</h1>
+          <p className="text-sm text-stone-600">Trang này chỉ dành riêng cho Giáo viên thẩm định nội dung Sử Việt.</p>
+          <Link href="/" className="inline-block px-6 py-2.5 bg-[#53270D] hover:bg-[#3C1E0A] text-white font-bold text-sm rounded-xl transition-all shadow-md">
+            Trở về trang chủ
           </Link>
         </div>
       </section>
@@ -663,334 +820,629 @@ export default function TeacherPage() {
   }
 
   return (
-    <section className="admin-page teacher-page">
-      <div className="admin-shell">
-        <aside className="admin-sidebar">
-          <div>
-            <p className="admin-kicker">SuViet360</p>
-            <h1>Teacher Review</h1>
-          </div>
-          <div className="teacher-sidebar-note">
-            <span>Tài khoản</span>
-            <strong>{user.name}</strong>
-            <small>{user.email}</small>
-          </div>
-          
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", margin: "16px 0" }}>
-            <button
-              onClick={() => setActiveDashboardTab("reviews")}
-              style={{
-                textAlign: "left",
-                padding: "8px 12px",
-                borderRadius: "4px",
-                fontWeight: "600",
-                fontSize: "14px",
-                border: "none",
-                cursor: "pointer",
-                background: activeDashboardTab === "reviews" ? "#f5e7c9" : "transparent",
-                color: activeDashboardTab === "reviews" ? "#5c3300" : "#78716c",
-              }}
-            >
-              Duyệt Game & Podcast
-            </button>
-            <button
-              onClick={() => setActiveDashboardTab("requests")}
-              style={{
-                textAlign: "left",
-                padding: "8px 12px",
-                borderRadius: "4px",
-                fontWeight: "600",
-                fontSize: "14px",
-                border: "none",
-                cursor: "pointer",
-                background: activeDashboardTab === "requests" ? "#f5e7c9" : "transparent",
-                color: activeDashboardTab === "requests" ? "#5c3300" : "#78716c",
-              }}
-            >
-              Yêu cầu bài học (Pro)
-            </button>
+    <section className="min-h-screen bg-cover bg-center bg-fixed p-4 md:p-6 lg:p-8" style={{ backgroundImage: 'url("/textures/paper.jpg")', fontFamily: '"Playfair Display", "Cinzel", "Cormorant Garamond", serif' }}>
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-          </div>
+        {/* LEFT SIDEBAR NAVIGATION CARD */}
+        <aside className="lg:col-span-3 space-y-5">
+          <div className="bg-[#FFFDF8] border border-[#D8C49A] p-5 rounded-2xl shadow-sm space-y-5">
+            {/* Header Brand */}
+            <div className="flex items-center gap-3 border-b border-[#E6D8BC] pb-4">
+              <div className="w-12 h-12 rounded-xl bg-[#F5EBD4] border border-[#D8C49A] flex items-center justify-center text-[#53270D] shrink-0">
+                <HelmIcon />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-[#8C6A34] tracking-widest uppercase">SUVIET360</p>
+                <h2 className="text-base font-bold text-[#2A1407]">Hội Đồng Thẩm Định</h2>
+              </div>
+            </div>
 
-          <div className="teacher-review-rules">
-            <strong>Quyền Teacher</strong>
-            <span>Xem chi tiết game/podcast</span>
-            <span>Kiểm tra nội dung, game & audio</span>
-            <span>Duyệt hoặc Từ chối kèm nhận xét</span>
+            {/* Teacher Account Info */}
+            <div className="bg-[#FDF8ED] border border-[#E6D8BC] p-3.5 rounded-xl space-y-1">
+              <span className="text-[10px] font-bold text-[#8C6A34] tracking-wider uppercase block">TÀI KHOẢN GIÁO VIÊN</span>
+              <strong className="text-sm font-bold text-[#2A1407] block truncate" title={user.name}>{user.name}</strong>
+              <small className="text-xs text-stone-500 block truncate" title={user.email}>{user.email}</small>
+            </div>
+
+            {/* Navigation Tabs */}
+            <nav className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setActiveDashboardTab("reviews")}
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                  activeDashboardTab === "reviews"
+                    ? "bg-[#53270D] text-white shadow-md"
+                    : "bg-[#FDF8ED] text-[#53270D] hover:bg-[#F5EBD4] border border-[#E6D8BC]"
+                }`}
+              >
+                <ReviewAuditIcon />
+                <span>Duyệt Game & Podcast</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveDashboardTab("requests")}
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                  activeDashboardTab === "requests"
+                    ? "bg-[#53270D] text-white shadow-md"
+                    : "bg-[#FDF8ED] text-[#53270D] hover:bg-[#F5EBD4] border border-[#E6D8BC]"
+                }`}
+              >
+                <BookIcon />
+                <span>Yêu cầu bài học (Pro)</span>
+              </button>
+            </nav>
+
+            {/* Teacher Role Info */}
+            <div className="bg-[#FDF8ED] border border-[#E6D8BC] p-3.5 rounded-xl space-y-2 text-xs text-[#53270D]">
+              <strong className="font-bold uppercase tracking-wider block text-[11px]">QUYỀN HẠN THẨM ĐỊNH</strong>
+              <div className="space-y-1 leading-relaxed text-stone-700">
+                <p className="flex items-center gap-1.5">• Xem chi tiết game & podcast</p>
+                <p className="flex items-center gap-1.5">• Kiểm tra nội dung & âm thanh</p>
+                <p className="flex items-center gap-1.5">• Phê duyệt hoặc từ chối kèm nhận xét</p>
+              </div>
+            </div>
           </div>
         </aside>
 
-        <div className="admin-content">
+        {/* RIGHT MAIN CONTENT PANEL */}
+        <main className="lg:col-span-9 space-y-6">
+
+          {/* Header Bar */}
+          <div className="bg-[#FFFDF8] border border-[#D8C49A] p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-bold text-[#2A1407]">
+                {activeDashboardTab === "reviews" ? "Teacher Review Dashboard" : "Danh Sách Yêu Cầu Soạn Bài"}
+              </h1>
+              <p className="text-xs text-[#8C6A34] mt-0.5">
+                {activeDashboardTab === "reviews"
+                  ? "Hệ thống thẩm định, kiểm duyệt và xuất bản bài học Lịch sử Sử Việt"
+                  : "Tiếp nhận và xử lý yêu cầu bài học theo yêu cầu của học viên Pro"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (activeDashboardTab === "reviews") loadItems();
+                else loadRequests();
+              }}
+              className="px-3.5 py-2 bg-[#FDF8ED] hover:bg-[#F5EBD4] text-[#53270D] border border-[#D8C49A] rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+            >
+              <RefreshIcon />
+              <span>Làm mới</span>
+            </button>
+          </div>
+
+          {/* Alert Message */}
           {(message || error) && (
             <div
-              className={`admin-alert ${
-                error ? "admin-alert--error" : "admin-alert--success"
+              className={`p-4 rounded-xl border text-xs font-bold flex items-center justify-between shadow-sm ${
+                error
+                  ? "bg-rose-50 border-rose-300 text-rose-800"
+                  : "bg-emerald-50 border-emerald-300 text-emerald-800"
               }`}
             >
-              {error || message}
+              <span>{error || message}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setMessage("");
+                  setError("");
+                }}
+                className="ml-4 text-xs font-bold px-2 py-0.5 rounded hover:bg-black/10 transition-colors"
+              >
+                ✕
+              </button>
             </div>
           )}
 
-          {activeDashboardTab === "reviews" ? (
-            <div className="admin-stack">
-              <div className="admin-heading">
-                <div>
-                  <p className="admin-kicker">Duyệt game & podcast</p>
-                  <h2>Teacher Review Dashboard</h2>
-                </div>
-              </div>
-
-              <div className="admin-stat-grid teacher-stat-grid">
-                <StatCard label="Chờ duyệt" value={stats.pending} />
-                <StatCard label="Đã xuất bản" value={stats.published} />
-                <StatCard label="Bị từ chối" value={stats.rejected} />
-                <StatCard label="Tổng mục" value={stats.total} />
-              </div>
-
-              <div className="admin-panel">
-                <div className="teacher-filter-bar teacher-filter-bar--compact">
-                  <input
-                    className="admin-search"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Tìm theo tiêu đề..."
-                  />
-                  <select
-                    value={statusFilter}
-                    onChange={(event) =>
-                      setStatusFilter(event.target.value as ReviewStatus | "All")
-                    }
-                    className="teacher-select"
-                  >
-                    {statusOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="admin-panel-heading teacher-list-heading">
-                  <h3>Danh sách game & podcast</h3>
-                  <span>{filteredItems.length} mục</span>
-                </div>
-
-                <div className="admin-table teacher-review-table teacher-review-table--lesson">
-                  <div className="admin-table-head">
-                    <span>Tiêu đề</span>
-                    <span>Loại</span>
-                    <span>Người tạo</span>
-                    <span>Ngày gửi</span>
-                    <span>Trạng thái</span>
-                    <span>Thao tác</span>
+          {/* STAT SUMMARY CARDS (Shown on Reviews Tab) */}
+          {activeDashboardTab === "reviews" && (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {/* Card 1: Chờ duyệt */}
+                <div
+                  onClick={() => setStatusFilter("Pending_Review")}
+                  className={`bg-[#FFFDF8] border p-4 rounded-2xl shadow-xs transition-all cursor-pointer ${
+                    statusFilter === "Pending_Review"
+                      ? "border-amber-600 ring-2 ring-amber-600/30 scale-[1.02]"
+                      : "border-[#E6D8BC] hover:border-[#D8C49A]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">CHỜ DUYỆT</span>
+                    <HourglassIcon className="text-amber-600" />
                   </div>
-                  {filteredItems.map((item) => (
-                    <div key={item.id} className="admin-table-row">
-                      <div>
-                        <strong>{item.title}</strong>
-                        <small className="line-clamp-2">{item.summary}</small>
-                      </div>
-                      <span className={`teacher-type-badge ${item.type === "Podcast" ? "teacher-type-badge--podcast" : item.type === "StudyUnit" ? "teacher-type-badge--study-unit" : item.type === "Quiz" ? "teacher-type-badge--quiz" : ""}`}>
-                        {item.type === "Lesson" ? "Game" : item.type === "Podcast" ? "Podcast" : item.type === "StudyUnit" ? "Lý thuyết" : "Quiz"}
-                      </span>
-                      <span className="flex flex-col min-w-0 justify-center">
-                        <span className="font-semibold text-amber-900 truncate block text-sm" title={formatCreatorDisplay(item.createdBy).name}>
-                          {formatCreatorDisplay(item.createdBy).name}
-                        </span>
-                        {formatCreatorDisplay(item.createdBy).email && (
-                          <span className="text-[10px] text-amber-600 truncate block mt-0.5" title={formatCreatorDisplay(item.createdBy).email}>
-                            {formatCreatorDisplay(item.createdBy).email}
-                          </span>
-                        )}
-                      </span>
-                      <span>{formatDate(item.submittedAt)}</span>
-                      <StatusBadge status={item.status} />
-                      <div className="admin-row-actions teacher-row-actions">
-                        <button type="button" onClick={() => setSelectedId(item.id)}>
-                          Chi tiết
-                        </button>
-                      </div>
-                    </div>
+                  <strong className="text-2xl font-bold text-[#2A1407] block">{stats.pending}</strong>
+                </div>
+
+                {/* Card 2: Đã xuất bản */}
+                <div
+                  onClick={() => setStatusFilter("Published")}
+                  className={`bg-[#FFFDF8] border p-4 rounded-2xl shadow-xs transition-all cursor-pointer ${
+                    statusFilter === "Published"
+                      ? "border-emerald-600 ring-2 ring-emerald-600/30 scale-[1.02]"
+                      : "border-[#E6D8BC] hover:border-[#D8C49A]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">ĐÃ XUẤT BẢN</span>
+                    <CheckCircleIcon className="text-emerald-600" />
+                  </div>
+                  <strong className="text-2xl font-bold text-[#2A1407] block">{stats.published}</strong>
+                </div>
+
+                {/* Card 3: Bị từ chối */}
+                <div
+                  onClick={() => setStatusFilter("Rejected")}
+                  className={`bg-[#FFFDF8] border p-4 rounded-2xl shadow-xs transition-all cursor-pointer ${
+                    statusFilter === "Rejected"
+                      ? "border-rose-600 ring-2 ring-rose-600/30 scale-[1.02]"
+                      : "border-[#E6D8BC] hover:border-[#D8C49A]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold text-rose-800 uppercase tracking-wider">BỊ TỪ CHỐI</span>
+                    <XCircleIcon className="text-rose-600" />
+                  </div>
+                  <strong className="text-2xl font-bold text-[#2A1407] block">{stats.rejected}</strong>
+                </div>
+
+                {/* Card 4: Tổng mục */}
+                <div
+                  onClick={() => setStatusFilter("All")}
+                  className={`bg-[#FFFDF8] border p-4 rounded-2xl shadow-xs transition-all cursor-pointer ${
+                    statusFilter === "All"
+                      ? "border-blue-600 ring-2 ring-blue-600/30 scale-[1.02]"
+                      : "border-[#E6D8BC] hover:border-[#D8C49A]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold text-blue-800 uppercase tracking-wider">TỔNG MỤC</span>
+                    <FileTextIcon className="text-blue-600" />
+                  </div>
+                  <strong className="text-2xl font-bold text-[#2A1407] block">{stats.total}</strong>
+                </div>
+              </div>
+
+              {/* FILTER & SEARCH BAR */}
+              <div className="bg-[#FFFDF8] border border-[#D8C49A] p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center gap-3">
+                <div className="relative flex-1 w-full">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8C6A34]" />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Tìm theo tiêu đề..."
+                    className="w-full pl-9 pr-3 py-2 bg-[#FDF8ED] border border-[#D8C49A] rounded-xl text-xs text-[#2A1407] font-semibold outline-none focus:ring-2 focus:ring-[#8C6A34]/40 transition-all"
+                  />
+                </div>
+
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as ReviewStatus | "All")}
+                  className="w-full sm:w-48 px-3 py-2 bg-[#FDF8ED] border border-[#D8C49A] rounded-xl text-xs text-[#2A1407] font-bold outline-none cursor-pointer"
+                >
+                  {statusOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
-                  {filteredItems.length === 0 && (
-                    <p className="admin-empty">
-                      Không có game/podcast phù hợp với bộ lọc hiện tại.
-                    </p>
-                  )}
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* MAIN TAB CONTENT */}
+          {activeDashboardTab === "reviews" ? (
+            <div className="bg-[#FFFDF8] border border-[#D8C49A] rounded-2xl shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-[#E6D8BC] flex items-center justify-between bg-[#FDF8ED]">
+                <h3 className="text-sm font-bold text-[#2A1407] uppercase tracking-wide">
+                  DANH SÁCH GAME & PODCAST
+                </h3>
+                <span className="text-xs font-bold text-[#8C6A34] bg-[#F5EBD4] px-3 py-1 rounded-full border border-[#D8C49A]">
+                  {filteredItems.length} mục
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-[#FFFDF8] border-b border-[#E6D8BC] text-[#8C6A34] uppercase font-bold tracking-wider">
+                      <th className="p-3.5 pl-4">TIÊU ĐỀ</th>
+                      <th className="p-3.5">LOẠI</th>
+                      <th className="p-3.5">NGƯỜI TẠO</th>
+                      <th className="p-3.5">NGÀY GỬI</th>
+                      <th className="p-3.5">TRẠNG THÁI</th>
+                      <th className="p-3.5 text-center">THAO TÁC</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E6D8BC]/60">
+                    {paginatedReviewItems.map((item) => {
+                      const creator = formatCreatorDisplay(item.createdBy);
+                      return (
+                        <tr key={item.id} className="hover:bg-[#FDF8ED]/80 transition-colors">
+                          <td className="p-3.5 pl-4 max-w-xs">
+                            <strong className="text-sm font-bold text-[#2A1407] block truncate" title={item.title}>
+                              {item.title}
+                            </strong>
+                            <small className="text-stone-600 line-clamp-1 mt-0.5 block">
+                              {item.summary}
+                            </small>
+                          </td>
+
+                          <td className="p-3.5">
+                            <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border bg-[#F5EBD4] text-[#8C6A34] border-[#D8C49A]">
+                              {item.type === "Lesson" ? "Game" : item.type === "Podcast" ? "Podcast" : item.type === "StudyUnit" ? "Lý thuyết" : "Quiz"}
+                            </span>
+                          </td>
+
+                          <td className="p-3.5">
+                            <span className="font-bold text-[#2A1407] block truncate" title={creator.name}>
+                              {creator.name}
+                            </span>
+                            {creator.email && (
+                              <span className="text-[10px] text-stone-500 block truncate">
+                                {creator.email}
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="p-3.5 text-stone-600 font-semibold whitespace-nowrap">
+                            {formatDate(item.submittedAt)}
+                          </td>
+
+                          <td className="p-3.5">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                              item.status === "Pending_Review"
+                                ? "bg-amber-50 text-amber-800 border-amber-300"
+                                : item.status === "Published"
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                                : "bg-rose-50 text-rose-800 border-rose-300"
+                            }`}>
+                              {item.status === "Pending_Review" && <HourglassIcon className="w-3 h-3 text-amber-600" />}
+                              {item.status === "Published" && <CheckCircleIcon className="w-3 h-3 text-emerald-600" />}
+                              {item.status === "Rejected" && <XCircleIcon className="w-3 h-3 text-rose-600" />}
+                              <span>{getStatusLabel(item.status)}</span>
+                            </span>
+                          </td>
+
+                          <td className="p-3.5 text-center">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedId(item.id)}
+                              className="px-3 py-1.5 bg-[#53270D] hover:bg-[#3C1E0A] text-white font-bold rounded-lg text-xs transition-all shadow-xs cursor-pointer inline-flex items-center gap-1"
+                            >
+                              <EyeIcon className="w-3.5 h-3.5" />
+                              <span>Chi tiết</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {filteredItems.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-stone-500 italic">
+                          Không có game/podcast nào phù hợp với bộ lọc hiện tại.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* PAGINATION BAR FOR REVIEWS TAB */}
+              <div className="p-4 border-t border-[#E6D8BC] bg-[#FDF8ED] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold">
+                <div className="text-stone-600">
+                  Hiển thị {filteredItems.length === 0 ? 0 : (reviewPage - 1) * reviewLimit + 1} - {Math.min(reviewPage * reviewLimit, filteredItems.length)} trong {filteredItems.length} nội dung
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={reviewPage <= 1}
+                    onClick={() => setReviewPage((prev) => Math.max(1, prev - 1))}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#D8C49A] bg-[#FFFDF8] text-[#2A1407] hover:bg-[#F5EBD4] disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold cursor-pointer"
+                  >
+                    ‹
+                  </button>
+
+                  {Array.from({ length: totalReviewPages }, (_, i) => i + 1).map((pNum) => (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => setReviewPage(pNum)}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                        reviewPage === pNum
+                          ? "bg-[#53270D] text-white border-[#53270D] shadow-xs"
+                          : "bg-[#FFFDF8] border-[#D8C49A] text-[#2A1407] hover:bg-[#F5EBD4]"
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    disabled={reviewPage >= totalReviewPages}
+                    onClick={() => setReviewPage((prev) => Math.min(totalReviewPages, prev + 1))}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#D8C49A] bg-[#FFFDF8] text-[#2A1407] hover:bg-[#F5EBD4] disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold cursor-pointer"
+                  >
+                    ›
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={reviewLimit}
+                    onChange={(e) => {
+                      setReviewLimit(Number(e.target.value));
+                      setReviewPage(1);
+                    }}
+                    className="px-2.5 py-1 bg-[#FFFDF8] border border-[#D8C49A] rounded-lg text-xs font-bold text-[#2A1407] outline-none cursor-pointer"
+                  >
+                    <option value={5}>5 / trang</option>
+                    <option value={10}>10 / trang</option>
+                    <option value={20}>20 / trang</option>
+                    <option value={50}>50 / trang</option>
+                  </select>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="admin-stack">
-              <div className="admin-heading">
-                <div>
-                  <p className="admin-kicker">Quản lý bài soạn</p>
-                  <h2>Yêu cầu bài học từ học viên Pro</h2>
-                </div>
+            /* PRO LESSON REQUESTS TAB CONTENT */
+            <div className="bg-[#FFFDF8] border border-[#D8C49A] rounded-2xl shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-[#E6D8BC] flex items-center justify-between bg-[#FDF8ED]">
+                <h3 className="text-sm font-bold text-[#2A1407] uppercase tracking-wide">
+                  DANH SÁCH YÊU CẦU SOẠN BÀI TỪ HỌC VIÊN PRO
+                </h3>
+                <span className="text-xs font-bold text-[#8C6A34] bg-[#F5EBD4] px-3 py-1 rounded-full border border-[#D8C49A]">
+                  {requests.length} yêu cầu
+                </span>
               </div>
 
-              <div className="admin-panel">
-                <div className="admin-panel-heading teacher-list-heading">
-                  <h3>Danh sách yêu cầu soạn bài</h3>
-                  <span>{requests.length} yêu cầu</span>
-                </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-[#FFFDF8] border-b border-[#E6D8BC] text-[#8C6A34] uppercase font-bold tracking-wider">
+                      <th className="p-3.5 pl-4" style={{ width: "38%" }}>ĐỀ XUẤT HỌC VIÊN</th>
+                      <th className="p-3.5" style={{ width: "16%" }}>THỜI KỲ LỊCH SỬ</th>
+                      <th className="p-3.5" style={{ width: "16%" }}>HỌC VIÊN YÊU CẦU</th>
+                      <th className="p-3.5" style={{ width: "15%" }}>TRẠNG THÁI XỬ LÝ</th>
+                      <th className="p-3.5 text-center" style={{ width: "15%" }}>THAO TÁC</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E6D8BC]/60">
+                    {paginatedRequests.map((req) => {
+                      const assignedTeacherId = req.assignedTeacherId && (typeof req.assignedTeacherId === "object" ? req.assignedTeacherId._id : req.assignedTeacherId);
+                      const isMyAssignment = assignedTeacherId === user.id;
 
-                <div className="admin-table teacher-review-table">
-                  <div className="admin-table-head">
-                    <span>Tiêu đề & Nội dung</span>
-                    <span>Thời kỳ</span>
-                    <span>Học sinh</span>
-                    <span>Trạng thái</span>
-                    <span>Thao tác</span>
-                  </div>
-                  {requests.map((req) => {
-                    const assignedTeacherId = req.assignedTeacherId && (typeof req.assignedTeacherId === "object" ? req.assignedTeacherId._id : req.assignedTeacherId);
-                    const isMyAssignment = assignedTeacherId === user.id;
+                      const requesterName = (req.requesterId && typeof req.requesterId === "object" ? req.requesterId.name || req.requesterId.email : null) || "Học viên Pro";
 
-                    return (
-                      <div key={req._id} className="admin-table-row">
-                        <div>
-                          <strong>{req.title}</strong>
-                          <small className="line-clamp-3 mt-1 block text-stone-600">{req.description}</small>
-                          {req.teacherResponse && (
-                            <div className="mt-2 text-rose-700 bg-rose-50 p-2 rounded border border-rose-200 text-xs">
-                              <strong>Lý do từ chối:</strong> {req.teacherResponse}
-                            </div>
-                          )}
-                          {req.pedagogicalNotes && (
-                            <div className="mt-2 text-sky-700 bg-sky-50 p-2 rounded border border-sky-200 text-xs">
-                              <strong>Nhận định sư phạm:</strong> {req.pedagogicalNotes}
-                            </div>
-                          )}
-                          {req.needsGameCreation && (
-                            <div className="mt-2 text-purple-700 bg-purple-50 p-2 rounded border border-purple-200 text-xs">
-                              <strong>Yêu cầu thiết kế Game:</strong>{" "}
-                              <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                req.gameCreationStatus === "Completed" ? "bg-emerald-100 text-emerald-800" : "bg-purple-100 text-purple-800"
-                              }`}>
-                                {req.gameCreationStatus === "Completed" ? "Đã hoàn thành" : "Đang yêu cầu Staff"}
+                      return (
+                        <tr key={req._id} className="hover:bg-[#FDF8ED]/80 transition-colors">
+                          <td className="p-3.5 pl-4 space-y-1.5">
+                            <strong className="text-sm font-bold text-[#2A1407] block">{req.title}</strong>
+                            <p className="text-xs text-stone-600 leading-relaxed line-clamp-2">{req.description}</p>
+                            
+                            {req.teacherResponse && (
+                              <div className="text-xs text-rose-800 bg-rose-50 p-2 rounded-lg border border-rose-200">
+                                <strong>Lý do từ chối:</strong> {req.teacherResponse}
+                              </div>
+                            )}
+                            {req.pedagogicalNotes && (
+                              <div className="text-xs text-sky-900 bg-sky-50 p-2 rounded-lg border border-sky-200">
+                                <strong>Nhận định sư phạm:</strong> {req.pedagogicalNotes}
+                              </div>
+                            )}
+                            {req.needsGameCreation && (
+                              <div className="text-xs text-purple-900 bg-purple-50 p-2 rounded-lg border border-purple-200 flex items-center justify-between">
+                                <span><strong>Yêu cầu Game 2D:</strong> Cần thiết kế</span>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  req.gameCreationStatus === "Completed" ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-purple-100 text-purple-800 border border-purple-300"
+                                }`}>
+                                  {req.gameCreationStatus === "Completed" ? "Đã hoàn thành" : "Đang giao Staff"}
+                                </span>
+                              </div>
+                            )}
+                            {req.estimatedCompletionDate && (
+                              <div className="text-xs text-stone-600 flex items-center gap-1">
+                                <CalendarIcon className="w-3.5 h-3.5 text-[#8C6A34]" />
+                                <span>Dự kiến hoàn thành: <strong>{new Date(req.estimatedCompletionDate).toLocaleDateString("vi-VN")}</strong></span>
+                              </div>
+                            )}
+                            {req.resultPodcastId && (
+                              <div className="text-xs text-emerald-900 bg-emerald-50 p-2 rounded-lg border border-emerald-200 flex items-center gap-1.5">
+                                <span><strong>Podcast xuất bản:</strong> {typeof req.resultPodcastId === "object" ? req.resultPodcastId.title : req.resultPodcastId}</span>
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="p-3.5">
+                            <span className="text-xs font-semibold text-[#8C6A34] bg-[#FDF8ED] px-2.5 py-1 rounded-md border border-[#E6D8BC] inline-block">
+                              {req.historicalPeriod || "Chưa phân loại"}
+                            </span>
+                          </td>
+
+                          <td className="p-3.5">
+                            <div className="space-y-0.5">
+                              <span className="font-bold text-[#2A1407] block">{requesterName}</span>
+                              <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300 inline-block">
+                                HỌC VIÊN PRO
                               </span>
                             </div>
-                          )}
-                          {req.estimatedCompletionDate && (
-                            <div className="mt-1.5 text-stone-600 text-xs">
-                              Dự kiến hoàn thành: <strong>{new Date(req.estimatedCompletionDate).toLocaleDateString("vi-VN")}</strong>
+                          </td>
+
+                          <td className="p-3.5">
+                            <div className="space-y-1">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                                req.status === "Pending" ? "bg-amber-50 text-amber-800 border-amber-300" :
+                                req.status === "Accepted" ? "bg-blue-50 text-blue-800 border-blue-300" :
+                                req.status === "InProgress" ? "bg-purple-50 text-purple-800 border-purple-300" :
+                                req.status === "Completed" ? "bg-emerald-50 text-emerald-800 border-emerald-300" :
+                                "bg-rose-50 text-rose-800 border-rose-300"
+                              }`}>
+                                {req.status === "Pending" ? "Chờ duyệt" :
+                                 req.status === "Accepted" ? "Đã nhận" :
+                                 req.status === "InProgress" ? "Đang soạn" :
+                                 req.status === "Completed" ? "Hoàn thành" :
+                                 "Từ chối"}
+                              </span>
+                              {req.status !== "Pending" && (
+                                <small className="block text-[10px] text-stone-500 font-semibold">
+                                  GV: {req.assignedTeacherId && typeof req.assignedTeacherId === "object" ? req.assignedTeacherId.name : "Hệ thống"}
+                                </small>
+                              )}
                             </div>
-                          )}
-                          {req.resultPodcastId && (
-                            <div className="mt-2 text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200 text-xs">
-                              <strong>Podcast xuất bản:</strong> {typeof req.resultPodcastId === "object" ? req.resultPodcastId.title : req.resultPodcastId}
+                          </td>
+
+                          <td className="p-3.5 text-center">
+                            <div className="flex flex-col gap-1.5 justify-center items-center">
+                              {req.status === "Pending" && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setAcceptingRequestId(req._id);
+                                      setNeedsGameCreation(false);
+                                      setPedagogicalNotes("");
+                                      setEstimatedCompletionDate("");
+                                    }}
+                                    className="w-24 py-1.5 bg-[#53270D] text-white hover:bg-[#3C1E0A] rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+                                  >
+                                    <BookIcon className="w-3.5 h-3.5 text-amber-300" />
+                                    <span>Nhận soạn</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setRejectingRequestId(req._id);
+                                      setRejectReason("");
+                                      setFeedbackError("");
+                                    }}
+                                    className="w-24 py-1.5 bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-300 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
+                                  >
+                                    <XCircleIcon className="w-3.5 h-3.5 text-rose-700" />
+                                    <span>Từ chối</span>
+                                  </button>
+                                </>
+                              )}
+                              {req.status === "Accepted" && isMyAssignment && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartRequest(req._id)}
+                                  className="w-28 py-1.5 bg-purple-800 text-white hover:bg-purple-900 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+                                >
+                                  <FileTextIcon className="w-3.5 h-3.5" />
+                                  <span>Bắt đầu soạn</span>
+                                </button>
+                              )}
+                              {req.status === "InProgress" && isMyAssignment && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const pId = typeof req.resultPodcastId === "object" ? req.resultPodcastId?._id : req.resultPodcastId;
+                                    const pTitle = typeof req.resultPodcastId === "object" ? req.resultPodcastId?.title : "bài soạn";
+                                    triggerCompleteRequest(req._id, pId || null, pTitle || "bài soạn");
+                                  }}
+                                  className="w-28 py-1.5 bg-emerald-700 text-white hover:bg-emerald-800 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+                                >
+                                  <CheckCircleIcon className="w-3.5 h-3.5" />
+                                  <span>Hoàn thành</span>
+                                </button>
+                              )}
+                              {isMyAssignment && req.resultPodcastId && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const podcastId = typeof req.resultPodcastId === "object" ? req.resultPodcastId?._id : req.resultPodcastId;
+                                    if (podcastId) {
+                                      openEditPodcastModal(podcastId);
+                                    }
+                                  }}
+                                  className="w-28 py-1.5 bg-[#FFFDF8] text-[#53270D] border border-[#D8C49A] hover:bg-[#F5EBD4] rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                                >
+                                  <span>Chỉnh sửa Podcast</span>
+                                </button>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <span>{req.historicalPeriod || "Chưa phân loại"}</span>
-                        <span>
-                          {req.requesterId && typeof req.requesterId === "object" ? (req.requesterId.name || req.requesterId.email) : "Học viên Pro"}
-                        </span>
-                        <span>
-                          <span className={`inline-block px-2.5 py-1 rounded text-xs font-semibold ${
-                            req.status === "Pending" ? "bg-amber-100 text-amber-800" :
-                            req.status === "Accepted" ? "bg-blue-100 text-blue-800" :
-                            req.status === "InProgress" ? "bg-purple-100 text-purple-800" :
-                            req.status === "Completed" ? "bg-emerald-100 text-emerald-800" :
-                            "bg-rose-100 text-rose-800"
-                          }`}>
-                            {req.status === "Pending" ? "Chờ duyệt" :
-                             req.status === "Accepted" ? "Đã nhận" :
-                             req.status === "InProgress" ? "Đang soạn" :
-                             req.status === "Completed" ? "Hoàn thành" :
-                             "Từ chối"}
-                          </span>
-                          {req.status !== "Pending" && (
-                            <small className="block mt-1 text-[10px] text-stone-500">
-                              GV: {req.assignedTeacherId && typeof req.assignedTeacherId === "object" ? req.assignedTeacherId.name : "N/A"}
-                            </small>
-                          )}
-                        </span>
-                        <div className="admin-row-actions teacher-row-actions flex flex-col gap-1.5 justify-center">
-                          {req.status === "Pending" && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setAcceptingRequestId(req._id);
-                                  setNeedsGameCreation(false);
-                                  setPedagogicalNotes("");
-                                  setEstimatedCompletionDate("");
-                                }}
-                                className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700"
-                              >
-                                Nhận soạn
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setRejectingRequestId(req._id);
-                                  setRejectReason("");
-                                  setFeedbackError("");
-                                }}
-                                className="px-2 py-1 bg-rose-600 text-white rounded text-xs font-semibold hover:bg-rose-700"
-                              >
-                                Từ chối
-                              </button>
-                            </>
-                          )}
-                          {req.status === "Accepted" && isMyAssignment && (
-                            <button
-                              type="button"
-                              onClick={() => handleStartRequest(req._id)}
-                              className="px-2 py-1 bg-purple-600 text-white rounded text-xs font-semibold hover:bg-purple-700"
-                            >
-                              Bắt đầu soạn
-                            </button>
-                          )}
-                          {req.status === "InProgress" && isMyAssignment && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const pId = typeof req.resultPodcastId === "object" ? req.resultPodcastId?._id : req.resultPodcastId;
-                                const pTitle = typeof req.resultPodcastId === "object" ? req.resultPodcastId?.title : "bài soạn";
-                                triggerCompleteRequest(req._id, pId || null, pTitle || "bài soạn");
-                              }}
-                              className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700"
-                            >
-                              Hoàn thành
-                            </button>
-                          )}
-                          {isMyAssignment && req.resultPodcastId && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const podcastId = typeof req.resultPodcastId === "object" ? req.resultPodcastId?._id : req.resultPodcastId;
-                                if (podcastId) {
-                                  openEditPodcastModal(podcastId);
-                                }
-                              }}
-                              className="px-2 py-1 bg-amber-600 text-white rounded text-xs font-semibold hover:bg-amber-700"
-                            >
-                              Chỉnh sửa Podcast
-                            </button>
-                          )}
-                          {req.status === "Completed" && !isMyAssignment && (
-                            <span className="text-[10px] text-stone-400 italic">Không có thao tác</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {requests.length === 0 && (
-                    <p className="admin-empty">
-                      Không có yêu cầu bài học nào cần xử lý.
-                    </p>
-                  )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {requests.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-stone-500 italic">
+                          Chưa có yêu cầu bài học nào cần xử lý.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* PAGINATION BAR FOR REQUESTS TAB */}
+              <div className="p-4 border-t border-[#E6D8BC] bg-[#FDF8ED] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold">
+                <div className="text-stone-600">
+                  Hiển thị {requests.length === 0 ? 0 : (requestPage - 1) * requestLimit + 1} - {Math.min(requestPage * requestLimit, requests.length)} trong {requests.length} nội dung
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={requestPage <= 1}
+                    onClick={() => setRequestPage((prev) => Math.max(1, prev - 1))}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#D8C49A] bg-[#FFFDF8] text-[#2A1407] hover:bg-[#F5EBD4] disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold cursor-pointer"
+                  >
+                    ‹
+                  </button>
+
+                  {Array.from({ length: totalRequestPages }, (_, i) => i + 1).map((pNum) => (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => setRequestPage(pNum)}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                        requestPage === pNum
+                          ? "bg-[#53270D] text-white border-[#53270D] shadow-xs"
+                          : "bg-[#FFFDF8] border-[#D8C49A] text-[#2A1407] hover:bg-[#F5EBD4]"
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    disabled={requestPage >= totalRequestPages}
+                    onClick={() => setRequestPage((prev) => Math.min(totalRequestPages, prev + 1))}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#D8C49A] bg-[#FFFDF8] text-[#2A1407] hover:bg-[#F5EBD4] disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold cursor-pointer"
+                  >
+                    ›
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={requestLimit}
+                    onChange={(e) => {
+                      setRequestLimit(Number(e.target.value));
+                      setRequestPage(1);
+                    }}
+                    className="px-2.5 py-1 bg-[#FFFDF8] border border-[#D8C49A] rounded-lg text-xs font-bold text-[#2A1407] outline-none cursor-pointer"
+                  >
+                    <option value={5}>5 / trang</option>
+                    <option value={10}>10 / trang</option>
+                    <option value={20}>20 / trang</option>
+                    <option value={50}>50 / trang</option>
+                  </select>
                 </div>
               </div>
             </div>
           )}
-
-
-        </div>
-      </div>
+        </main>
 
       {selectedItem && (
         <ContentDetailModal
@@ -1685,6 +2137,7 @@ export default function TeacherPage() {
           </div>
         </div>
       )}
+      </div>
     </section>
   );
 }

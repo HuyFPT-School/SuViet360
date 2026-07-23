@@ -310,23 +310,8 @@ export default function ProfilePage() {
           <span className="breadcrumb__current">Hồ sơ cá nhân</span>
         </div>
 
-        {/* ── Top section: Sidebar + Profile card ── */}
+        {/* ── Top section: Profile card ── */}
         <div className="profile-top">
-
-          {/* Sidebar */}
-          <div className="card sidebar">
-            <div className="sidebar__title">Hồ Sơ Cá Nhân</div>
-            <div className="sidebar__divider" />
-            {sidebarItems.map((label, i) => (
-              <div
-                key={i}
-                className={`sidebar__item${activeTab === i ? " sidebar__item--active" : ""}`}
-                onClick={() => setActiveTab(i)}
-              >
-                <span className="sidebar__item-label">{label}</span>
-              </div>
-            ))}
-          </div>
 
           {/* Profile card */}
           <div className="card profile-card">
