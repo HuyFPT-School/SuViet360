@@ -15,25 +15,25 @@ const DEFAULT_ANIMATIONS = [
       {
         key: "player-idle-0",
         frame: 1,
-        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201247/suviet360/characters/6a2af95e4c9d3ff442fd8f38/idle/eumvtkr5hfccyf2pnpl7.png",
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1784782640/suviet360/characters/6a619f3012f1128da11b1bd7/idle/s4ldmn4okxz8ddcjy8zj.png",
         publicId: ""
       },
       {
         key: "player-idle-1",
         frame: 2,
-        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201249/suviet360/characters/6a2af95e4c9d3ff442fd8f38/idle/cixrwgikmkidhzztqwgk.png",
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1784782641/suviet360/characters/6a619f3012f1128da11b1bd7/idle/hrzifah8plmh5cxeka0m.png",
         publicId: ""
       },
       {
         key: "player-idle-2",
         frame: 3,
-        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201250/suviet360/characters/6a2af95e4c9d3ff442fd8f38/idle/ycshcervjyffrgdnhu2g.png",
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1784782641/suviet360/characters/6a619f3012f1128da11b1bd7/idle/jbq46zp6tocep0cxkyxh.png",
         publicId: ""
       },
       {
         key: "player-idle-3",
         frame: 4,
-        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201253/suviet360/characters/6a2af95e4c9d3ff442fd8f38/idle/caa33tesryog46arnddo.png",
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1784782642/suviet360/characters/6a619f3012f1128da11b1bd7/idle/yatacjuzbnhlbptz22l6.png",
         publicId: ""
       }
     ]
@@ -44,31 +44,31 @@ const DEFAULT_ANIMATIONS = [
       {
         key: "player-run-0",
         frame: 5,
-        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201254/suviet360/characters/6a2af95e4c9d3ff442fd8f38/run/f0cpsgukkhrlpjmn54l6.png",
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1784782642/suviet360/characters/6a619f3012f1128da11b1bd7/run/ty6ac0qgrcuytgmdmgh2.png",
         publicId: ""
       },
       {
         key: "player-run-1",
         frame: 6,
-        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201255/suviet360/characters/6a2af95e4c9d3ff442fd8f38/run/dyiibnswiksor2yoqxbp.png",
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1784782643/suviet360/characters/6a619f3012f1128da11b1bd7/run/m7hevzd9yib8j4kaux8i.png",
         publicId: ""
       },
       {
         key: "player-run-2",
         frame: 7,
-        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201257/suviet360/characters/6a2af95e4c9d3ff442fd8f38/run/hkp2vhguoafabhkecxeh.png",
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1784782644/suviet360/characters/6a619f3012f1128da11b1bd7/run/q2wctzddysysuc4qsupm.png",
         publicId: ""
       },
       {
         key: "player-run-3",
-        frame: 8,
-        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201258/suviet360/characters/6a2af95e4c9d3ff442fd8f38/run/wgwiqmxrphgqppgfrj0q.png",
+        frame: 9,
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1784782644/suviet360/characters/6a619f3012f1128da11b1bd7/run/q1a02k3uhbkjr0iuziaa.png",
         publicId: ""
       },
       {
         key: "player-run-4",
-        frame: 9,
-        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1781201260/suviet360/characters/6a2af95e4c9d3ff442fd8f38/run/jk3cvlak02cp5yqsdqjc.png",
+        frame: 10,
+        imageUrl: "https://res.cloudinary.com/dt6uoyt1t/image/upload/v1784782645/suviet360/characters/6a619f3012f1128da11b1bd7/run/ixnvfndrmnxq12tmqfly.png",
         publicId: ""
       }
     ]

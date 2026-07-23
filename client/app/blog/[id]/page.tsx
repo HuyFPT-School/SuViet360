@@ -36,6 +36,9 @@ export default function BlogDetailPage() {
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const [replyInput, setReplyInput] = useState("");
 
+  // History Modal state
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
   // Report Modal states
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ type: "Post" | "Comment"; id: string } | null>(null);
@@ -240,7 +243,7 @@ export default function BlogDetailPage() {
     switch (role) {
       case "teacher": return "Giáo viên";
       case "admin": return "Quản trị";
-      case "staff": return "Nhân viên";
+      case "staff": return "Biên tập viên";
       default: return null;
     }
   };
@@ -301,7 +304,18 @@ export default function BlogDetailPage() {
                 <span className="blog-comment-role-badge">{getRoleBadge(post.author.role)}</span>
               )}
             </div>
-            <div className="blog-post-time">Đăng lúc {formatDate(post.createdAt)}</div>
+            <div className="blog-post-time flex items-center gap-1.5">
+              <span>Đăng lúc {formatDate(post.createdAt)}</span>
+              {(post.isEdited || (post.editHistory && post.editHistory.length > 0)) && (
+                <button
+                  type="button"
+                  onClick={() => setShowHistoryModal(true)}
+                  className="text-xs text-[#a84d28] font-bold underline hover:text-[#8a3c1e] transition-colors cursor-pointer"
+                >
+                  (Đã chỉnh sửa)
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Delete options for owner / mod */}
@@ -582,6 +596,59 @@ export default function BlogDetailPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit History Modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#fdf9f1] border-2 border-[#c9a15a] rounded-2xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative text-[#2c1a0e] max-h-[85vh] flex flex-col">
+            <button
+              onClick={() => setShowHistoryModal(false)}
+              className="absolute top-4 right-4 text-[#8c6a34] hover:text-[#4a1f24] font-bold text-base cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-xl font-extrabold text-[#4a1f24] uppercase mb-4 border-b border-[#e8d5b5] pb-3" style={{ fontFamily: '"Cinzel", serif' }}>
+              LỊCH SỬ CHỈNH SỬA BÀI VIẾT
+            </h3>
+
+            <div className="overflow-y-auto pr-2 space-y-4 flex-1">
+              {post.editHistory && post.editHistory.length > 0 ? (
+                post.editHistory.map((item, idx) => (
+                  <div key={idx} className="bg-white border border-[#e8d5b5] rounded-xl p-4 space-y-2 shadow-sm">
+                    <div className="flex items-center justify-between text-xs text-[#a84d28] font-bold">
+                      <span>Phiên bản gốc #{idx + 1}</span>
+                      <span>{formatDate(item.editedAt)}</span>
+                    </div>
+                    {item.title && (
+                      <h4 className="font-bold text-sm text-[#3a2312] border-b border-amber-100 pb-1">
+                        {item.title}
+                      </h4>
+                    )}
+                    <p className="text-xs text-[#5c4a3d] leading-relaxed whitespace-pre-wrap">
+                      {item.content}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-[#8c6a34] italic text-center py-6">
+                  Bài viết chưa ghi nhận lần chỉnh sửa nào trước đó.
+                </p>
+              )}
+            </div>
+
+            <div className="pt-4 mt-2 border-t border-[#e8d5b5] flex justify-end">
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="px-5 py-2 rounded-xl bg-[#2c1216] text-[#f6e1ba] border border-[#c9a15a]/50 font-bold text-xs uppercase tracking-wider hover:bg-[#4a1f24] transition cursor-pointer"
+                style={{ fontFamily: '"Cinzel", serif' }}
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -494,9 +494,9 @@ export default function PodcastTab({
                 disabled={isTeacherPodcast}
                 className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-stone-100 disabled:cursor-not-allowed"
               >
-                <option value="Easy">Dễ (Easy)</option>
-                <option value="Medium">Trung bình (Medium)</option>
-                <option value="Hard">Khó (Hard)</option>
+                <option value="Easy">Dễ</option>
+                <option value="Medium">Trung cấp</option>
+                <option value="Hard">Nâng cao</option>
               </select>
             </div>
 

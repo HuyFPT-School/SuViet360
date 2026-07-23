@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import dynamic from "next/dynamic";
@@ -13,7 +13,41 @@ const PhaserGame = dynamic(() => import("@/components/PhaserGame"), {
   loading: () => <p className="text-center py-6 text-amber-700 font-semibold">Đang tải game...</p>,
 });
 
-// --- Icons ---
+const LockIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const romanToArabic = (roman: string): number => {
+  const val: Record<string, number> = { i: 1, v: 5, x: 10, l: 50, c: 100, d: 500, m: 1000 };
+  let total = 0;
+  let prev = 0;
+  for (let i = roman.length - 1; i >= 0; i--) {
+    const char = roman[i].toLowerCase();
+    const current = val[char] || 0;
+    if (current < prev) {
+      total -= current;
+    } else {
+      total += current;
+    }
+    prev = current;
+  }
+  return total;
+};
+
+const extractNumberFromString = (str: string): number => {
+  const arabicMatch = str.match(/(?:Chủ đề|Chủ Đề|CHỦ ĐỀ|Chương|CHƯƠNG|Lớp|Bài|BÀI)\s*(\d+)/i);
+  if (arabicMatch) return parseInt(arabicMatch[1], 10);
+  const romanMatch = str.match(/(?:Chủ đề|Chủ Đề|CHỦ ĐỀ|Chương|CHƯƠNG)\s*([ivxlcdm]+)/i);
+  if (romanMatch) {
+    const val = romanToArabic(romanMatch[1]);
+    if (val > 0) return val;
+  }
+  const anyNumber = str.match(/\d+/);
+  return anyNumber ? parseInt(anyNumber[0], 10) : 999999;
+};
 const HomeIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
 const ClockIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
 const BookOpenIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
@@ -76,9 +110,16 @@ const MOCK_COMMENTS: any[] = [];
 
 export default function PodcastDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id as string;
 
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && !user && id) {
+      router.push(`/login?redirect=${encodeURIComponent(`/podcasts/${id}`)}`);
+    }
+  }, [user, authLoading, id, router]);
   const [podcast, setPodcast] = useState<Record<string, any> | null>(null);
   const [notes, setNotes] = useState<Record<string, any>[]>([]);
   const [comments, setComments] = useState<Record<string, any>[]>([]);
@@ -225,10 +266,12 @@ export default function PodcastDetailPage() {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [noteTimestamp, setNoteTimestamp] = useState(0);
 
-  // Completion states
+  // Completion & Premium states
   const [isCompleted, setIsCompleted] = useState(false);
   const [xpGained, setXpGained] = useState<number | null>(null);
   const [showCompletionToast, setShowCompletionToast] = useState(false);
+  const [isLockedPremium, setIsLockedPremium] = useState(false);
+  const [premiumEpIndex, setPremiumEpIndex] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -241,17 +284,43 @@ export default function PodcastDetailPage() {
           return;
         }
 
-
         const [podRes, notesRes, commentsRes] = await Promise.all([
           api.get(`/podcasts/${id}`),
           api.get(`/podcast-notes/${id}`).catch(() => ({ data: { data: [] } })),
           api.get(`/podcast-comments/${id}`).catch(() => ({ data: { data: [] } }))
         ]);
         
-        setPodcast(podRes.data.data);
+        const currentPod = podRes.data.data;
+        setPodcast(currentPod);
         setNotes(notesRes.data.data || []);
         setComments(commentsRes.data.data || []);
-        setDuration(podRes.data.data.duration || 0);
+        setDuration(currentPod.duration || 0);
+
+        // --- VIP Premium Episode Check (Index >= 3 in category list) ---
+        const isVIPUser =
+          user &&
+          (user.subscriptionTier === "Student Plus" || user.subscriptionTier === "Student Pro") &&
+          user.subscriptionExpiry &&
+          new Date(user.subscriptionExpiry) > new Date();
+
+        if (currentPod?.category) {
+          try {
+            const catRes = await api.get(`/podcasts?category=${encodeURIComponent(currentPod.category)}`);
+            const sortedEps = (catRes.data?.data || []).sort((a: any, b: any) => {
+              const numA = extractNumberFromString(a.title);
+              const numB = extractNumberFromString(b.title);
+              if (numA !== numB) return numA - numB;
+              return a.title.localeCompare(b.title, 'vi');
+            });
+            const epIndex = sortedEps.findIndex((e: any) => e._id === id);
+            setPremiumEpIndex(epIndex >= 0 ? epIndex + 1 : 4);
+            if (epIndex >= 3 && !isVIPUser) {
+              setIsLockedPremium(true);
+            }
+          } catch (catErr) {
+            console.error("Cat check error:", catErr);
+          }
+        }
 
         if (user) {
           try {
@@ -526,6 +595,37 @@ export default function PodcastDetailPage() {
   };
 
   if (loading) return <div className="min-h-screen bg-transparent flex items-center justify-center text-[#8c6a34]">Đang tải...</div>;
+  
+  if (isLockedPremium) {
+    return (
+      <div className="min-h-screen bg-[#fdf9f1] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white border-2 border-[#c9a15a] rounded-2xl p-8 text-center shadow-2xl space-y-4">
+          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-tr from-[#c9a15a] to-[#e5b869] text-[#1a0f0a] border-2 border-[#c9a15a] flex items-center justify-center shadow-lg">
+            <LockIcon className="w-10 h-10 text-[#1a0f0a]" />
+          </div>
+          <h2 className="text-xl font-bold text-[#4a1f24] uppercase font-display">BÀI HỌC PREMIUM GÓI VIP</h2>
+          <p className="text-sm text-[#6b4a2b] leading-relaxed">
+            Gói <strong>Free</strong> hỗ trợ nghe miễn phí 3 bài học đầu tiên. Bài học thứ <strong>{premiumEpIndex}</strong> này thuộc kho tài nguyên độc quyền của gói <strong className="text-[#a84d28]">Student Plus</strong> và <strong className="text-[#a84d28]">Student Pro</strong>.
+          </p>
+          <div className="pt-2 flex flex-col gap-3">
+            <Link
+              href="/subscription"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#c9a15a] to-[#9a702e] text-[#1a0f0a] font-bold text-xs uppercase tracking-wider shadow hover:brightness-110 transition font-display block text-center"
+            >
+              Nâng Cấp Gói VIP Ngay
+            </Link>
+            <Link
+              href="/podcasts"
+              className="w-full py-3 rounded-xl bg-[#2c1216] text-[#f6e1ba] border border-[#c9a15a]/50 font-bold text-xs uppercase tracking-wider hover:bg-[#4a1f24] transition font-display block text-center"
+            >
+              Quay Về Danh Sách Podcast
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!podcast) return <div className="min-h-screen bg-transparent flex items-center justify-center text-[#8c6a34]">Không tìm thấy nội dung.</div>;
 
   return (
@@ -689,12 +789,8 @@ export default function PodcastDetailPage() {
                <div className="flex border-b border-[#e8d5b5] px-6">
                   <button 
                      onClick={() => setActiveTab("noidung")}
-                     className={`py-4 font-bold text-sm tracking-wider uppercase border-b-2 transition-colors mr-8 ${activeTab === 'noidung' ? 'border-[#a84d28] text-[#a84d28]' : 'border-transparent text-[#8c6a34] hover:text-[#5c4a3d]'}`}
+                     className={`py-4 font-bold text-sm tracking-wider uppercase border-b-2 transition-colors ${activeTab === 'noidung' ? 'border-[#a84d28] text-[#a84d28]' : 'border-transparent text-[#8c6a34] hover:text-[#5c4a3d]'}`}
                   >NỘI DUNG</button>
-                  <button 
-                     onClick={() => setActiveTab("tailieu")}
-                     className={`py-4 font-bold text-sm tracking-wider uppercase border-b-2 transition-colors ${activeTab === 'tailieu' ? 'border-[#a84d28] text-[#a84d28]' : 'border-transparent text-[#8c6a34] hover:text-[#5c4a3d]'}`}
-                  >TÀI LIỆU LIÊN QUAN</button>
                   {podcast?.lessonId && (
                      <button 
                         onClick={() => setActiveTab("game")}
@@ -740,9 +836,6 @@ export default function PodcastDetailPage() {
                         </div>
                       );
                    })()}
-                  {activeTab === "tailieu" && (
-                     <p>Chưa có tài liệu liên quan cho bài học này.</p>
-                  )}
                   {activeTab === "game" && podcast?.lessonId && (
                      <div className="space-y-4 relative">
                         {submitting && (

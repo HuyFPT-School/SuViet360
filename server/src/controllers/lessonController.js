@@ -302,8 +302,11 @@ const getLessonById = asyncHandler(async (req, res) => {
 const updateLesson = asyncHandler(async (req, res) => {
   const lesson = await lessonService.getLessonById(req.params.id);
 
-  // Ownership check (Issue #16)
-  if (lesson.createdBy.toString() !== req.user.id && req.user.role !== "admin") {
+  // Ownership & Role check: Staff or Lesson Creator can update
+  if (
+    lesson.createdBy.toString() !== req.user.id &&
+    req.user.role !== "staff"
+  ) {
     throw new AppError("You are not authorized to update this lesson", 403);
   }
 
@@ -385,8 +388,11 @@ const updateLesson = asyncHandler(async (req, res) => {
 const deleteLesson = asyncHandler(async (req, res) => {
   const lesson = await lessonService.getLessonById(req.params.id);
 
-  // Ownership check (Issue #16)
-  if (lesson.createdBy.toString() !== req.user.id && req.user.role !== "admin") {
+  // Ownership & Role check: Staff or Lesson Creator can delete
+  if (
+    lesson.createdBy.toString() !== req.user.id &&
+    req.user.role !== "staff"
+  ) {
     throw new AppError("You are not authorized to delete this lesson", 403);
   }
 

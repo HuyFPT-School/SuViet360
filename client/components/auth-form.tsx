@@ -9,9 +9,9 @@ import Link from "next/link";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 
 const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(2, "Họ và tên phải có ít nhất 2 ký tự"),
+  email: z.string().email("Vui lòng nhập địa chỉ email hợp lệ"),
+  password: z.string().min(8, "Mật khẩu phải có ít nhất 8 ký tự"),
 });
 
 const loginSchema = registerSchema.omit({ name: true });

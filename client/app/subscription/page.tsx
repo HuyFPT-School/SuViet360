@@ -8,9 +8,20 @@ import { useAuth } from "@/hooks/useAuth";
 import type { SubscriptionTier, Subscription, LessonRequest } from "@/types/subscription";
 import "./subscription.css";
 
+const LockIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
 export default function SubscriptionPage() {
   const router = useRouter();
-  const { user, refreshUser } = useAuth();
+  const { user, isLoading: authLoading, refreshUser } = useAuth();
+
+  // Auth Modal State for Unauthenticated Visitors
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [pendingTargetUrl, setPendingTargetUrl] = useState<string>("/subscription");
 
   // Tab State: "tiers" | "redeem" | "request"
   const [activeTab, setActiveTab] = useState<"tiers" | "redeem" | "request">("tiers");
@@ -94,6 +105,11 @@ export default function SubscriptionPage() {
   // Handle Redeem
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      setPendingTargetUrl("/subscription");
+      setShowAuthModal(true);
+      return;
+    }
     if (!redeemCode.trim()) {
       setRedeemError("Vui lòng nhập mã quà tặng.");
       return;
@@ -123,6 +139,11 @@ export default function SubscriptionPage() {
   // Handle Lesson Request Submit
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      setPendingTargetUrl("/subscription");
+      setShowAuthModal(true);
+      return;
+    }
     if (!lessonTitle.trim() || !lessonDesc.trim() || !lessonPeriod.trim()) {
       setRequestError("Vui lòng điền đầy đủ tất cả thông tin.");
       return;
@@ -479,9 +500,16 @@ export default function SubscriptionPage() {
                         </button>
                       ) : (
                         <button
-                          className="btn-gold"
+                          className="btn-gold cursor-pointer"
                           onClick={() => {
-                            router.push(`/subscription/checkout?tierId=${tier._id}&cycle=${billingCycle}`);
+                            const targetUrl = `/subscription/checkout?tierId=${tier._id}&cycle=${billingCycle}`;
+                            if (authLoading) return;
+                            if (!user) {
+                              setPendingTargetUrl(targetUrl);
+                              setShowAuthModal(true);
+                            } else {
+                              router.push(targetUrl);
+                            }
                           }}
                         >
                           Nâng Cấp Ngay
@@ -744,6 +772,57 @@ export default function SubscriptionPage() {
         )}
 
       </div>
+
+      {/* --- Auth Required Modal for VIP Package Subscription --- */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#fdf9f1] border-2 border-[#c9a15a] rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl relative text-center text-[#2c1a0e]">
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-4 right-4 text-[#8c6a34] hover:text-[#4a1f24] font-bold text-base cursor-pointer"
+              aria-label="Đóng"
+            >
+              ✕
+            </button>
+
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#4a1f24] text-[#f6e1ba] border-2 border-[#c9a15a] flex items-center justify-center shadow-lg">
+              <LockIcon className="w-8 h-8 text-[#e5b869]" />
+            </div>
+
+            <h3 className="text-xl font-extrabold text-[#4a1f24] uppercase mb-2" style={{ fontFamily: '"Cinzel", serif' }}>
+              YÊU CẦU ĐĂNG NHẬP / ĐĂNG KÝ
+            </h3>
+
+            <p className="text-sm text-[#6b4a2b] mb-6 leading-relaxed" style={{ fontFamily: '"Cormorant Garamond", serif' }}>
+              Vui lòng đăng nhập hoặc tạo tài khoản SuViet360 để tiến hành nâng cấp gói VIP, kích hoạt mã quà tặng và nhận các đặc quyền AI & bài học nâng cao.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => {
+                  setShowAuthModal(false);
+                  router.push(`/login?redirect=${encodeURIComponent(pendingTargetUrl)}`);
+                }}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#c9a15a] to-[#9a702e] text-[#1a0f0a] font-bold text-xs uppercase tracking-wider shadow hover:brightness-110 transition cursor-pointer"
+                style={{ fontFamily: '"Cinzel", serif' }}
+              >
+                Đăng Nhập Ngay
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowAuthModal(false);
+                  router.push(`/register?redirect=${encodeURIComponent(pendingTargetUrl)}`);
+                }}
+                className="px-6 py-2.5 rounded-xl bg-[#2c1216] text-[#f6e1ba] border border-[#c9a15a]/50 font-bold text-xs uppercase tracking-wider hover:bg-[#4a1f24] transition cursor-pointer"
+                style={{ fontFamily: '"Cinzel", serif' }}
+              >
+                Đăng Ký Tài Khoản
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

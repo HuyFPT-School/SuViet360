@@ -68,6 +68,26 @@ const blogPostSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    isEdited: {
+      type: Boolean,
+      default: false,
+    },
+    editHistory: [
+      {
+        title: { type: String },
+        content: { type: String },
+        editedAt: { type: Date, default: Date.now },
+      },
+    ],
+    hasPendingDraft: {
+      type: Boolean,
+      default: false,
+    },
+    pendingDraft: {
+      title: { type: String, default: "" },
+      content: { type: String, default: "" },
+      updatedAt: { type: Date },
+    },
   },
   {
     timestamps: true,

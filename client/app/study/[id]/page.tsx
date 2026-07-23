@@ -255,7 +255,7 @@ export default function StudyUnitDetailsPage() {
               {unit.duration} phút học
             </span>
             <span className="bg-amber-100 text-amber-900 border border-amber-200 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded">
-              Level: {unit.difficulty === "Easy" ? "Dễ" : unit.difficulty === "Medium" ? "Vừa" : "Khó"}
+              Cấp độ: {unit.difficulty === "Easy" ? "Dễ" : unit.difficulty === "Medium" ? "Vừa" : "Khó"}
             </span>
           </div>
           <h1 className="text-2xl md:text-3xl font-display font-bold text-amber-950 leading-snug">
