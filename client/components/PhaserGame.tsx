@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Phaser from "phaser";
+
 
 // ─── Types matching API response ──────────────────────────────────────
 export type SpriteFrame = { key: string; frame: number; imageUrl: string };
@@ -60,6 +61,29 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
 
   const callbackRef = useRef(onQuizComplete);
   callbackRef.current = onQuizComplete;
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch((err) => {
+        console.error("Error enabling fullscreen:", err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return;
@@ -636,6 +660,74 @@ export default function PhaserGame({ lessonGame, onQuizComplete }: PhaserGamePro
   }, []);
 
   return (
-    <div ref={containerRef} style={{ width: "100%", height: "70vh", minHeight: 480 }} />
+    <div
+      ref={containerRef}
+      className="phaser-game-container"
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "70vh",
+        minHeight: 480,
+        backgroundColor: "#0c0804",
+        borderRadius: "8px",
+        overflow: "hidden"
+      }}
+    >
+      <style>{`
+        .phaser-game-container:fullscreen {
+          width: 100vw !important;
+          height: 100vh !important;
+          max-width: none !important;
+          max-height: none !important;
+          background-color: #0c0804 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          border-radius: 0 !important;
+        }
+        .phaser-fullscreen-btn {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          z-index: 101;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: rgba(255, 248, 220, 0.85);
+          border: 2px solid #8B6914;
+          color: #5c3300;
+          cursor: pointer;
+          transition: all 0.2s ease-in-out;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        .phaser-fullscreen-btn:hover {
+          background: #f4ebd0;
+          transform: scale(1.08);
+          color: #8B6914;
+        }
+        .phaser-fullscreen-btn:active {
+          transform: scale(0.95);
+        }
+      `}</style>
+      <button
+        onClick={toggleFullscreen}
+        className="phaser-fullscreen-btn"
+        title={isFullscreen ? "Thoát toàn màn hình" : "Phóng to toàn màn hình"}
+        aria-label="Toggle Fullscreen"
+      >
+        {isFullscreen ? (
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 14h6v6m10-6h-6v6M4 10h6V4m10 6h-6V4"/>
+          </svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+        )}
+      </button>
+    </div>
   );
 }
