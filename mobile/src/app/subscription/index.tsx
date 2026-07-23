@@ -44,6 +44,8 @@ export default function SubscriptionScreen() {
   const [reqDesc, setReqDesc] = useState('');
   const [reqPeriod, setReqPeriod] = useState('');
   const [reqLoading, setReqLoading] = useState(false);
+  const [reqSuccess, setReqSuccess] = useState(false);
+  const [reqError, setReqError] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -94,20 +96,23 @@ export default function SubscriptionScreen() {
 
   const handleRequest = async () => {
     if (!reqTitle.trim() || !reqDesc.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập tiêu đề và mô tả.');
+      setReqError('Vui lòng nhập tiêu đề và mô tả.');
       return;
     }
     setReqLoading(true);
+    setReqError('');
+    setReqSuccess(false);
     try {
       await subscriptionApi.createLessonRequest(reqTitle.trim(), reqDesc.trim(), reqPeriod || undefined);
-      Alert.alert('Thành công', 'Yêu cầu bài học đã được gửi!');
+      setReqSuccess(true);
       setReqTitle('');
       setReqDesc('');
       setReqPeriod('');
       const reqs = await subscriptionApi.getMyLessonRequests();
       setLessonRequests(reqs);
-    } catch {
-      Alert.alert('Lỗi', 'Không thể gửi yêu cầu.');
+      setTimeout(() => setReqSuccess(false), 5000);
+    } catch (err: any) {
+      setReqError(err?.response?.data?.message || 'Không thể gửi yêu cầu.');
     } finally {
       setReqLoading(false);
     }
@@ -119,9 +124,46 @@ export default function SubscriptionScreen() {
   const formatPrice = (price: number) =>
     price.toLocaleString('vi-VN') + '₫';
 
+  // Tier level comparison (prevent downgrade)
+  const getTierLevel = (slug: string): number => {
+    const s = slug.toLowerCase();
+    if (s.includes('pro')) return 2;
+    if (s.includes('plus')) return 1;
+    return 0;
+  };
+
+  const userTier = currentSub?.tier || 'Free';
+  const currentLevel = getTierLevel(userTier);
+
+  // Fallback tiers when API fails / MongoDB empty
+  const FALLBACK_TIERS: SubscriptionTier[] = [
+    {
+      _id: 'free', name: 'Free', slug: 'free', priceMonthly: 0, priceYearly: 0,
+      features: { dailyAIQueries: 3, premiumLessons: false, customLessonRequest: false, bonusXPMultiplier: 1.0 },
+      isActive: true, displayOrder: 0, description: 'Trải nghiệm cơ bản với các bài học lịch sử Việt Nam', badge: 'Free',
+    },
+    {
+      _id: 'student-plus', name: 'Student Plus', slug: 'student-plus', priceMonthly: 49000, priceYearly: 490000,
+      features: { dailyAIQueries: 20, premiumLessons: true, customLessonRequest: false, bonusXPMultiplier: 1.5 },
+      isActive: true, displayOrder: 1, description: 'Mở khóa bài học premium và tăng tốc học tập', badge: 'Plus',
+    },
+    {
+      _id: 'student-pro', name: 'Student Pro', slug: 'student-pro', priceMonthly: 99000, priceYearly: 990000,
+      features: { dailyAIQueries: -1, premiumLessons: true, customLessonRequest: true, bonusXPMultiplier: 2.0 },
+      isActive: true, displayOrder: 2, description: 'Trải nghiệm tối đa với AI không giới hạn và yêu cầu bài học riêng', badge: 'Pro',
+    },
+  ];
+
+  const displayedTiers: SubscriptionTier[] = tiers.length > 0 ? tiers : FALLBACK_TIERS;
+
   const renderTierCard = (tier: SubscriptionTier, index: number) => {
     const isPopular = index === 1;
-    const isCurrent = currentSub?.tier === tier.name;
+    const isFree = tier.slug === 'free';
+    const isCurrent =
+      userTier.toLowerCase() === tier.slug.toLowerCase() ||
+      userTier.toLowerCase() === tier.name.toLowerCase();
+    const targetLevel = getTierLevel(tier.slug || tier.name);
+
     return (
       <View key={tier._id} style={[styles.tierCard, isPopular && styles.tierCardPopular]}>
         {isPopular && <Text style={styles.popularBadge}>Phổ Biến</Text>}
@@ -129,33 +171,64 @@ export default function SubscriptionScreen() {
         <Text style={styles.tierDescription}>{tier.description}</Text>
         <View style={styles.priceRow}>
           <Text style={styles.tierPrice}>{formatPrice(getPrice(tier))}</Text>
-          <Text style={styles.priceUnit}>/{billingCycle === 'monthly' ? 'tháng' : 'năm'}</Text>
+          {!isFree && (
+            <Text style={styles.priceUnit}>/{billingCycle === 'monthly' ? 'tháng' : 'năm'}</Text>
+          )}
         </View>
         <View style={styles.featuresList}>
-          {tier.features?.premiumLessons && (
-            <View style={styles.featureItem}>
-              <Ionicons name="checkmark-circle" size={16} color={Colors.light.success} />
-              <Text style={styles.featureText}>Bài học cao cấp</Text>
-            </View>
-          )}
-          {tier.features?.customLessonRequest && (
-            <View style={styles.featureItem}>
-              <Ionicons name="checkmark-circle" size={16} color={Colors.light.success} />
-              <Text style={styles.featureText}>Yêu cầu bài học riêng</Text>
-            </View>
-          )}
+          {/* AI queries */}
           <View style={styles.featureItem}>
             <Ionicons name="checkmark-circle" size={16} color={Colors.light.success} />
-            <Text style={styles.featureText}>XP x{tier.features?.bonusXPMultiplier || 1}</Text>
+            <Text style={styles.featureText}>
+              {tier.features?.dailyAIQueries === -1
+                ? 'Không giới hạn AI'
+                : `${tier.features?.dailyAIQueries || 0} truy vấn AI/ngày`}
+            </Text>
           </View>
+          {/* Premium lessons */}
           <View style={styles.featureItem}>
-            <Ionicons name="checkmark-circle" size={16} color={Colors.light.success} />
-            <Text style={styles.featureText}>{tier.features?.dailyAIQueries || 0} truy vấn AI/ngày</Text>
+            <Ionicons
+              name={tier.features?.premiumLessons ? 'checkmark-circle' : 'close-circle'}
+              size={16}
+              color={tier.features?.premiumLessons ? Colors.light.success : Colors.light.textMuted}
+            />
+            <Text style={[styles.featureText, !tier.features?.premiumLessons && styles.featureDisabled]}>
+              {tier.features?.premiumLessons ? 'Bài học cao cấp' : 'Không học được bài Premium'}
+            </Text>
+          </View>
+          {/* Custom lesson request */}
+          <View style={styles.featureItem}>
+            <Ionicons
+              name={tier.features?.customLessonRequest ? 'checkmark-circle' : 'close-circle'}
+              size={16}
+              color={tier.features?.customLessonRequest ? Colors.light.success : Colors.light.textMuted}
+            />
+            <Text style={[styles.featureText, !tier.features?.customLessonRequest && styles.featureDisabled]}>
+              {tier.features?.customLessonRequest ? 'Yêu cầu bài học riêng' : 'Không yêu cầu bài học riêng'}
+            </Text>
+          </View>
+          {/* XP Multiplier */}
+          <View style={styles.featureItem}>
+            <Ionicons name="flash" size={16} color={Colors.light.gold} />
+            <Text style={styles.featureText}>
+              XP x{tier.features?.bonusXPMultiplier || 1} ({
+                (tier.features?.bonusXPMultiplier || 1) >= 2.0 ? 'Bậc thầy' :
+                (tier.features?.bonusXPMultiplier || 1) >= 1.5 ? 'Học nhanh' : 'Thường'
+              })
+            </Text>
           </View>
         </View>
-        {isCurrent ? (
+        {isFree ? (
+          <View style={[styles.currentBadge, { backgroundColor: Colors.light.backgroundCardAlt }]}>
+            <Text style={[styles.currentBadgeText, { color: Colors.light.textMuted }]}>Gói mặc định</Text>
+          </View>
+        ) : isCurrent ? (
           <View style={styles.currentBadge}>
-            <Text style={styles.currentBadgeText}>Gói Hiện Tại</Text>
+            <Text style={styles.currentBadgeText}>Đang kích hoạt</Text>
+          </View>
+        ) : currentLevel > targetLevel ? (
+          <View style={[styles.currentBadge, { backgroundColor: Colors.light.backgroundCardAlt, opacity: 0.6 }]}>
+            <Text style={[styles.currentBadgeText, { color: Colors.light.textMuted }]}>Đã có gói cao hơn</Text>
           </View>
         ) : (
           <GoldButton
@@ -212,7 +285,7 @@ export default function SubscriptionScreen() {
           {loadingTiers ? (
             <ActivityIndicator size="large" color={Colors.light.gold} style={{ marginTop: 40 }} />
           ) : (
-            tiers.map((t, i) => renderTierCard(t, i))
+            displayedTiers.map((t, i) => renderTierCard(t, i))
           )}
 
           {currentSub && (
@@ -265,11 +338,29 @@ export default function SubscriptionScreen() {
             <View style={styles.center}>
               <Ionicons name="lock-closed-outline" size={48} color={Colors.light.textMuted} />
               <Text style={styles.emptyText}>Tính năng này dành cho gói Student Pro</Text>
+              <Text style={[styles.emptyText, { fontSize: FontSizes.xs, marginTop: 4 }]}>
+                Vui lòng nâng cấp gói để tiếp tục.
+              </Text>
+              <TouchableOpacity style={{ marginTop: 16 }} onPress={() => setActiveTab('tiers')}>
+                <Text style={styles.linkText}>Nâng Cấp Gói Ngay →</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <>
               <View style={styles.redeemCard}>
                 <Text style={styles.sectionTitle}>Yêu Cầu Bài Học Mới</Text>
+                {reqSuccess ? (
+                  <View style={[styles.reqSuccessBox]}>
+                    <Ionicons name="checkmark-circle" size={20} color={Colors.light.success} />
+                    <Text style={styles.reqSuccessText}>Gửi yêu cầu bài học thành công! Giáo viên sẽ phản hồi sớm.</Text>
+                  </View>
+                ) : null}
+                {reqError ? (
+                  <View style={styles.reqErrorBox}>
+                    <Ionicons name="alert-circle" size={16} color={Colors.light.error} />
+                    <Text style={styles.reqErrorText}>{reqError}</Text>
+                  </View>
+                ) : null}
                 <TextInput
                   style={styles.redeemInput}
                   placeholder="Tiêu đề bài học"
@@ -297,7 +388,13 @@ export default function SubscriptionScreen() {
 
               {loadingRequests ? (
                 <ActivityIndicator size="small" color={Colors.light.gold} style={{ marginTop: 20 }} />
-              ) : lessonRequests.length > 0 ? (
+              ) : lessonRequests.length === 0 ? (
+                <View style={styles.center}>
+                  <Text style={[styles.emptyText, { fontSize: FontSizes.sm }]}>
+                    Bạn chưa gửi yêu cầu bài học nào.
+                  </Text>
+                </View>
+              ) : (
                 <View style={styles.requestsSection}>
                   <Text style={styles.sectionTitle}>Yêu Cầu Đã Gửi</Text>
                   {lessonRequests.map((r) => {
@@ -349,6 +446,13 @@ export default function SubscriptionScreen() {
                           <Text style={styles.reqPedagogicalText}>{r.pedagogicalNotes}</Text>
                         </View>
                       ) : null}
+                      {/* Teacher response */}
+                      {r.teacherResponse ? (
+                        <View style={styles.reqTeacherBox}>
+                          <Text style={styles.reqTeacherLabel}>Phản hồi từ giáo viên:</Text>
+                          <Text style={styles.reqTeacherText}>{r.teacherResponse}</Text>
+                        </View>
+                      ) : null}
                       {/* Game creation status */}
                       {r.needsGameCreation ? (
                         <View style={styles.reqGameRow}>
@@ -386,7 +490,7 @@ export default function SubscriptionScreen() {
                     );
                   })}
                 </View>
-              ) : null}
+              )}
             </>
           )}
         </ScrollView>
@@ -458,6 +562,7 @@ const styles = StyleSheet.create({
   featuresList: { gap: 8, marginBottom: 16 },
   featureItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   featureText: { color: Colors.light.textMain, fontSize: FontSizes.sm },
+  featureDisabled: { color: Colors.light.textDim },
   currentBadge: {
     backgroundColor: Colors.light.successBg,
     borderRadius: BorderRadius.md,
@@ -498,6 +603,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   errorMsg: { color: Colors.light.error, fontSize: FontSizes.xs },
+  // ─── Request success/error ─────────────────────────
+  reqSuccessBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(16, 185, 129, 0.15)', borderRadius: BorderRadius.sm, padding: 10, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)' },
+  reqSuccessText: { color: Colors.light.success, fontSize: FontSizes.xs, flex: 1 },
+  reqErrorBox: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  reqErrorText: { color: Colors.light.error, fontSize: FontSizes.xs, flex: 1 },
+  // ─── Teacher response ──────────────────────────────
+  reqTeacherBox: { backgroundColor: 'rgba(217, 165, 70, 0.1)', borderRadius: BorderRadius.sm, padding: 10, gap: 4, marginTop: 4 },
+  reqTeacherLabel: { color: Colors.light.gold, fontSize: FontSizes.xs, fontWeight: '700' },
+  reqTeacherText: { color: Colors.light.textMain, fontSize: FontSizes.sm, fontStyle: 'italic' },
   redeemResult: { alignItems: 'center', gap: 8, paddingTop: 12 },
   redeemResultTitle: { color: Colors.light.gold, fontSize: FontSizes.md, fontWeight: '700' },
   redeemResultText: { color: Colors.light.textMain, fontSize: FontSizes.sm },

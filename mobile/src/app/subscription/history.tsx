@@ -48,11 +48,16 @@ export default function HistoryScreen() {
   const formatAmount = (amount: number) => amount.toLocaleString('vi-VN') + '₫';
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const formatTime = (dateStr: string) =>
+    new Date(dateStr).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
-  const renderTransaction = ({ item }: { item: Transaction }) => (
+  const renderTransaction = ({ item }: { item: Transaction }) => {
+    const txCode = item.transactionId || item._id || 'SV-XXXX';
+    const isRecipientSelf = !item.isGift || (item.recipientId && item.buyerId && item.recipientId._id === item.buyerId._id);
+    return (
     <View style={styles.txCard}>
       <View style={styles.txHeader}>
-        <Text style={styles.txId}>#{item.transactionId?.slice(-8) || item._id.slice(-8)}</Text>
+        <Text style={styles.txId}>#{txCode.slice(-8)}</Text>
         <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLORS[item.status] || Colors.light.textMuted) + '22' }]}>
           <Text style={[styles.statusText, { color: STATUS_COLORS[item.status] || Colors.light.textMuted }]}>
             {STATUS_LABELS[item.status] || item.status}
@@ -62,11 +67,29 @@ export default function HistoryScreen() {
       <View style={styles.txBody}>
         <View style={styles.txDetail}>
           <Ionicons name="layers-outline" size={14} color={Colors.light.textMuted} />
-          <Text style={styles.txDetailText}>{item.tierId?.name || 'N/A'}</Text>
+          <Text style={styles.txDetailText}>{item.tierId?.name || 'Gói VIP'}</Text>
         </View>
         <View style={styles.txDetail}>
           <Ionicons name="card-outline" size={14} color={Colors.light.textMuted} />
           <Text style={styles.txDetailText}>{item.billingCycle === 'yearly' ? 'Hàng năm' : 'Hàng tháng'}</Text>
+        </View>
+        {/* Người nhận */}
+        <View style={styles.txDetail}>
+          <Ionicons name="person-outline" size={14} color={Colors.light.textMuted} />
+          {isRecipientSelf ? (
+            <View style={styles.selfBadge}>
+              <Text style={styles.selfBadgeText}>Bản thân</Text>
+            </View>
+          ) : (
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.txDetailText, { color: Colors.light.gold }]}>
+                🎁 Tặng: {item.recipientId?.name || 'Bạn bè'}
+              </Text>
+              <Text style={styles.txRecipientEmail}>
+                ({item.recipientId?.email || 'Email không xác định'})
+              </Text>
+            </View>
+          )}
         </View>
         {item.isGift && (
           <View style={styles.txDetail}>
@@ -82,16 +105,19 @@ export default function HistoryScreen() {
         )}
       </View>
       <View style={styles.txFooter}>
-        <Text style={styles.txDate}>{formatDate(item.createdAt)}</Text>
-        <Text style={styles.txAmount}>
+        <View>
+          <Text style={styles.txDate}>{formatDate(item.createdAt)}</Text>
+          <Text style={styles.txTime}>{formatTime(item.createdAt)}</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
           {item.discountAmount > 0 && (
-            <Text style={styles.txOriginalAmount}>{formatAmount(item.originalAmount)} → </Text>
+            <Text style={styles.txOriginalAmount}>{formatAmount(item.originalAmount)}</Text>
           )}
-          {formatAmount(item.amount)}
-        </Text>
+          <Text style={styles.txAmount}>{formatAmount(item.amount)}</Text>
+        </View>
       </View>
     </View>
-  );
+  );};
 
   return (
     <PageBackground style={styles.container}>
@@ -139,8 +165,19 @@ const styles = StyleSheet.create({
   txBody: { gap: 4, marginBottom: 8 },
   txDetail: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   txDetailText: { color: Colors.light.textMain, fontSize: FontSizes.sm },
-  txFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  txFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   txDate: { color: Colors.light.textDim, fontSize: FontSizes.xs },
+  txTime: { color: Colors.light.textDim, fontSize: FontSizes.xs, marginTop: 2 },
   txAmount: { color: Colors.light.gold, fontSize: FontSizes.md, fontWeight: '700' },
   txOriginalAmount: { color: Colors.light.textMuted, fontSize: FontSizes.xs, fontWeight: '400', textDecorationLine: 'line-through' },
+  selfBadge: {
+    backgroundColor: Colors.light.gold + '18',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.light.gold + '33',
+  },
+  selfBadgeText: { color: Colors.light.gold, fontSize: FontSizes.xs },
+  txRecipientEmail: { color: Colors.light.textDim, fontSize: FontSizes.xs, marginTop: 1 },
 });
