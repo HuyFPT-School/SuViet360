@@ -621,6 +621,10 @@ const googleLogin = asyncHandler(async (req, res) => {
 
   const user = await findOrCreateGoogleUser(payload);
 
+  if (user.isLocked) {
+    throw new AppError("Tài khoản của bạn đã bị khóa.", 403);
+  }
+
   await sendAuthResponse(res, 200, user, "Google login successful");
 });
 
@@ -682,6 +686,10 @@ const googleMobileCallback = asyncHandler(async (req, res) => {
 
     const user = await findOrCreateGoogleUser(payload);
 
+    if (user.isLocked) {
+      return res.redirect(buildAppUrl(`error=${encodeURIComponent("Tài khoản của bạn đã bị khóa.")}`));
+    }
+
     // Tạo mobileToken ngắn hạn (2 phút) để app gọi finalize
     const mobileToken = jwt.sign(
       { userId: user._id.toString() },
@@ -714,6 +722,10 @@ const googleMobileFinalize = asyncHandler(async (req, res) => {
   const user = await User.findById(decoded.userId);
   if (!user) {
     throw new AppError("User not found", 404);
+  }
+
+  if (user.isLocked) {
+    throw new AppError("Tài khoản của bạn đã bị khóa.", 403);
   }
 
   await sendAuthResponse(res, 200, user, "Google login successful");

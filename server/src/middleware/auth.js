@@ -32,6 +32,10 @@ const protect = asyncHandler(async (req, res, next) => {
     throw new AppError("Password recently changed. Please login again", 401);
   }
 
+  if (user.isLocked) {
+    throw new AppError("Tài khoản của bạn đã bị khóa.", 403);
+  }
+
   if (!user.isEmailVerified) {
     throw new AppError("Email not verified", 403);
   }
