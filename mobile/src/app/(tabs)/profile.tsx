@@ -21,18 +21,8 @@ import { useAppDispatch } from '@/store';
 import { Colors, FontSizes, BorderRadius, Spacing } from '@/constants/theme';
 import { GENDER_MAP } from '@/utils/format';
 
-const ACHIEVEMENTS = [
-  { title: 'Nhà Khám Phá', desc: 'Đã khám phá 10 di sản', color: '#D4AF37' },
-  { title: 'Nhà Sưu Tầm', desc: 'Sưu tầm 50 hiện vật', color: '#C0A060' },
-  { title: 'Học Giả Sử Việt', desc: 'Đọc 100 bài viết', color: '#B8963E' },
-  { title: 'Lữ Hành Thời Gian', desc: 'Hoàn thành 5 hành trình', color: '#A07830' },
-  { title: 'Bậc Thầy Bản Đồ', desc: 'Mở khóa 20 địa danh', color: '#C8A850' },
-  { title: 'Dấu Ấn Lịch Sử', desc: 'Đăng nhập 30 ngày', color: '#D4AF37' },
-];
-
 const SIDEBAR_ITEMS = [
   'Thông tin cá nhân',
-  'Thành tựu',
   'Hành trình của tôi',
   'Di sản đã mở khóa',
   'Nhật ký hành trình',
@@ -109,7 +99,7 @@ export default function ProfileScreen() {
             style={styles.loginButton}
             onPress={() => router.push('/login')}
           >
-            <Text style={styles.loginButtonText}>Đăng Nhập</Text>
+            <Text style={styles.loginButtonText}>Đăng nhập</Text>
           </TouchableOpacity>
         </View>
       </PageBackground>
@@ -121,7 +111,7 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <Ionicons name="person-outline" size={22} color={Colors.light.goldLight} />
-          <Text style={styles.headerTitle}>Cá Nhân</Text>
+          <Text style={styles.headerTitle}>Cá nhân</Text>
         </View>
         <TouchableOpacity onPress={handleLogout}>
           <Text style={styles.logoutText}>Đăng xuất</Text>
@@ -139,9 +129,9 @@ export default function ProfileScreen() {
         <Text style={styles.profileEmail}>{user.email}</Text>
         <View style={styles.roleBadge}>
           <Text style={styles.roleText}>
-            {user.role === 'admin' ? 'Quản Trị Viên' :
-             user.role === 'staff' ? 'Nhân Viên' :
-             user.role === 'teacher' ? 'Giáo Viên' : 'Học Viên'}
+            {user.role === 'admin' ? 'Quản trị viên' :
+             user.role === 'staff' ? 'Nhân viên' :
+             user.role === 'teacher' ? 'Giáo viên' : 'Học viên'}
           </Text>
         </View>
         {subInfo && (
@@ -153,17 +143,26 @@ export default function ProfileScreen() {
           </View>
         )}
         {/* XP Progress Bar */}
-        {progress && (
+        {progress && (() => {
+          const level = progress.level || 1;
+          const xp = progress.xp || 0;
+          const minXP = 100 * Math.pow(level - 1, 2);
+          const maxXP = 100 * Math.pow(level, 2);
+          const diffXP = maxXP - minXP;
+          const currentOffset = xp - minXP;
+          const percentFill = Math.min(100, Math.max(0, diffXP > 0 ? (currentOffset / diffXP) * 100 : 0));
+
+          return (
           <View style={styles.xpSection}>
             <View style={styles.xpHeaderRow}>
-              <Text style={styles.xpLevel}>Cấp {progress.level}</Text>
-              <Text style={styles.xpValue}>{progress.xp} XP</Text>
+              <Text style={styles.xpLevel}>Cấp {level}</Text>
+              <Text style={styles.xpValue}>{xp} XP</Text>
             </View>
             <View style={styles.xpBarTrack}>
               <View
                 style={[
                   styles.xpBarFill,
-                  { width: `${progress.xpToNextLevel > 0 ? Math.min(100, (progress.xp / (progress.xp + progress.xpToNextLevel)) * 100) : 100}%` },
+                  { width: `${percentFill}%` },
                 ]}
               />
             </View>
@@ -179,7 +178,8 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
-        )}
+          );
+        })()}
       </View>
 
       {/* Edit Profile Button */}
@@ -199,28 +199,28 @@ export default function ProfileScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => router.push('/blog/my-posts' as any)}>
           <Ionicons name="document-text-outline" size={20} color={Colors.light.gold} />
-          <Text style={styles.navText}>Bài Viết Của Tôi</Text>
+          <Text style={styles.navText}>Bài viết của tôi</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => router.push('/subscription/history' as any)}>
           <Ionicons name="receipt-outline" size={20} color={Colors.light.gold} />
-          <Text style={styles.navText}>Lịch Sử GD</Text>
+          <Text style={styles.navText}>Lịch sử GD</Text>
         </TouchableOpacity>
         {user.role === 'admin' && (
           <TouchableOpacity style={styles.navItem} onPress={() => router.push('/admin' as any)}>
             <Ionicons name="settings-outline" size={20} color={Colors.light.gold} />
-            <Text style={styles.navText}>Quản Trị</Text>
+            <Text style={styles.navText}>Quản trị</Text>
           </TouchableOpacity>
         )}
         {user.role === 'staff' && (
           <TouchableOpacity style={styles.navItem} onPress={() => router.push('/staff' as any)}>
             <Ionicons name="briefcase-outline" size={20} color={Colors.light.gold} />
-            <Text style={styles.navText}>QL Nội Dung</Text>
+            <Text style={styles.navText}>QL nội dung</Text>
           </TouchableOpacity>
         )}
         {user.role === 'teacher' && (
           <TouchableOpacity style={styles.navItem} onPress={() => router.push('/teacher' as any)}>
             <Ionicons name="checkmark-circle-outline" size={20} color={Colors.light.gold} />
-            <Text style={styles.navText}>Kiểm Duyệt</Text>
+            <Text style={styles.navText}>Kiểm duyệt</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -340,19 +340,79 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Achievements */}
+        {/* ─── Real Progress Sections ─── */}
+        {/* Tiến Độ Học Tập */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thành tựu</Text>
-          <View style={styles.achievementGrid}>
-            {ACHIEVEMENTS.map((ach, i) => (
-              <View key={i} style={styles.achievementItem}>
-                <View style={[styles.achievementDot, { backgroundColor: ach.color }]} />
-                <View style={styles.achievementInfo}>
-                  <Text style={styles.achievementTitle}>{ach.title}</Text>
-                  <Text style={styles.achievementDesc}>{ach.desc}</Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Tiến độ học tập</Text>
+                <TouchableOpacity><Text style={styles.sectionLink}>Xem tất cả</Text></TouchableOpacity>
+              </View>
+              <View style={styles.progressRow}>
+                <View style={styles.progressItem}>
+                  <Ionicons name="game-controller" size={20} color={Colors.light.gold} />
+                  <Text style={styles.progressLabel}>Bài học RPG</Text>
+                  <Text style={styles.progressSub}>Bài học lịch sử đã hoàn thành</Text>
+                  <Text style={styles.progressValue}>
+                    {progress?.completedLessons?.length || 0}/{progress?.stats?.totalLessons || 0} ({(progress?.stats?.totalLessons || 0) > 0 ? Math.round(((progress?.completedLessons?.length || 0) / (progress?.stats?.totalLessons || 1)) * 100) : 0}%)
+                  </Text>
+                </View>
+                <View style={styles.progressItem}>
+                  <Ionicons name="headset" size={20} color={Colors.light.gold} />
+                  <Text style={styles.progressLabel}>Audio Podcast</Text>
+                  <Text style={styles.progressSub}>Podcast âm thanh đã nghe</Text>
+                  <Text style={styles.progressValue}>
+                    {progress?.completedPodcasts?.length || 0}/{progress?.stats?.totalPodcasts || 0} ({(progress?.stats?.totalPodcasts || 0) > 0 ? Math.round(((progress?.completedPodcasts?.length || 0) / (progress?.stats?.totalPodcasts || 1)) * 100) : 0}%)
+                  </Text>
                 </View>
               </View>
-            ))}
+            </View>
+
+            {/* Kết Quả Làm Quiz */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Kết quả làm quiz</Text>
+                <TouchableOpacity><Text style={styles.sectionLink}>Xem tất cả</Text></TouchableOpacity>
+              </View>
+              {(progress?.totalQuizzesTaken || 0) === 0 ? (
+                <View style={styles.progressItem}>
+                  <Text style={styles.emptyText}>Chưa thực hiện bài quiz nào.</Text>
+                </View>
+              ) : (
+                <View style={[styles.progressItem, { gap: 8 }]}>
+                  <Text style={styles.progressLabel}>Thống kê Quiz</Text>
+                  <View style={{ gap: 4 }}>
+                    <Text style={styles.progressSub}>Đã làm: {progress?.totalQuizzesTaken || 0} quiz</Text>
+                    <Text style={styles.progressSub}>Đã vượt qua: {progress?.totalQuizzesPassed || 0} quiz</Text>
+                    <Text style={styles.progressSub}>Tỉ lệ đạt: {(progress?.totalQuizzesTaken || 0) > 0 ? Math.round(((progress?.totalQuizzesPassed || 0) / (progress?.totalQuizzesTaken || 1)) * 100) : 0}%</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* Màn Chơi Đã Mở Khóa */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Màn chơi đã mở khóa</Text>
+                <TouchableOpacity><Text style={styles.sectionLink}>Xem tất cả</Text></TouchableOpacity>
+              </View>
+              <View style={styles.progressItem}>
+                <Ionicons name="game-controller" size={20} color={Colors.light.gold} />
+                <Text style={styles.progressLabel}>Game RPG 2D</Text>
+                <Text style={styles.progressSub}>Màn chơi game đã được mở khóa</Text>
+                <Text style={styles.progressValue}>
+                  {progress?.unlockedLessons?.length || 0}/{progress?.stats?.totalLessons || 0} ({(progress?.stats?.totalLessons || 0) > 0 ? Math.round(((progress?.unlockedLessons?.length || 0) / (progress?.stats?.totalLessons || 1)) * 100) : 0}%)
+                </Text>
+              </View>
+            </View>
+
+        {/* Lịch Sử Tích Lũy XP */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Lịch sử tích lũy XP</Text>
+            <TouchableOpacity><Text style={styles.sectionLink}>Xem tất cả</Text></TouchableOpacity>
+          </View>
+          <View style={styles.progressItem}>
+            <Text style={styles.emptyText}>Chưa có lịch sử XP nào.</Text>
           </View>
         </View>
       </ScrollView>
@@ -602,38 +662,6 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
     color: Colors.light.text,
   },
-  achievementGrid: {
-    gap: 10,
-  },
-  achievementItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    backgroundColor: Colors.light.panel,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.light.panelBorder,
-  },
-  achievementDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  achievementInfo: {
-    flex: 1,
-  },
-  achievementTitle: {
-    fontFamily: 'Playfair Display',
-    fontSize: FontSizes.md,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  achievementDesc: {
-    fontFamily: 'Cormorant Garamond',
-    fontSize: FontSizes.sm,
-    color: Colors.light.textMuted,
-  },
   loginPrompt: {
     fontFamily: 'Playfair Display',
     fontSize: FontSizes.lg,
@@ -652,5 +680,53 @@ const styles = StyleSheet.create({
     color: '#3a2312',
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  // ─── Progress Sections ────────────────────────────
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionLink: {
+    color: Colors.light.goldMuted,
+    fontSize: FontSizes.xs,
+    textDecorationLine: 'underline',
+  },
+  progressRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  progressItem: {
+    flex: 1,
+    backgroundColor: Colors.light.backgroundCard,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.light.panelBorder,
+    padding: Spacing.sm,
+    gap: 4,
+  },
+  progressLabel: {
+    color: Colors.light.textMain,
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  progressSub: {
+    color: Colors.light.textMuted,
+    fontSize: FontSizes.xs,
+  },
+  progressValue: {
+    color: Colors.light.gold,
+    fontSize: FontSizes.lg,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  emptyText: {
+    color: Colors.light.textMuted,
+    fontSize: FontSizes.sm,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 12,
   },
 });

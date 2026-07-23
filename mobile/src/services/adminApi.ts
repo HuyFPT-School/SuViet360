@@ -33,10 +33,13 @@ export type AdminLesson = {
 };
 
 export type AdminSubscriptionStats = {
-  totalActive: number;
-  totalRevenue: number;
-  byTier: Array<{ name: string; count: number; revenue: number }>;
-  monthlyRevenue: Array<{ month: string; revenue: number }>;
+  stats: {
+    totalActiveSubscriptions: number;
+    totalRevenue: number;
+    totalTransactions: number;
+    totalUsers: number;
+  };
+  monthlyRevenue: Array<{ month: string; revenue: number; transactions: number }>;
 };
 
 export type Coupon = {
@@ -184,6 +187,9 @@ export const adminApi = {
     discountType: 'percentage' | 'fixed';
     discountValue: number;
     maxUses?: number;
+    minPurchaseAmount?: number;
+    applicableTiers?: string[];
+    endDate?: string;
     expiresAt?: string;
     description?: string;
   }) => {

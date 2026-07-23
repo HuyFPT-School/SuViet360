@@ -98,7 +98,7 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.title}>Chào mừng Trở lại!</Text>
+              <Text style={styles.title}>Chào mừng trở lại!</Text>
               <Text style={styles.subtitle}>Đăng nhập để tiếp tục hành trình khám phá.</Text>
 
             {serverError ? (
@@ -167,7 +167,7 @@ export default function LoginScreen() {
               {isSubmitting ? (
                 <ActivityIndicator color="#3a2312" size="small" />
               ) : (
-                <Text style={styles.submitText}>Đăng Nhập</Text>
+                <Text style={styles.submitText}>Đăng nhập</Text>
               )}
             </TouchableOpacity>
 

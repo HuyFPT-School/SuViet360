@@ -204,7 +204,7 @@ export default function CheckoutScreen() {
   if (loadingTier) {
     return (
       <PageBackground style={styles.container}>
-        <HeaderBar title="Thanh Toán" showBack />
+        <HeaderBar title="Thanh toán" showBack />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.light.gold} />
         </View>
@@ -215,7 +215,7 @@ export default function CheckoutScreen() {
   if (!tier || !user) {
     return (
       <PageBackground style={styles.container}>
-        <HeaderBar title="Thanh Toán" showBack />
+        <HeaderBar title="Thanh toán" showBack />
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.light.textMuted} />
           <Text style={styles.errorText}>{!tier ? 'Gói không tồn tại.' : 'Vui lòng đăng nhập.'}</Text>
@@ -233,10 +233,10 @@ export default function CheckoutScreen() {
 
     return (
       <PageBackground style={styles.container}>
-        <HeaderBar title="Chuyển Khoản" showBack />
+        <HeaderBar title="Chuyển khoản" showBack />
         <ScrollView style={styles.scroll} contentContainerStyle={styles.sepayContent}>
           <View style={styles.sepayCard}>
-            <Text style={styles.sepayTitle}>Chuyển Khoản Ngân Hàng</Text>
+            <Text style={styles.sepayTitle}>Chuyển khoản ngân hàng</Text>
             <Text style={styles.sepaySubtitle}>Quét mã VietQR hoặc chuyển khoản đúng thông tin</Text>
 
             {/* QR Image */}
@@ -283,7 +283,7 @@ export default function CheckoutScreen() {
             </Text>
 
             <GoldButton
-              title="Hủy & Quay lại"
+              title="Hủy & quay lại"
               variant="secondary"
               onPress={() => {
                 Alert.alert('Xác nhận', 'Hủy giao dịch hiện tại để quay về trang thanh toán?', [
@@ -303,13 +303,13 @@ export default function CheckoutScreen() {
     const codeToCopy = checkoutSuccess.data?.code || checkoutSuccess.data?.giftCode?.code || '';
     return (
       <PageBackground style={styles.container}>
-        <HeaderBar title="Thanh Toán" showBack />
+        <HeaderBar title="Thanh toán" showBack />
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
           <View style={[styles.sepayCard, { alignItems: 'center', gap: 16 }]}>
             <View style={styles.successIcon}>
               <Ionicons name="checkmark-circle" size={48} color={Colors.light.success} />
             </View>
-            <Text style={styles.sepayTitle}>Giao Dịch Thành Công!</Text>
+            <Text style={styles.sepayTitle}>Giao dịch thành công!</Text>
             <View style={{ width: 48, height: 2, backgroundColor: Colors.light.gold }} />
             {checkoutSuccess.mode === 'self' ? (
               <Text style={styles.successText}>
@@ -342,7 +342,7 @@ export default function CheckoutScreen() {
               </View>
             )}
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
-              <GoldButton title="Trở Lại Gói VIP" onPress={() => router.replace('/subscription' as any)} />
+              <GoldButton title="Trở lại gói VIP" onPress={() => router.replace('/subscription' as any)} />
             </View>
           </View>
         </ScrollView>
@@ -353,7 +353,7 @@ export default function CheckoutScreen() {
   // ─── Normal Checkout UI ──────────────────────────────
   return (
     <PageBackground style={styles.container}>
-      <HeaderBar title="Thanh Toán" showBack />
+      <HeaderBar title="Thanh toán" showBack />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {/* Summary */}
         <View style={styles.summaryCard}>
@@ -373,13 +373,13 @@ export default function CheckoutScreen() {
             style={[styles.modeBtn, mode === 'self' && styles.modeBtnActive]}
             onPress={() => setMode('self')}
           >
-            <Text style={[styles.modeText, mode === 'self' && styles.modeTextActive]}>Mua Cho Mình</Text>
+            <Text style={[styles.modeText, mode === 'self' && styles.modeTextActive]}>Mua cho mình</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modeBtn, mode === 'gift' && styles.modeBtnActive]}
             onPress={() => setMode('gift')}
           >
-            <Text style={[styles.modeText, mode === 'gift' && styles.modeTextActive]}>Tặng Bạn Bè</Text>
+            <Text style={[styles.modeText, mode === 'gift' && styles.modeTextActive]}>Tặng bạn bè</Text>
           </TouchableOpacity>
         </View>
 
@@ -397,7 +397,7 @@ export default function CheckoutScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
-              <GoldButton title="Kiểm Tra" variant="secondary" onPress={verifyRecipient} loading={verifyingRecipient} disabled={verifyingRecipient || !recipient.trim()} />
+              <GoldButton title="Kiểm tra" variant="secondary" onPress={verifyRecipient} loading={verifyingRecipient} disabled={verifyingRecipient || !recipient.trim()} />
             </View>
             {recipientVerified && (
               <View style={styles.verifiedBadge}>
@@ -426,13 +426,13 @@ export default function CheckoutScreen() {
                 style={[styles.modeBtnSmall, giftMode === 'instant' && styles.modeBtnActive]}
                 onPress={() => setGiftMode('instant')}
               >
-                <Text style={[styles.modeText, giftMode === 'instant' && styles.modeTextActive]}>Gửi Ngay</Text>
+                <Text style={[styles.modeText, giftMode === 'instant' && styles.modeTextActive]}>Gửi ngay</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modeBtnSmall, giftMode === 'code' && styles.modeBtnActive]}
                 onPress={() => setGiftMode('code')}
               >
-                <Text style={[styles.modeText, giftMode === 'code' && styles.modeTextActive]}>Tạo Mã</Text>
+                <Text style={[styles.modeText, giftMode === 'code' && styles.modeTextActive]}>Tạo mã</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -450,7 +450,7 @@ export default function CheckoutScreen() {
               onChangeText={setCouponCode}
               autoCapitalize="characters"
             />
-            <GoldButton title="Áp Dụng" variant="secondary" onPress={validateCoupon} loading={validatingCoupon} />
+            <GoldButton title="Áp dụng" variant="secondary" onPress={validateCoupon} loading={validatingCoupon} />
           </View>
           {!!couponResult && (
             <View style={styles.couponBadge}>
@@ -492,7 +492,7 @@ export default function CheckoutScreen() {
 
         {/* Payment */}
         <GoldButton
-          title={`Thanh Toán ${finalPrice.toLocaleString('vi-VN')}₫`}
+          title={`Thanh toán ${finalPrice.toLocaleString('vi-VN')}₫`}
           onPress={handlePurchase}
           loading={buying}
           disabled={buying}

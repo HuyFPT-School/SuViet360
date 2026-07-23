@@ -22,11 +22,9 @@ import GoldButton from '@/components/ui/GoldButton';
 import AuthInput from '@/components/ui/AuthInput';
 import { blogApi } from '@/services/blogApi';
 import { adminApi } from '@/services/adminApi';
-import type { BlogPost, BlogReport } from '@/types/blog';
-import ChapterTab from '@/components/staff/ChapterTab';
-import QuizTab from '@/components/staff/QuizTab';
+import type { BlogPost } from '@/types/blog';
 
-const TABS = ['Bài Học', 'Podcast', 'Diễn Đàn', 'Báo Cáo', 'Chương Học', 'Ngân Hàng Quiz', 'Yêu cầu bài học'] as const;
+const TABS = ['Quản lý trò chơi', 'Quản lý podcast', 'Kiểm duyệt diễn đàn', 'Yêu cầu bài học'] as const;
 type Tab = (typeof TABS)[number];
 
 // ─── Helpers ──────────────────────────────────────────
@@ -56,7 +54,7 @@ export default function StaffScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<Tab>('Bài Học');
+  const [activeTab, setActiveTab] = useState<Tab>('Quản lý trò chơi');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -96,7 +94,6 @@ export default function StaffScreen() {
 
   // ─── Blog moderation ────────────────────────────────
   const [pendingPosts, setPendingPosts] = useState<BlogPost[]>([]);
-  const [pendingReports, setPendingReports] = useState<BlogReport[]>([]);
 
   // ─── Lesson Requests (admin view) ───────────────────
   const [lessonRequests, setLessonRequests] = useState<any[]>([]);
@@ -135,10 +132,9 @@ export default function StaffScreen() {
     if (!user || (user.role !== 'staff' && user.role !== 'admin')) return;
     setLoading(true);
     Promise.all([
-      activeTab === 'Bài Học' || activeTab === 'Podcast' ? loadLessons() : Promise.resolve(),
-      activeTab === 'Podcast' ? loadPodcasts() : Promise.resolve(),
-      activeTab === 'Diễn Đàn' ? blogApi.getPendingPosts().then(r => setPendingPosts(r.data || [])).catch(() => { }) : Promise.resolve(),
-      activeTab === 'Báo Cáo' ? blogApi.getPendingReports().then(r => setPendingReports(r.data || [])).catch(() => { }) : Promise.resolve(),
+      activeTab === 'Quản lý trò chơi' || activeTab === 'Quản lý podcast' ? loadLessons() : Promise.resolve(),
+      activeTab === 'Quản lý podcast' ? loadPodcasts() : Promise.resolve(),
+      activeTab === 'Kiểm duyệt diễn đàn' ? blogApi.getPendingPosts().then(r => setPendingPosts(r.data || [])).catch(() => { }) : Promise.resolve(),
       activeTab === 'Yêu cầu bài học' ? loadLessonRequests() : Promise.resolve(),
     ]).finally(() => setLoading(false));
   }, [user, activeTab]);
@@ -171,7 +167,7 @@ export default function StaffScreen() {
     setLessonFormMode('create');
     setSelectedLessonId(null);
     setSelectedLessonDetail(null);
-    setActiveTab('Bài Học');
+    setActiveTab('Quản lý trò chơi');
     setMessage({ type: 'success', text: `Đang tạo Game liên kết cho yêu cầu: "${req.title}"` });
   };
 
@@ -273,15 +269,15 @@ export default function StaffScreen() {
 
       if (lessonFormMode === 'create') {
         await adminApi.createLesson(fd);
-        setMessage({ type: 'success', text: 'Tạo bài học thành công.' });
+        setMessage({ type: 'success', text: 'Tạo trò chơi thành công.' });
       } else if (selectedLessonId) {
         await adminApi.updateLesson(selectedLessonId, fd);
-        setMessage({ type: 'success', text: 'Cập nhật bài học thành công.' });
+        setMessage({ type: 'success', text: 'Cập nhật trò chơi thành công.' });
       }
       resetLessonForm();
       loadLessons();
     } catch (err: any) {
-      setMessage({ type: 'error', text: err?.response?.data?.message || 'Lỗi khi lưu bài học.' });
+      setMessage({ type: 'error', text: err?.response?.data?.message || 'Lỗi khi lưu trò chơi.' });
     } finally {
       setLessonSaving(false);
     }
@@ -289,7 +285,7 @@ export default function StaffScreen() {
 
   const handleDeleteLesson = async () => {
     if (!selectedLessonId) return;
-    Alert.alert('Xác nhận', 'Xóa bài học này?', [
+    Alert.alert('Xác nhận', 'Xóa trò chơi này?', [
       { text: 'Hủy', style: 'cancel' },
       {
         text: 'Xóa', style: 'destructive', onPress: async () => {
@@ -432,16 +428,10 @@ export default function StaffScreen() {
     ]);
   };
 
-  const handleResolveReport = async (id: string, action: 'delete' | 'dismiss') => {
-    await blogApi.resolveReport(id, action);
-    loadBlog();
-  };
-
   const loadBlog = async () => {
     try {
-      const [posts, reports] = await Promise.all([blogApi.getPendingPosts(), blogApi.getPendingReports()]);
+      const posts = await blogApi.getPendingPosts();
       setPendingPosts(posts.data || []);
-      setPendingReports(reports.data || []);
     } catch { /* ignore */ }
   };
 
@@ -449,7 +439,7 @@ export default function StaffScreen() {
   if (!user || (user.role !== 'staff' && user.role !== 'admin')) {
     return (
       <PageBackground style={styles.container}>
-        <HeaderBar title="Nhân Viên" showBack />
+        <HeaderBar title="Nhân viên" showBack />
         <View style={styles.center}>
           <Ionicons name="lock-closed-outline" size={48} color={Colors.light.textMuted} />
           <Text style={styles.errorText}>Bạn không có quyền truy cập.</Text>
@@ -489,10 +479,10 @@ export default function StaffScreen() {
       ) : (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           {/* ─── LESSONS TAB ─── */}
-          {activeTab === 'Bài Học' && (
+          {activeTab === 'Quản lý trò chơi' && (
             <>
               {/* Lesson list */}
-              <Text style={styles.sectionTitle}>Danh sách bài học ({lessons.length})</Text>       
+              <Text style={styles.sectionTitle}>Danh sách trò chơi ({lessons.length})</Text>       
               {lessons.map((l: any) => (
                 <TouchableOpacity
                   key={l._id}
@@ -513,11 +503,11 @@ export default function StaffScreen() {
 
               {/* Lesson form */}
               <View style={styles.formCard}>
-                <Text style={styles.formTitle}>{lessonFormMode === 'create' ? 'Tạo bài học mới' : 'Chỉnh sửa bài học'}</Text>
+                <Text style={styles.formTitle}>{lessonFormMode === 'create' ? 'Tạo trò chơi mới' : 'Chỉnh sửa trò chơi'}</Text>
 
                 {lessonFormMode === 'edit' && selectedLesson?.status === 'Rejected' && selectedLesson?.reviewFeedback && (
                   <View style={styles.warningBox}>
-                    <Text style={styles.warningTitle}>⚠ Bài học bị từ chối duyệt</Text>
+                    <Text style={styles.warningTitle}>⚠ Trò chơi bị từ chối duyệt</Text>
                     <Text style={styles.warningText}>{selectedLesson.reviewFeedback}</Text>
                   </View>
                 )}
@@ -647,7 +637,7 @@ export default function StaffScreen() {
 
                 <View style={styles.formActions}>
                   <GoldButton
-                    title={lessonFormMode === 'create' ? 'Tạo bài học' : 'Lưu cập nhật'}
+                    title={lessonFormMode === 'create' ? 'Tạo trò chơi' : 'Lưu cập nhật'}
                     onPress={handleLessonSubmit}
                     loading={lessonSaving}
                     disabled={lessonSaving}
@@ -662,7 +652,7 @@ export default function StaffScreen() {
           )}
 
           {/* ─── PODCAST TAB ─── */}
-          {activeTab === 'Podcast' && (
+          {activeTab === 'Quản lý podcast' && (
             <>
               <Text style={styles.sectionTitle}>Danh sách podcast ({podcasts.length})</Text>
               {podcasts.map((p: any) => (
@@ -720,7 +710,7 @@ export default function StaffScreen() {
                   ))}
                 </View>
 
-                <Text style={styles.label}>Liên kết bài học (Game 2D)</Text>
+                <Text style={styles.label}>Liên kết trò chơi (Game 2D)</Text>
                 <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowLessonPicker(true)}>
                   <Text style={{ color: podcastLessonId ? Colors.light.textMain : Colors.light.textDim, fontSize: FontSizes.sm }}>
                     {podcastLessonId ? lessons.find((l: any) => l._id === podcastLessonId)?.title || podcastLessonId : 'Không liên kết'}
@@ -810,7 +800,7 @@ export default function StaffScreen() {
               <Modal visible={showLessonPicker} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                   <View style={styles.modalContent}>
-                    <Text style={styles.modalTitle}>Chọn bài học liên kết</Text>
+                    <Text style={styles.modalTitle}>Chọn trò chơi liên kết</Text>
                     <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={true}>
                       <TouchableOpacity
                         style={[styles.modalItem, !podcastLessonId && { backgroundColor: '#fef3c7' }]}
@@ -849,7 +839,7 @@ export default function StaffScreen() {
           )}
 
           {/* ─── BLOG TAB ─── */}
-          {activeTab === 'Diễn Đàn' && (
+          {activeTab === 'Kiểm duyệt diễn đàn' && (
             <>
               <Text style={styles.sectionTitle}>Bài viết chờ duyệt ({pendingPosts.length})</Text>
               {pendingPosts.length === 0 ? (
@@ -870,32 +860,6 @@ export default function StaffScreen() {
               ))}
             </>
           )}
-
-          {/* ─── REPORTS TAB ─── */}
-          {activeTab === 'Báo Cáo' && (
-            <>
-              <Text style={styles.sectionTitle}>Báo cáo vi phạm ({pendingReports.length})</Text>
-              {pendingReports.length === 0 ? (
-                <Text style={styles.emptyText}>Không có báo cáo nào cần xử lý.</Text>
-              ) : pendingReports.map((r: any) => (
-                <View key={r._id} style={styles.card}>
-                  <Text style={styles.cardTitle}>{r.targetType === 'Post' ? 'Bài viết' : 'Bình luận'}: {r.reason}</Text>
-                  <Text style={styles.cardBody}>{r.description || 'Không có mô tả.'}</Text>
-                  <Text style={styles.cardAuthor}>Báo cáo bởi: {r.reporter?.name}</Text>
-                  <View style={styles.actionRow}>
-                    <GoldButton title="Xóa ND" variant="secondary" onPress={() => handleResolveReport(r._id, 'delete')} style={{ flex: 1 }} />
-                    <GoldButton title="Bỏ qua" variant="ghost" onPress={() => handleResolveReport(r._id, 'dismiss')} style={{ flex: 1 }} />
-                  </View>
-                </View>
-              ))}
-            </>
-          )}
-
-          {/* ─── CHAPTER TAB ─── */}
-          {activeTab === 'Chương Học' && <ChapterTab />}
-
-          {/* ─── QUIZ TAB ─── */}
-          {activeTab === 'Ngân Hàng Quiz' && <QuizTab />}
 
           {/* ─── LESSON REQUESTS TAB ─── */}
           {activeTab === 'Yêu cầu bài học' && (
@@ -1039,16 +1003,16 @@ const styles = StyleSheet.create({
   scrollContent: { padding: Spacing.md, paddingBottom: 60 },
 
   // Tabs
-  tabScroll: { maxHeight: 48, borderBottomWidth: 1, borderBottomColor: Colors.light.panelBorder },
-  tabScrollContent: { flexDirection: 'row', paddingHorizontal: Spacing.md, gap: 4, alignItems: 'center' },
+  tabScroll: { maxHeight: 44, borderBottomWidth: 1, borderBottomColor: Colors.light.panelBorder },
+  tabScrollContent: { flexDirection: 'row', paddingHorizontal: 8, gap: 2, alignItems: 'center' },
   tab: {
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
   tabActive: { borderBottomColor: Colors.light.goldDark },
-  tabText: { color: Colors.light.textMuted, fontSize: FontSizes.sm, fontWeight: '600' },
+  tabText: { color: Colors.light.textMuted, fontSize: FontSizes.xs, fontWeight: '600' },
   tabTextActive: { color: Colors.light.goldDark, fontWeight: '700' },
 
   // Message

@@ -136,6 +136,23 @@ export default function CreateLessonScreen() {
         } as any);
       });
 
+      if (questions.length > 0) {
+        formData.append('questions', JSON.stringify(questions.map(q => ({
+          question: q.question.trim(),
+          options: q.options.map(o => o.trim()),
+          correctIndex: q.correctIndex,
+        }))));
+      }
+
+      if (questions.length > 0) {
+        formData.append('questions', JSON.stringify(questions.map(q => ({
+          question: q.question.trim(),
+          options: q.options.map(o => o.trim()),
+          correctIndex: q.correctIndex,
+        }))));
+      }
+
+
       await adminApi.createLesson(formData);
       Alert.alert('Thành công', 'Đã tạo bài học.');
       router.back();

@@ -9,7 +9,7 @@ export default function AdminLessonRequestsTab() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    subscriptionApi.getAllLessonRequests()
+    subscriptionApi.getAdminLessonRequests()
       .then((data) => setRequests(data))
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -40,9 +40,9 @@ export default function AdminLessonRequestsTab() {
 }
 
 const S = {
-  empty: { color: Colors.light.textMuted, fontSize: FontSizes.sm, textAlign: 'center' as const, padding: 24, fontStyle: 'italic' as const },
-  card: { backgroundColor: Colors.light.backgroundCard, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.light.panelBorder, padding: Spacing.sm, marginBottom: 8 },
-  title: { color: Colors.light.textMain, fontSize: FontSizes.sm, fontWeight: '600' as const },
-  body: { color: Colors.light.textMuted, fontSize: FontSizes.xs, marginTop: 4 },
-  meta: { color: Colors.light.textDim, fontSize: 10, marginTop: 4 },
+  empty: { color: '#6b4f14', fontSize: FontSizes.sm, textAlign: 'center' as const, padding: 24, fontStyle: 'italic' as const },
+  card: { backgroundColor: '#1e1508', borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: 'rgba(201, 161, 90, 0.2)', padding: Spacing.sm, marginBottom: 8 },
+  title: { color: '#f0ddb7', fontSize: FontSizes.sm, fontWeight: '600' as const },
+  body: { color: '#8c6a34', fontSize: FontSizes.xs, marginTop: 4 },
+  meta: { color: '#6b4f14', fontSize: 10, marginTop: 4 },
 };

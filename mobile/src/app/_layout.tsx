@@ -40,8 +40,6 @@ export default function RootLayout() {
           <Stack.Screen name="blog/friends" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="blog/groups" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="blog/groups/[id]" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="study/index" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="study/[id]" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="subscription/index" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="subscription/checkout" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="subscription/redeem" options={{ animation: 'slide_from_right' }} />
