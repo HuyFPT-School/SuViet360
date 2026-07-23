@@ -10,7 +10,6 @@ import {
   type LessonGame,
   type ReviewStatus,
   type TeacherReviewItem,
-  type ReviewContentType,
 } from "@/lib/teacherReviewApi";
 import dynamic from "next/dynamic";
 import { subscriptionApi } from "@/lib/subscriptionApi";
@@ -26,11 +25,208 @@ const PhaserGame = dynamic(() => import("@/components/PhaserGame"), {
   ),
 });
 
+// SVG Icons matching the vintage SuViet360 theme (NO EMOJIS)
+function HelmIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-9 h-9 shrink-0 ${className}`} style={{ width: "36px", height: "36px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+      <path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+    </svg>
+  );
+}
+
+function DashboardIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+    </svg>
+  );
+}
+
+function GamepadIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="6" y1="12" x2="10" y2="12" />
+      <line x1="8" y1="10" x2="8" y2="14" />
+      <circle cx="15" cy="13" r="1" fill="currentColor" />
+      <circle cx="17.5" cy="10.5" r="1" fill="currentColor" />
+      <path d="M17.3 5H6.7C3.6 5 2 7.4 2 11c0 4.1 2.3 8 5 8 1.1 0 2.2-.6 2.8-1.5L11 16h2l1.2 1.5c.6.9 1.7 1.5 2.8 1.5 2.7 0 5-3.9 5-8 0-3.6-1.6-6-4.7-6z" />
+    </svg>
+  );
+}
+
+function BookIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  );
+}
+
+function HelpIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+function ShieldIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+function MessageIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function LogoutIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
+function HourglassIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 22h14M5 2h14M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" />
+    </svg>
+  );
+}
+
+function CheckCircleIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function XCircleIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function FileTextIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-5 h-5 shrink-0 ${className}`} style={{ width: "20px", height: "20px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
+  );
+}
+
+function SearchIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+function CategoryGridIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+    </svg>
+  );
+}
+
+function FilterLinesIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <line x1="8" y1="12" x2="16" y2="12" />
+      <line x1="11" y1="18" x2="13" y2="18" />
+    </svg>
+  );
+}
+
+function CalendarIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function RefreshIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 4 23 10 17 10" />
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+    </svg>
+  );
+}
+
+function EyeIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function BarChartIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="20" x2="12" y2="10" />
+      <line x1="18" y1="20" x2="18" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="16" />
+    </svg>
+  );
+}
+
+function MicIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-3 h-3 shrink-0 ${className}`} style={{ width: "12px", height: "12px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" y1="19" x2="12" y2="23" />
+      <line x1="8" y1="23" x2="16" y2="23" />
+    </svg>
+  );
+}
+
 const statusOptions: Array<{ value: ReviewStatus | "All"; label: string }> = [
+  { value: "All", label: "Tất cả trạng thái" },
   { value: "Pending_Review", label: "Chờ duyệt" },
   { value: "Published", label: "Đã xuất bản" },
   { value: "Rejected", label: "Bị từ chối" },
-  { value: "All", label: "Tất cả trạng thái" },
 ];
 
 function formatDate(value?: string) {
@@ -63,25 +259,23 @@ function formatCreatorDisplay(createdByStr: string) {
 }
 
 export default function TeacherPage() {
-  const { user, isLoading, refreshUser } = useAuth();
+  const { user, isLoading, refreshUser, logout } = useAuth();
   const [items, setItems] = useState<TeacherReviewItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ReviewStatus | "All">(
-    "Pending_Review"
-  );
+  const [statusFilter, setStatusFilter] = useState<ReviewStatus | "All">("Pending_Review");
+  const [typeFilter, setTypeFilter] = useState<string>("All");
+  const [timeFilter, setTimeFilter] = useState<string>("All");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [rejectingItem, setRejectingItem] = useState<TeacherReviewItem | null>(
-    null
-  );
+  const [rejectingItem, setRejectingItem] = useState<TeacherReviewItem | null>(null);
   const [feedback, setFeedback] = useState("");
   const [feedbackError, setFeedbackError] = useState("");
 
   // New LessonRequest states
-  const [activeDashboardTab, setActiveDashboardTab] = useState<"reviews" | "requests" | "podcasts">("reviews");
+  const [activeDashboardTab, setActiveDashboardTab] = useState<"dashboard" | "reviews" | "requests" | "guide" | "audit" | "notes">("reviews");
   const [requests, setRequests] = useState<LessonRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [rejectingRequestId, setRejectingRequestId] = useState<string | null>(null);
@@ -146,11 +340,22 @@ export default function TeacherPage() {
       
       const podcastsRes = await api.get<{ success: boolean; data: any[] }>("/podcasts");
       setAvailablePodcasts(podcastsRes.data.data || []);
-    } catch (err) {
+    } catch {
       setError("Không thể tải danh sách yêu cầu bài học.");
     } finally {
       setLoadingRequests(false);
-      setLoading(false); // Fix indefinite loading state
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (activeDashboardTab === "requests") {
+      await loadRequests();
+    } else {
+      await loadItems();
+      if (activeDashboardTab === "reviews") {
+        setStatusFilter("Pending_Review");
+      }
     }
   };
 
@@ -346,7 +551,6 @@ export default function TeacherPage() {
     }
   };
 
-  // ─── Podcast CRUD Methods for Teacher ────────────────────────────────
   const loadPodcasts = async () => {
     try {
       const res = await api.get<{ success: boolean; data: any[] }>("/podcasts");
@@ -462,7 +666,6 @@ export default function TeacherPage() {
     setSaving(true);
     setFeedbackError("");
     try {
-      // Fetch details of this podcast
       const res = await api.get<{ success: boolean; data: any }>(`/staff/podcasts/${podcastId}`);
       const podcast = res.data.data;
       if (podcast) {
@@ -486,7 +689,7 @@ export default function TeacherPage() {
         });
         await loadLessonsList();
       }
-    } catch (err: any) {
+    } catch {
       setError("Không thể tải thông tin podcast để chỉnh sửa.");
     } finally {
       setSaving(false);
@@ -546,30 +749,141 @@ export default function TeacherPage() {
     }
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+
+  const isSameDay = (d1?: string) => {
+    if (!d1) return false;
+    const date = new Date(d1);
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+  };
+
   const filteredItems = useMemo(() => {
     const term = query.trim().toLowerCase();
 
     return items.filter((item) => {
       const matchesStatus =
         statusFilter === "All" || item.status === statusFilter;
+      const matchesType =
+        typeFilter === "All" ||
+        (typeFilter === "Game" && item.type === "Lesson") ||
+        (typeFilter === "Podcast" && item.type === "Podcast");
+      
+      let matchesTime = true;
+      if (timeFilter !== "All" && item.submittedAt) {
+        const itemDate = new Date(item.submittedAt).getTime();
+        const now = new Date().getTime();
+        const oneDay = 24 * 60 * 60 * 1000;
+        if (timeFilter === "Today") {
+          matchesTime = isSameDay(item.submittedAt);
+        } else if (timeFilter === "Week") {
+          matchesTime = now - itemDate <= 7 * oneDay;
+        } else if (timeFilter === "Month") {
+          matchesTime = now - itemDate <= 30 * oneDay;
+        }
+      }
+
       const matchesQuery =
         !term ||
         item.title.toLowerCase().includes(term) ||
-        item.summary.toLowerCase().includes(term);
+        item.summary.toLowerCase().includes(term) ||
+        item.createdBy.toLowerCase().includes(term);
 
-      return matchesStatus && matchesQuery;
+      return matchesStatus && matchesType && matchesTime && matchesQuery;
     });
-  }, [items, query, statusFilter]);
+  }, [items, query, statusFilter, typeFilter, timeFilter]);
 
-  const stats = useMemo(
-    () => ({
-      pending: items.filter((item) => item.status === "Pending_Review").length,
-      published: items.filter((item) => item.status === "Published").length,
-      rejected: items.filter((item) => item.status === "Rejected").length,
-      total: items.length,
-    }),
-    [items]
-  );
+  const stats = useMemo(() => {
+    if (activeDashboardTab === "requests") {
+      const pending = requests.filter((r) => r.status === "Pending").length;
+      const published = requests.filter((r) => r.status === "Completed" || r.status === "InProgress" || r.status === "Accepted").length;
+      const rejected = requests.filter((r) => r.status === "Rejected").length;
+      const total = requests.length;
+      const pendingToday = requests.filter((r) => r.status === "Pending" && isSameDay((r as any).createdAt || (r as any).submittedAt)).length;
+      return {
+        pending,
+        published,
+        rejected,
+        total,
+        pendingToday,
+        publishedToday: 0,
+        rejectedToday: 0,
+      };
+    }
+
+    if (activeDashboardTab === "reviews") {
+      const pending = items.filter((item) => item.status === "Pending_Review").length;
+      const published = items.filter((item) => item.status === "Published").length;
+      const rejected = items.filter((item) => item.status === "Rejected").length;
+      const total = items.length;
+
+      const pendingToday = items.filter(
+        (item) => item.status === "Pending_Review" && isSameDay(item.submittedAt)
+      ).length;
+
+      const publishedToday = items.filter(
+        (item) => item.status === "Published" && isSameDay(item.submittedAt)
+      ).length;
+
+      const rejectedToday = items.filter(
+        (item) => item.status === "Rejected" && isSameDay(item.submittedAt)
+      ).length;
+
+      return {
+        pending,
+        published,
+        rejected,
+        total,
+        pendingToday,
+        publishedToday,
+        rejectedToday,
+      };
+    }
+
+    // Default "dashboard", "audit", "notes", "guide": Combined Stats across both Game/Podcast items & Pro Requests
+    const itemsPending = items.filter((item) => item.status === "Pending_Review").length;
+    const requestsPending = requests.filter((r) => r.status === "Pending").length;
+
+    const itemsPublished = items.filter((item) => item.status === "Published").length;
+    const requestsPublished = requests.filter((r) => r.status === "Completed" || r.status === "InProgress" || r.status === "Accepted").length;
+
+    const itemsRejected = items.filter((item) => item.status === "Rejected").length;
+    const requestsRejected = requests.filter((r) => r.status === "Rejected").length;
+
+    const pendingToday =
+      items.filter((item) => item.status === "Pending_Review" && isSameDay(item.submittedAt)).length +
+      requests.filter((r) => r.status === "Pending" && isSameDay((r as any).createdAt || (r as any).submittedAt)).length;
+
+    const publishedToday = items.filter(
+      (item) => item.status === "Published" && isSameDay(item.submittedAt)
+    ).length;
+
+    const rejectedToday =
+      items.filter((item) => item.status === "Rejected" && isSameDay(item.submittedAt)).length +
+      requests.filter((r) => r.status === "Rejected" && isSameDay((r as any).createdAt || (r as any).submittedAt)).length;
+
+    return {
+      pending: itemsPending + requestsPending,
+      published: itemsPublished + requestsPublished,
+      rejected: itemsRejected + requestsRejected,
+      total: items.length + requests.length,
+      pendingToday,
+      publishedToday,
+      rejectedToday,
+    };
+  }, [items, requests, activeDashboardTab]);
+
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredItems.slice(startIndex, startIndex + pageSize);
+  }, [filteredItems, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredItems.length / pageSize) || 1;
 
   const handleApprove = async (item: TeacherReviewItem) => {
     const typeLabel = item.type === "Lesson" ? "game" : item.type === "Podcast" ? "podcast" : "bài học";
@@ -584,7 +898,7 @@ export default function TeacherPage() {
     try {
       await teacherReviewApi.approveContent(item.id, item.type);
       await loadItems();
-      setMessage(`Đã duyệt ${typeLabel} và cập nhật trạng thái Published.`);
+      setMessage(`Đã phê duyệt thành công ${typeLabel} "${item.title}" và xuất bản công khai.`);
     } catch {
       setError(`Không thể duyệt ${typeLabel} này.`);
     } finally {
@@ -618,7 +932,7 @@ export default function TeacherPage() {
       await loadItems();
       setRejectingItem(null);
       setFeedback("");
-      setMessage(`Đã từ chối ${typeLabel} và lưu feedback cho Staff.`);
+      setMessage(`Đã từ chối ${typeLabel} "${rejectingItem.title}" và gửi nhận xét phản hồi cho Staff.`);
     } catch {
       setError(`Không thể từ chối ${typeLabel} này.`);
     } finally {
@@ -663,347 +977,704 @@ export default function TeacherPage() {
   }
 
   return (
-    <section className="admin-page teacher-page">
-      <div className="admin-shell">
-        <aside className="admin-sidebar">
-          <div>
-            <p className="admin-kicker">SuViet360</p>
-            <h1>Teacher Review</h1>
-          </div>
-          <div className="teacher-sidebar-note">
-            <span>Tài khoản</span>
-            <strong>{user.name}</strong>
-            <small>{user.email}</small>
-          </div>
-          
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", margin: "16px 0" }}>
-            <button
-              onClick={() => setActiveDashboardTab("reviews")}
-              style={{
-                textAlign: "left",
-                padding: "8px 12px",
-                borderRadius: "4px",
-                fontWeight: "600",
-                fontSize: "14px",
-                border: "none",
-                cursor: "pointer",
-                background: activeDashboardTab === "reviews" ? "#f5e7c9" : "transparent",
-                color: activeDashboardTab === "reviews" ? "#5c3300" : "#78716c",
-              }}
-            >
-              Duyệt Game & Podcast
-            </button>
-            <button
-              onClick={() => setActiveDashboardTab("requests")}
-              style={{
-                textAlign: "left",
-                padding: "8px 12px",
-                borderRadius: "4px",
-                fontWeight: "600",
-                fontSize: "14px",
-                border: "none",
-                cursor: "pointer",
-                background: activeDashboardTab === "requests" ? "#f5e7c9" : "transparent",
-                color: activeDashboardTab === "requests" ? "#5c3300" : "#78716c",
-              }}
-            >
-              Yêu cầu bài học (Pro)
-            </button>
-
+    <section className="teacher-page">
+      <div className="teacher-dash-layout">
+        {/* LEFT SIDEBAR PANEL */}
+        <aside className="teacher-dash-sidebar">
+          {/* Header Logo */}
+          <div className="teacher-logo-header">
+            <HelmIcon className="teacher-helm-icon" />
+            <h1 className="teacher-logo-title">DUYỆT GAME</h1>
+            <div className="teacher-logo-subtitle">& PODCAST</div>
           </div>
 
-          <div className="teacher-review-rules">
-            <strong>Quyền Teacher</strong>
-            <span>Xem chi tiết game/podcast</span>
-            <span>Kiểm tra nội dung, game & audio</span>
-            <span>Duyệt hoặc Từ chối kèm nhận xét</span>
+          {/* Teacher Profile Card */}
+          <div className="teacher-profile-card-v2">
+            <div className="teacher-avatar-wrapper">
+              <img
+                src={user.avatar || "/images/login_background.png"}
+                alt={user.name || "Teacher Avatar"}
+                className="teacher-avatar-img"
+              />
+            </div>
+            <div className="teacher-profile-name">{user.name || "Vu Van Duc"}</div>
+            <div className="teacher-role-badge">TEACHER</div>
+            <div className="teacher-star-rating">★ ★ ★ ★ ★</div>
+            <div className="teacher-email-text">{user.email || "vuvanduc3012004@gmail.com"}</div>
           </div>
+
+          {/* Navigation Menu */}
+          <nav className="teacher-nav-menu">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveDashboardTab("dashboard");
+                setSelectedId(null);
+                setStatusFilter("All");
+              }}
+              className={`teacher-nav-item ${activeDashboardTab === "dashboard" ? "teacher-nav-item--active" : ""}`}
+            >
+              <DashboardIcon className="teacher-nav-icon" />
+              <span>Dashboard</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveDashboardTab("reviews");
+                setSelectedId(null);
+                setStatusFilter("Pending_Review");
+              }}
+              className={`teacher-nav-item ${activeDashboardTab === "reviews" ? "teacher-nav-item--active" : ""}`}
+            >
+              <GamepadIcon className="teacher-nav-icon" />
+              <span>Duyệt Game & Podcast</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveDashboardTab("requests");
+                setSelectedId(null);
+              }}
+              className={`teacher-nav-item ${activeDashboardTab === "requests" ? "teacher-nav-item--active" : ""}`}
+            >
+              <BookIcon className="teacher-nav-icon" />
+              <span>Yêu cầu bài học (Pro)</span>
+            </button>
+
+            <div className="teacher-nav-divider">
+              <span>◇</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveDashboardTab("guide");
+                setSelectedId(null);
+              }}
+              className={`teacher-nav-item ${activeDashboardTab === "guide" ? "teacher-nav-item--active" : ""}`}
+            >
+              <HelpIcon className="teacher-nav-icon" />
+              <span>Hướng dẫn sử dụng</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveDashboardTab("notes");
+                setSelectedId(null);
+                setStatusFilter("Rejected");
+              }}
+              className={`teacher-nav-item ${activeDashboardTab === "notes" ? "teacher-nav-item--active" : ""}`}
+            >
+              <MessageIcon className="teacher-nav-icon" />
+              <span>Duyệt hoặc Từ chối kèm nhận xét</span>
+            </button>
+
+            <div className="teacher-nav-divider">
+              <span>◇</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="teacher-nav-item text-red-800 hover:bg-rose-100/60 w-full text-left"
+            >
+              <LogoutIcon className="teacher-nav-icon text-red-800" />
+              <span>Đăng xuất</span>
+            </button>
+          </nav>
         </aside>
 
-        <div className="admin-content">
-          {(message || error) && (
-            <div
-              className={`admin-alert ${
-                error ? "admin-alert--error" : "admin-alert--success"
-              }`}
-            >
-              {error || message}
-            </div>
-          )}
-
-          {activeDashboardTab === "reviews" ? (
-            <div className="admin-stack">
-              <div className="admin-heading">
+        {/* RIGHT MAIN CONTENT PANEL */}
+        <main className="teacher-dash-main">
+          {selectedItem ? (
+            <TeacherItemDetailFullView
+              item={selectedItem}
+              saving={saving}
+              lessons={lessons}
+              podcasts={podcasts}
+              quizzes={availableQuizzes}
+              onBack={() => setSelectedId(null)}
+              onApprove={handleApprove}
+              onReject={openRejectForm}
+            />
+          ) : (
+            <>
+              {/* Header Bar */}
+              <div className="teacher-header-bar">
                 <div>
-                  <p className="admin-kicker">Duyệt game & podcast</p>
-                  <h2>Teacher Review Dashboard</h2>
+                  <h1 className="teacher-main-title font-sans">Bảng Duyệt Bài Giáo Viên</h1>
+                  <p className="teacher-main-subtitle">
+                    Duyệt game, podcast và yêu cầu bài học từ cộng đồng
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  className="teacher-top-refresh"
+                >
+                  <RefreshIcon className="w-4 h-4" />
+                  <span>Làm mới</span>
+                </button>
+              </div>
+
+              {(message || error) && (
+                <div
+                  className={`admin-alert ${
+                    error ? "admin-alert--error" : "admin-alert--success"
+                  } flex items-center justify-between font-sans`}
+                >
+                  <span>{error || message}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMessage("");
+                      setError("");
+                    }}
+                    className="ml-4 text-xs font-bold px-2 py-0.5 rounded hover:bg-black/10 transition-colors shrink-0"
+                    title="Đóng thông báo"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              {/* Stat Summary Cards Row */}
+              <div className="teacher-stats-grid-v2">
+                {/* Card 1: Chờ duyệt */}
+                <div className="teacher-stat-card-v2 teacher-stat-card-v2--pending">
+                  <div className="teacher-stat-icon-circle teacher-stat-icon-circle--pending">
+                    <HourglassIcon />
+                  </div>
+                  <div className="teacher-stat-info">
+                    <span className="teacher-stat-label">CHỜ DUYỆT</span>
+                    <span className="teacher-stat-number">{stats.pending}</span>
+                    <span className="teacher-stat-pill teacher-stat-pill--pending">
+                      {stats.pendingToday > 0 ? `↑ ${stats.pendingToday} mới hôm nay` : "Chờ xử lý"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card 2: Đã xuất bản */}
+                <div className="teacher-stat-card-v2 teacher-stat-card-v2--published">
+                  <div className="teacher-stat-icon-circle teacher-stat-icon-circle--published">
+                    <CheckCircleIcon />
+                  </div>
+                  <div className="teacher-stat-info">
+                    <span className="teacher-stat-label">ĐÃ XUẤT BẢN</span>
+                    <span className="teacher-stat-number">{stats.published}</span>
+                    <span className="teacher-stat-pill teacher-stat-pill--published">
+                      {stats.publishedToday > 0 ? `↑ ${stats.publishedToday} hôm nay` : "Đã xuất bản"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card 3: Bị từ chối */}
+                <div className="teacher-stat-card-v2 teacher-stat-card-v2--rejected">
+                  <div className="teacher-stat-icon-circle teacher-stat-icon-circle--rejected">
+                    <XCircleIcon />
+                  </div>
+                  <div className="teacher-stat-info">
+                    <span className="teacher-stat-label">BỊ TỪ CHỐI</span>
+                    <span className="teacher-stat-number">{stats.rejected}</span>
+                    <span className="teacher-stat-pill teacher-stat-pill--rejected">
+                      {stats.rejectedToday > 0 ? `↓ ${stats.rejectedToday} hôm nay` : "Đã từ chối"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card 4: Tổng cộng */}
+                <div className="teacher-stat-card-v2 teacher-stat-card-v2--total">
+                  <div className="teacher-stat-icon-circle teacher-stat-icon-circle--total">
+                    <FileTextIcon />
+                  </div>
+                  <div className="teacher-stat-info">
+                    <span className="teacher-stat-label">TỔNG CỘNG</span>
+                    <span className="teacher-stat-number">{stats.total}</span>
+                    <span className="teacher-stat-pill teacher-stat-pill--total">
+                      Tất cả nội dung
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="admin-stat-grid teacher-stat-grid">
-                <StatCard label="Chờ duyệt" value={stats.pending} />
-                <StatCard label="Đã xuất bản" value={stats.published} />
-                <StatCard label="Bị từ chối" value={stats.rejected} />
-                <StatCard label="Tổng mục" value={stats.total} />
-              </div>
-
-              <div className="admin-panel">
-                <div className="teacher-filter-bar teacher-filter-bar--compact">
+              {/* Filter & Search Bar */}
+              <div className="teacher-filter-card-v2">
+                <div className="teacher-search-input-wrapper">
+                  <SearchIcon className="text-amber-800" />
                   <input
-                    className="admin-search"
+                    type="text"
+                    className="teacher-search-input-field"
                     value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Tìm theo tiêu đề..."
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Tìm theo tiêu đề, người tạo..."
                   />
+                </div>
+
+                <div className="teacher-select-box-v2">
+                  <CategoryGridIcon className="text-amber-800" />
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => {
+                      setTypeFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value="All">Chọn loại</option>
+                    <option value="Game">Game</option>
+                    <option value="Podcast">Podcast</option>
+                  </select>
+                </div>
+
+                <div className="teacher-select-box-v2">
+                  <FilterLinesIcon className="text-amber-800" />
                   <select
                     value={statusFilter}
-                    onChange={(event) =>
-                      setStatusFilter(event.target.value as ReviewStatus | "All")
-                    }
-                    className="teacher-select"
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value as ReviewStatus | "All");
+                      setCurrentPage(1);
+                    }}
                   >
-                    {statusOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
+                    {statusOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div className="admin-panel-heading teacher-list-heading">
-                  <h3>Danh sách game & podcast</h3>
-                  <span>{filteredItems.length} mục</span>
+                <div className="teacher-select-box-v2">
+                  <CalendarIcon className="text-amber-800" />
+                  <select
+                    value={timeFilter}
+                    onChange={(e) => {
+                      setTimeFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value="All">Thời gian</option>
+                    <option value="Today">Hôm nay</option>
+                    <option value="Week">Tuần này</option>
+                    <option value="Month">Tháng này</option>
+                  </select>
                 </div>
 
-                <div className="admin-table teacher-review-table teacher-review-table--lesson">
-                  <div className="admin-table-head">
-                    <span>Tiêu đề</span>
-                    <span>Loại</span>
-                    <span>Người tạo</span>
-                    <span>Ngày gửi</span>
-                    <span>Trạng thái</span>
-                    <span>Thao tác</span>
-                  </div>
-                  {filteredItems.map((item) => (
-                    <div key={item.id} className="admin-table-row">
-                      <div>
-                        <strong>{item.title}</strong>
-                        <small className="line-clamp-2">{item.summary}</small>
-                      </div>
-                      <span className={`teacher-type-badge ${item.type === "Podcast" ? "teacher-type-badge--podcast" : item.type === "StudyUnit" ? "teacher-type-badge--study-unit" : item.type === "Quiz" ? "teacher-type-badge--quiz" : ""}`}>
-                        {item.type === "Lesson" ? "Game" : item.type === "Podcast" ? "Podcast" : item.type === "StudyUnit" ? "Lý thuyết" : "Quiz"}
-                      </span>
-                      <span className="flex flex-col min-w-0 justify-center">
-                        <span className="font-semibold text-amber-900 truncate block text-sm" title={formatCreatorDisplay(item.createdBy).name}>
-                          {formatCreatorDisplay(item.createdBy).name}
-                        </span>
-                        {formatCreatorDisplay(item.createdBy).email && (
-                          <span className="text-[10px] text-amber-600 truncate block mt-0.5" title={formatCreatorDisplay(item.createdBy).email}>
-                            {formatCreatorDisplay(item.createdBy).email}
-                          </span>
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  className="teacher-btn-refresh-v2"
+                >
+                  <RefreshIcon className="w-4 h-4" />
+                  <span>Làm mới</span>
+                </button>
+              </div>
+
+              {/* Main Content Area */}
+              {activeDashboardTab === "guide" ? (
+                <TeacherGuideView />
+              ) : (
+                <div className="teacher-table-card-v2">
+                  {activeDashboardTab !== "requests" ? (
+                  <>
+                    <table className="teacher-table-v2">
+                      <colgroup>
+                        <col style={{ width: "36%" }} />
+                        <col style={{ width: "11%" }} />
+                        <col style={{ width: "18%" }} />
+                        <col style={{ width: "12%" }} />
+                        <col style={{ width: "12%" }} />
+                        <col style={{ width: "11%" }} />
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <th>TIÊU ĐỀ</th>
+                          <th>LOẠI</th>
+                          <th>NGƯỜI TẠO</th>
+                          <th>NGÀY GỬI</th>
+                          <th>TRẠNG THÁI</th>
+                          <th>THAO TÁC</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedItems.map((item) => {
+                          const creator = formatCreatorDisplay(item.createdBy);
+
+                          const itemThumb =
+                            item.type === "Podcast" && item.podcastDetails?.thumbnail
+                              ? item.podcastDetails.thumbnail
+                              : item.game?.tilesets && item.game.tilesets.length > 0 && item.game.tilesets[0]?.imageUrl
+                              ? item.game.tilesets[0].imageUrl
+                              : item.type === "Podcast"
+                              ? "/textures/paper.jpg"
+                              : "/images/HeroSection.png";
+
+                          const creatorAvatarSrc = item.creatorAvatar
+                            ? item.creatorAvatar
+                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.name)}&background=8C4210&color=fff`;
+
+                          return (
+                            <tr key={item.id}>
+                              <td>
+                                <div className="teacher-item-cell">
+                                  <img
+                                    src={itemThumb}
+                                    alt={item.title}
+                                    className="teacher-item-thumb"
+                                  />
+                                  <div className="teacher-item-title-box">
+                                    <span className="teacher-item-title">{item.title}</span>
+                                    <span className="teacher-item-subtitle">{item.summary}</span>
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td>
+                                <span
+                                  className={`teacher-badge-type ${
+                                    item.type === "Podcast"
+                                      ? "teacher-badge-type--podcast"
+                                      : "teacher-badge-type--game"
+                                  }`}
+                                >
+                                  {item.type === "Podcast" ? (
+                                    <>
+                                      <MicIcon /> PODCAST
+                                    </>
+                                  ) : (
+                                    <>
+                                      <GamepadIcon className="w-3 h-3" /> GAME
+                                    </>
+                                  )}
+                                </span>
+                              </td>
+
+                              <td>
+                                <div className="teacher-author-cell">
+                                  <img
+                                    src={creatorAvatarSrc}
+                                    alt={creator.name}
+                                    className="teacher-author-avatar"
+                                  />
+                                  <div className="teacher-author-info">
+                                    <span className="teacher-author-name">{creator.name}</span>
+                                    <span className="teacher-author-handle">
+                                      {creator.email ? `@${creator.email.split("@")[0]}` : "@staff"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td>
+                                <div className="teacher-date-cell">
+                                  <span>{formatDate(item.submittedAt).split(" ")[0]}</span>
+                                  <span className="text-xs text-stone-500">
+                                    {formatDate(item.submittedAt).split(" ")[1] || ""}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td>
+                                <span
+                                  className={`teacher-status-pill-v2 ${
+                                    item.status === "Pending_Review"
+                                      ? "teacher-status-pill-v2--pending"
+                                      : item.status === "Published"
+                                      ? "teacher-status-pill-v2--published"
+                                      : "teacher-status-pill-v2--rejected"
+                                  }`}
+                                >
+                                  {item.status === "Pending_Review" && <HourglassIcon className="w-3.5 h-3.5" />}
+                                  {item.status === "Published" && <CheckCircleIcon className="w-3.5 h-3.5" />}
+                                  {item.status === "Rejected" && <XCircleIcon className="w-3.5 h-3.5" />}
+                                  <span>{getStatusLabel(item.status)}</span>
+                                </span>
+                              </td>
+
+                              <td>
+                                <div className="teacher-action-group">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedId(item.id)}
+                                    title="Xem chi tiết"
+                                    className="teacher-btn-icon-v2"
+                                  >
+                                    <EyeIcon />
+                                  </button>
+
+                                  {item.status === "Pending_Review" ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleApprove(item)}
+                                        title="Duyệt xuất bản"
+                                        className="teacher-btn-icon-v2 teacher-btn-icon-v2--approve"
+                                      >
+                                        <CheckCircleIcon className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => openRejectForm(item)}
+                                        title="Từ chối"
+                                        className="teacher-btn-icon-v2 teacher-btn-icon-v2--reject"
+                                      >
+                                        <XCircleIcon className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  ) : item.status === "Published" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedId(item.id)}
+                                      title="Thống kê"
+                                      className="teacher-btn-icon-v2 text-blue-700"
+                                    >
+                                      <BarChartIcon />
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedId(item.id)}
+                                      title="Xem nhận xét"
+                                      className="teacher-btn-icon-v2 text-rose-700"
+                                    >
+                                      <MessageIcon />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+
+                        {filteredItems.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="text-center py-8 text-stone-600 font-medium">
+                              Không tìm thấy game hoặc podcast nào phù hợp với bộ lọc hiện tại.
+                            </td>
+                          </tr>
                         )}
-                      </span>
-                      <span>{formatDate(item.submittedAt)}</span>
-                      <StatusBadge status={item.status} />
-                      <div className="admin-row-actions teacher-row-actions">
-                        <button type="button" onClick={() => setSelectedId(item.id)}>
-                          Chi tiết
+                      </tbody>
+                    </table>
+
+                    {/* Pagination Footer */}
+                    <div className="teacher-pagination-footer">
+                      <div>
+                        Hiển thị {filteredItems.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredItems.length)} trong {filteredItems.length} nội dung
+                      </div>
+                      <div className="teacher-pagination-controls">
+                        <button
+                          type="button"
+                          disabled={currentPage === 1}
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          className="teacher-page-btn disabled:opacity-40"
+                        >
+                          &lt;
+                        </button>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`teacher-page-btn ${currentPage === pageNum ? "teacher-page-btn--active" : ""}`}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+
+                        <button
+                          type="button"
+                          disabled={currentPage >= totalPages}
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          className="teacher-page-btn disabled:opacity-40"
+                        >
+                          &gt;
                         </button>
                       </div>
-                    </div>
-                  ))}
-                  {filteredItems.length === 0 && (
-                    <p className="admin-empty">
-                      Không có game/podcast phù hợp với bộ lọc hiện tại.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="admin-stack">
-              <div className="admin-heading">
-                <div>
-                  <p className="admin-kicker">Quản lý bài soạn</p>
-                  <h2>Yêu cầu bài học từ học viên Pro</h2>
-                </div>
-              </div>
-
-              <div className="admin-panel">
-                <div className="admin-panel-heading teacher-list-heading">
-                  <h3>Danh sách yêu cầu soạn bài</h3>
-                  <span>{requests.length} yêu cầu</span>
-                </div>
-
-                <div className="admin-table teacher-review-table">
-                  <div className="admin-table-head">
-                    <span>Tiêu đề & Nội dung</span>
-                    <span>Thời kỳ</span>
-                    <span>Học sinh</span>
-                    <span>Trạng thái</span>
-                    <span>Thao tác</span>
-                  </div>
-                  {requests.map((req) => {
-                    const assignedTeacherId = req.assignedTeacherId && (typeof req.assignedTeacherId === "object" ? req.assignedTeacherId._id : req.assignedTeacherId);
-                    const isMyAssignment = assignedTeacherId === user.id;
-
-                    return (
-                      <div key={req._id} className="admin-table-row">
-                        <div>
-                          <strong>{req.title}</strong>
-                          <small className="line-clamp-3 mt-1 block text-stone-600">{req.description}</small>
-                          {req.teacherResponse && (
-                            <div className="mt-2 text-rose-700 bg-rose-50 p-2 rounded border border-rose-200 text-xs">
-                              <strong>Lý do từ chối:</strong> {req.teacherResponse}
-                            </div>
-                          )}
-                          {req.pedagogicalNotes && (
-                            <div className="mt-2 text-sky-700 bg-sky-50 p-2 rounded border border-sky-200 text-xs">
-                              <strong>Nhận định sư phạm:</strong> {req.pedagogicalNotes}
-                            </div>
-                          )}
-                          {req.needsGameCreation && (
-                            <div className="mt-2 text-purple-700 bg-purple-50 p-2 rounded border border-purple-200 text-xs">
-                              <strong>Yêu cầu thiết kế Game:</strong>{" "}
-                              <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                req.gameCreationStatus === "Completed" ? "bg-emerald-100 text-emerald-800" : "bg-purple-100 text-purple-800"
-                              }`}>
-                                {req.gameCreationStatus === "Completed" ? "Đã hoàn thành" : "Đang yêu cầu Staff"}
-                              </span>
-                            </div>
-                          )}
-                          {req.estimatedCompletionDate && (
-                            <div className="mt-1.5 text-stone-600 text-xs">
-                              Dự kiến hoàn thành: <strong>{new Date(req.estimatedCompletionDate).toLocaleDateString("vi-VN")}</strong>
-                            </div>
-                          )}
-                          {req.resultPodcastId && (
-                            <div className="mt-2 text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200 text-xs">
-                              <strong>Podcast xuất bản:</strong> {typeof req.resultPodcastId === "object" ? req.resultPodcastId.title : req.resultPodcastId}
-                            </div>
-                          )}
-                        </div>
-                        <span>{req.historicalPeriod || "Chưa phân loại"}</span>
-                        <span>
-                          {req.requesterId && typeof req.requesterId === "object" ? (req.requesterId.name || req.requesterId.email) : "Học viên Pro"}
-                        </span>
-                        <span>
-                          <span className={`inline-block px-2.5 py-1 rounded text-xs font-semibold ${
-                            req.status === "Pending" ? "bg-amber-100 text-amber-800" :
-                            req.status === "Accepted" ? "bg-blue-100 text-blue-800" :
-                            req.status === "InProgress" ? "bg-purple-100 text-purple-800" :
-                            req.status === "Completed" ? "bg-emerald-100 text-emerald-800" :
-                            "bg-rose-100 text-rose-800"
-                          }`}>
-                            {req.status === "Pending" ? "Chờ duyệt" :
-                             req.status === "Accepted" ? "Đã nhận" :
-                             req.status === "InProgress" ? "Đang soạn" :
-                             req.status === "Completed" ? "Hoàn thành" :
-                             "Từ chối"}
-                          </span>
-                          {req.status !== "Pending" && (
-                            <small className="block mt-1 text-[10px] text-stone-500">
-                              GV: {req.assignedTeacherId && typeof req.assignedTeacherId === "object" ? req.assignedTeacherId.name : "N/A"}
-                            </small>
-                          )}
-                        </span>
-                        <div className="admin-row-actions teacher-row-actions flex flex-col gap-1.5 justify-center">
-                          {req.status === "Pending" && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setAcceptingRequestId(req._id);
-                                  setNeedsGameCreation(false);
-                                  setPedagogicalNotes("");
-                                  setEstimatedCompletionDate("");
-                                }}
-                                className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700"
-                              >
-                                Nhận soạn
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setRejectingRequestId(req._id);
-                                  setRejectReason("");
-                                  setFeedbackError("");
-                                }}
-                                className="px-2 py-1 bg-rose-600 text-white rounded text-xs font-semibold hover:bg-rose-700"
-                              >
-                                Từ chối
-                              </button>
-                            </>
-                          )}
-                          {req.status === "Accepted" && isMyAssignment && (
-                            <button
-                              type="button"
-                              onClick={() => handleStartRequest(req._id)}
-                              className="px-2 py-1 bg-purple-600 text-white rounded text-xs font-semibold hover:bg-purple-700"
-                            >
-                              Bắt đầu soạn
-                            </button>
-                          )}
-                          {req.status === "InProgress" && isMyAssignment && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const pId = typeof req.resultPodcastId === "object" ? req.resultPodcastId?._id : req.resultPodcastId;
-                                const pTitle = typeof req.resultPodcastId === "object" ? req.resultPodcastId?.title : "bài soạn";
-                                triggerCompleteRequest(req._id, pId || null, pTitle || "bài soạn");
-                              }}
-                              className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700"
-                            >
-                              Hoàn thành
-                            </button>
-                          )}
-                          {isMyAssignment && req.resultPodcastId && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const podcastId = typeof req.resultPodcastId === "object" ? req.resultPodcastId?._id : req.resultPodcastId;
-                                if (podcastId) {
-                                  openEditPodcastModal(podcastId);
-                                }
-                              }}
-                              className="px-2 py-1 bg-amber-600 text-white rounded text-xs font-semibold hover:bg-amber-700"
-                            >
-                              Chỉnh sửa Podcast
-                            </button>
-                          )}
-                          {req.status === "Completed" && !isMyAssignment && (
-                            <span className="text-[10px] text-stone-400 italic">Không có thao tác</span>
-                          )}
-                        </div>
+                      <div>
+                        <select
+                          value={pageSize}
+                          onChange={(e) => {
+                            setPageSize(Number(e.target.value));
+                            setCurrentPage(1);
+                          }}
+                          className="border border-amber-200 rounded px-2 py-1 bg-white text-xs text-stone-700"
+                        >
+                          <option value={5}>5 / trang</option>
+                          <option value={10}>10 / trang</option>
+                          <option value={20}>20 / trang</option>
+                        </select>
                       </div>
-                    );
-                  })}
-                  {requests.length === 0 && (
-                    <p className="admin-empty">
-                      Không có yêu cầu bài học nào cần xử lý.
-                    </p>
-                  )}
-                </div>
+                    </div>
+                  </>
+                ) : (
+                  /* PRO LESSON REQUESTS TAB CONTENT */
+                  <div className="admin-stack">
+                    <div className="admin-panel-heading teacher-list-heading">
+                      <h3>Danh sách yêu cầu soạn bài từ học viên Pro</h3>
+                      <span>{requests.length} yêu cầu</span>
+                    </div>
+
+                    <div className="admin-table teacher-review-table">
+                      <div className="admin-table-head">
+                        <span>Tiêu đề & Nội dung</span>
+                        <span>Thời kỳ</span>
+                        <span>Học sinh</span>
+                        <span>Trạng thái</span>
+                        <span>Thao tác</span>
+                      </div>
+                      {requests.map((req) => {
+                        const assignedTeacherId = req.assignedTeacherId && (typeof req.assignedTeacherId === "object" ? req.assignedTeacherId._id : req.assignedTeacherId);
+                        const isMyAssignment = assignedTeacherId === user.id;
+
+                        return (
+                          <div key={req._id} className="admin-table-row">
+                            <div>
+                              <strong>{req.title}</strong>
+                              <small className="line-clamp-3 mt-1 block text-stone-600">{req.description}</small>
+                              {req.teacherResponse && (
+                                <div className="mt-2 text-rose-700 bg-rose-50 p-2 rounded border border-rose-200 text-xs">
+                                  <strong>Lý do từ chối:</strong> {req.teacherResponse}
+                                </div>
+                              )}
+                              {req.pedagogicalNotes && (
+                                <div className="mt-2 text-sky-700 bg-sky-50 p-2 rounded border border-sky-200 text-xs">
+                                  <strong>Nhận định sư phạm:</strong> {req.pedagogicalNotes}
+                                </div>
+                              )}
+                              {req.needsGameCreation && (
+                                <div className="mt-2 text-purple-700 bg-purple-50 p-2 rounded border border-purple-200 text-xs">
+                                  <strong>Yêu cầu thiết kế Game:</strong>{" "}
+                                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                    req.gameCreationStatus === "Completed" ? "bg-emerald-100 text-emerald-800" : "bg-purple-100 text-purple-800"
+                                  }`}>
+                                    {req.gameCreationStatus === "Completed" ? "Đã hoàn thành" : "Đang yêu cầu Staff"}
+                                  </span>
+                                </div>
+                              )}
+                              {req.estimatedCompletionDate && (
+                                <div className="mt-1.5 text-stone-600 text-xs">
+                                  Dự kiến hoàn thành: <strong>{new Date(req.estimatedCompletionDate).toLocaleDateString("vi-VN")}</strong>
+                                </div>
+                              )}
+                              {req.resultPodcastId && (
+                                <div className="mt-2 text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200 text-xs">
+                                  <strong>Podcast xuất bản:</strong> {typeof req.resultPodcastId === "object" ? req.resultPodcastId.title : req.resultPodcastId}
+                                </div>
+                              )}
+                            </div>
+                            <span>{req.historicalPeriod || "Chưa phân loại"}</span>
+                            <span>
+                              {req.requesterId && typeof req.requesterId === "object" ? (req.requesterId.name || req.requesterId.email) : "Học viên Pro"}
+                            </span>
+                            <span>
+                              <span className={`inline-block px-2.5 py-1 rounded text-xs font-semibold ${
+                                req.status === "Pending" ? "bg-amber-100 text-amber-800" :
+                                req.status === "Accepted" ? "bg-blue-100 text-blue-800" :
+                                req.status === "InProgress" ? "bg-purple-100 text-purple-800" :
+                                req.status === "Completed" ? "bg-emerald-100 text-emerald-800" :
+                                "bg-rose-100 text-rose-800"
+                              }`}>
+                                {req.status === "Pending" ? "Chờ duyệt" :
+                                 req.status === "Accepted" ? "Đã nhận" :
+                                 req.status === "InProgress" ? "Đang soạn" :
+                                 req.status === "Completed" ? "Hoàn thành" :
+                                 "Từ chối"}
+                              </span>
+                              {req.status !== "Pending" && (
+                                <small className="block mt-1 text-[10px] text-stone-500">
+                                  GV: {req.assignedTeacherId && typeof req.assignedTeacherId === "object" ? req.assignedTeacherId.name : "N/A"}
+                                </small>
+                              )}
+                            </span>
+                            <div className="admin-row-actions teacher-row-actions flex flex-col gap-1.5 justify-center">
+                              {req.status === "Pending" && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setAcceptingRequestId(req._id);
+                                      setNeedsGameCreation(false);
+                                      setPedagogicalNotes("");
+                                      setEstimatedCompletionDate("");
+                                    }}
+                                    className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700"
+                                  >
+                                    Nhận soạn
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setRejectingRequestId(req._id);
+                                      setRejectReason("");
+                                      setFeedbackError("");
+                                    }}
+                                    className="px-2 py-1 bg-rose-600 text-white rounded text-xs font-semibold hover:bg-rose-700"
+                                  >
+                                    Từ chối
+                                  </button>
+                                </>
+                              )}
+                              {req.status === "Accepted" && isMyAssignment && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartRequest(req._id)}
+                                  className="px-2 py-1 bg-purple-600 text-white rounded text-xs font-semibold hover:bg-purple-700"
+                                >
+                                  Bắt đầu soạn
+                                </button>
+                              )}
+                              {req.status === "InProgress" && isMyAssignment && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const pId = typeof req.resultPodcastId === "object" ? req.resultPodcastId?._id : req.resultPodcastId;
+                                    const pTitle = typeof req.resultPodcastId === "object" ? req.resultPodcastId?.title : "bài soạn";
+                                    triggerCompleteRequest(req._id, pId || null, pTitle || "bài soạn");
+                                  }}
+                                  className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700"
+                                >
+                                  Hoàn thành
+                                </button>
+                              )}
+                              {isMyAssignment && req.resultPodcastId && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const podcastId = typeof req.resultPodcastId === "object" ? req.resultPodcastId?._id : req.resultPodcastId;
+                                    if (podcastId) {
+                                      openEditPodcastModal(podcastId);
+                                    }
+                                  }}
+                                  className="px-2 py-1 bg-amber-600 text-white rounded text-xs font-semibold hover:bg-amber-700"
+                                >
+                                  Chỉnh sửa Podcast
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {requests.length === 0 && (
+                        <p className="admin-empty">
+                          Không có yêu cầu bài học nào cần xử lý.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
+            </>
           )}
-
-
-        </div>
+        </main>
       </div>
 
-      {selectedItem && (
-        <ContentDetailModal
-          item={selectedItem}
-          saving={saving}
-          lessons={lessons}
-          podcasts={podcasts}
-          quizzes={availableQuizzes}
-          onClose={() => setSelectedId(null)}
-          onApprove={handleApprove}
-          onReject={openRejectForm}
-        />
-      )}
+      {/* ALL MODALS (KEEP ORIGINAL LOGIC) */}
 
       {rejectingItem && (
         <RejectModal
@@ -1069,8 +1740,6 @@ export default function TeacherPage() {
               <button type="button" onClick={() => setAcceptingRequestId(null)} className="teacher-close-button">✕</button>
             </div>
             <form onSubmit={handleAcceptRequestSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              
-              {/* Nhận định sư phạm */}
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Nhận định sư phạm của bạn</span>
                 <textarea
@@ -1082,7 +1751,6 @@ export default function TeacherPage() {
                 />
               </div>
 
-              {/* Ngày dự kiến hoàn thành */}
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Ngày dự kiến hoàn thành</span>
                 <input
@@ -1093,7 +1761,6 @@ export default function TeacherPage() {
                 />
               </div>
 
-              {/* Yêu cầu Staff thiết kế Game */}
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
                 <input
                   type="checkbox"
@@ -1110,7 +1777,6 @@ export default function TeacherPage() {
               <hr style={{ border: "none", borderTop: "1px dashed #d1c2a5", margin: "10px 0" }} />
               <h4 style={{ margin: "0 0 5px", color: "#78350f", fontSize: "13px" }}>Thông tin chi tiết Podcast</h4>
 
-              {/* Podcast Title */}
               <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Tiêu đề Podcast *</span>
                 <input
@@ -1123,7 +1789,6 @@ export default function TeacherPage() {
                 />
               </div>
 
-              {/* Podcast Description */}
               <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Mô tả ngắn *</span>
                 <textarea
@@ -1136,7 +1801,6 @@ export default function TeacherPage() {
                 />
               </div>
 
-              {/* Podcast Content */}
               <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Nội dung chi tiết</span>
                 <textarea
@@ -1148,7 +1812,6 @@ export default function TeacherPage() {
                 />
               </div>
 
-              {/* Level & Category */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", minWidth: 0 }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
                   <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Độ khó</span>
@@ -1163,7 +1826,6 @@ export default function TeacherPage() {
                   </select>
                 </div>
                 
-                {/* Category selection */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Thể loại/Chủ đề *</span>
@@ -1229,7 +1891,6 @@ export default function TeacherPage() {
                 </div>
               </div>
 
-              {/* Premium Thumbnail Upload */}
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>
                   Hình ảnh đại diện (Thumbnail) *
@@ -1245,19 +1906,11 @@ export default function TeacherPage() {
                     borderRadius: "6px",
                     cursor: "pointer",
                     background: "#fffdf9",
-                    transition: "border-color 0.2s, background 0.2s",
                     textAlign: "center"
                   }}
-                  className="hover:border-amber-500 hover:bg-amber-50/30"
                 >
-                  <svg className="w-6 h-6 mb-1 text-amber-700" style={{ width: "24px", height: "24px", color: "#b45309" }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
                   <span style={{ fontSize: "12px", fontWeight: "600", color: "#78350f" }}>
                     {podcastForm.thumbnailFile ? (podcastForm.thumbnailFile as File).name : "Chọn hoặc kéo thả ảnh vào đây"}
-                  </span>
-                  <span style={{ fontSize: "10px", color: "#a1a1aa" }}>
-                    Chấp nhận PNG, JPG, JPEG (Tối đa 5MB)
                   </span>
                   <input
                     type="file"
@@ -1269,7 +1922,6 @@ export default function TeacherPage() {
                 </label>
               </div>
 
-              {/* Premium Audio Upload */}
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>
                   Tệp âm thanh (Audio) *
@@ -1285,19 +1937,11 @@ export default function TeacherPage() {
                     borderRadius: "6px",
                     cursor: "pointer",
                     background: "#fffdf9",
-                    transition: "border-color 0.2s, background 0.2s",
                     textAlign: "center"
                   }}
-                  className="hover:border-amber-500 hover:bg-amber-50/30"
                 >
-                  <svg className="w-6 h-6 mb-1 text-amber-700" style={{ width: "24px", height: "24px", color: "#b45309" }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                  </svg>
                   <span style={{ fontSize: "12px", fontWeight: "600", color: "#78350f" }}>
                     {podcastForm.audioFile ? (podcastForm.audioFile as File).name : "Chọn hoặc kéo thả tệp âm thanh vào đây"}
-                  </span>
-                  <span style={{ fontSize: "10px", color: "#a1a1aa" }}>
-                    Chấp nhận MP3, WAV, M4A (Tối đa 100MB)
                   </span>
                   <input
                     type="file"
@@ -1344,7 +1988,6 @@ export default function TeacherPage() {
               <h3>Hoàn thành bài soạn</h3>
               <button type="button" onClick={() => setCompletingRequestId(null)} className="teacher-close-button">✕</button>
             </div>
-            
             <form onSubmit={handleCompleteRequestSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Chọn podcast liên kết *</span>
@@ -1355,7 +1998,6 @@ export default function TeacherPage() {
                   style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", background: "white" }}
                 >
                   <option value="">-- Chọn podcast liên kết --</option>
-                  {/* Show teacher's own podcasts first */}
                   {availablePodcasts
                     .filter((p) => p.createdBy === user?.id || p.createdBy?._id === user?.id)
                     .map((podcast) => (
@@ -1363,7 +2005,6 @@ export default function TeacherPage() {
                         [Của tôi] {podcast.title}
                       </option>
                     ))}
-                  {/* Show other podcasts */}
                   {availablePodcasts
                     .filter((p) => p.createdBy !== user?.id && p.createdBy?._id !== user?.id)
                     .map((podcast) => (
@@ -1372,9 +2013,6 @@ export default function TeacherPage() {
                       </option>
                     ))}
                 </select>
-                <small style={{ color: "#64748b", fontSize: "11px", marginTop: "2px" }}>
-                  * Lưu ý: Podcast sau khi liên kết sẽ được đổi sang chế độ riêng tư (Chỉ học sinh Pro gửi yêu cầu mới có quyền truy cập).
-                </small>
               </div>
 
               {feedbackError && <p style={{ fontSize: "11px", color: "#e11d48", margin: 0 }}>{feedbackError}</p>}
@@ -1418,13 +2056,10 @@ export default function TeacherPage() {
             </div>
             
             <form onSubmit={handleEditPodcastSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              
-              {/* Podcast Title */}
               <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Tiêu đề Podcast *</span>
                 <input
                   type="text"
-                  placeholder="Tiêu đề podcast..."
                   value={podcastForm.title}
                   onChange={(e) => setPodcastFormField("title", e.target.value)}
                   required
@@ -1432,11 +2067,9 @@ export default function TeacherPage() {
                 />
               </div>
 
-              {/* Podcast Description */}
               <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                 <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Mô tả ngắn *</span>
                 <textarea
-                  placeholder="Mô tả tóm tắt..."
                   value={podcastForm.description}
                   onChange={(e) => setPodcastFormField("description", e.target.value)}
                   required
@@ -1444,221 +2077,6 @@ export default function TeacherPage() {
                   style={{ padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", resize: "none" }}
                 />
               </div>
-
-              {/* Podcast Content */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Nội dung chi tiết</span>
-                <textarea
-                  placeholder="Kịch bản / nội dung..."
-                  value={podcastForm.content}
-                  onChange={(e) => setPodcastFormField("content", e.target.value)}
-                  rows={3}
-                  style={{ padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", resize: "none" }}
-                />
-              </div>
-
-              {/* Difficulty & Category */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", minWidth: 0 }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
-                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Độ khó</span>
-                  <select
-                    value={podcastForm.level}
-                    onChange={(e) => setPodcastFormField("level", e.target.value)}
-                    style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", background: "white" }}
-                  >
-                    <option value="Easy">Dễ</option>
-                    <option value="Medium">Trung bình</option>
-                    <option value="Hard">Khó</option>
-                  </select>
-                </div>
-                
-                {/* Category selection */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Thể loại/Chủ đề *</span>
-                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                      {podcastForm.category && !isAddingNewCategory && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={handleRenameCategoryPrompt}
-                            style={{ fontSize: "10px", color: "#2563eb", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}
-                          >
-                            Đổi tên
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleDeleteCategoryPrompt}
-                            style={{ fontSize: "10px", color: "#dc2626", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}
-                          >
-                            Xóa
-                          </button>
-                        </>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsAddingNewCategory(!isAddingNewCategory);
-                          setNewCategoryName("");
-                          setPodcastFormField("category", "");
-                        }}
-                        style={{ fontSize: "10px", color: "#b45309", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}
-                      >
-                        {isAddingNewCategory ? "Hủy" : "Tạo mới"}
-                      </button>
-                    </div>
-                  </div>
-                  {isAddingNewCategory ? (
-                    <input
-                      type="text"
-                      placeholder="Tên chủ đề mới..."
-                      value={newCategoryName}
-                      onChange={(e) => {
-                        setNewCategoryName(e.target.value);
-                        setPodcastFormField("category", e.target.value);
-                      }}
-                      required
-                      style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none" }}
-                    />
-                  ) : (
-                    <select
-                      value={podcastForm.category}
-                      onChange={(e) => setPodcastFormField("category", e.target.value)}
-                      required
-                      style={{ width: "100%", padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", background: "white" }}
-                    >
-                      <option value="">-- Chọn chủ đề --</option>
-                      {categoriesList.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              </div>
-
-              {/* Linked Lesson */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>Liên kết Bài học/Trò chơi (Lesson)</span>
-                <select
-                  value={podcastForm.lessonId}
-                  onChange={(e) => setPodcastFormField("lessonId", e.target.value)}
-                  style={{ padding: "8px", border: "1px solid #d1c2a5", borderRadius: "4px", outline: "none", background: "white" }}
-                >
-                  <option value="">-- Không liên kết --</option>
-                  {lessons.map((lesson) => (
-                    <option key={lesson._id} value={lesson._id}>
-                      {lesson.title} ({lesson._id})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Premium Thumbnail Upload (optional in edit mode) */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>
-                  Hình ảnh đại diện (Thumbnail) (Tải lên để thay thế)
-                </span>
-                {podcastForm.existingThumbnail && (
-                  <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "4px", background: "#fef3c7/20", padding: "6px", borderRadius: "6px", border: "1px solid #fef3c7" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={podcastForm.existingThumbnail}
-                      alt="Ảnh đại diện hiện tại"
-                      style={{ width: "80px", height: "45px", objectFit: "cover", borderRadius: "4px", border: "1px solid #d1c2a5" }}
-                    />
-                    <span style={{ fontSize: "11px", color: "#b45309", fontWeight: "600" }}>Ảnh đại diện hiện tại đã lưu trên máy chủ</span>
-                  </div>
-                )}
-                <label
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "12px",
-                    border: "2px dashed #d1c2a5",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    background: "#fffdf9",
-                    transition: "border-color 0.2s, background 0.2s",
-                    textAlign: "center"
-                  }}
-                  className="hover:border-amber-500 hover:bg-amber-50/30"
-                >
-                  <svg className="w-6 h-6 mb-1 text-amber-700" style={{ width: "24px", height: "24px", color: "#b45309" }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#78350f" }}>
-                    {podcastForm.thumbnailFile ? (podcastForm.thumbnailFile as File).name : "Chọn hoặc kéo thả ảnh mới vào đây"}
-                  </span>
-                  <span style={{ fontSize: "10px", color: "#a1a1aa" }}>
-                    Chấp nhận PNG, JPG, JPEG (Tối đa 5MB)
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setPodcastFormField("thumbnailFile", e.target.files?.[0] || null)}
-                    style={{ display: "none" }}
-                  />
-                </label>
-              </div>
-
-              {/* Premium Audio Upload (optional in edit mode) */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span style={{ fontSize: "12px", fontWeight: "600", color: "#92400e" }}>
-                  Tệp âm thanh (Audio) (Tải lên để thay thế)
-                </span>
-                {podcastForm.existingAudioUrl && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginBottom: "4px", background: "#fef3c7/20", padding: "6px", borderRadius: "6px", border: "1px solid #fef3c7" }}>
-                    <audio
-                      src={podcastForm.existingAudioUrl}
-                      controls
-                      style={{ width: "100%", height: "32px", outline: "none" }}
-                    />
-                    <span style={{ fontSize: "11px", color: "#b45309", fontWeight: "600" }}>Tệp âm thanh hiện tại đã lưu trên máy chủ</span>
-                  </div>
-                )}
-                <label
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "12px",
-                    border: "2px dashed #d1c2a5",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    background: "#fffdf9",
-                    transition: "border-color 0.2s, background 0.2s",
-                    textAlign: "center"
-                  }}
-                  className="hover:border-amber-500 hover:bg-amber-50/30"
-                >
-                  <svg className="w-6 h-6 mb-1 text-amber-700" style={{ width: "24px", height: "24px", color: "#b45309" }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                  </svg>
-                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#78350f" }}>
-                    {podcastForm.audioFile ? (podcastForm.audioFile as File).name : "Chọn hoặc kéo thả tệp âm thanh mới vào đây"}
-                  </span>
-                  <span style={{ fontSize: "10px", color: "#a1a1aa" }}>
-                    Chấp nhận MP3, WAV, M4A (Tối đa 100MB)
-                  </span>
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    onChange={(e) => setPodcastFormField("audioFile", e.target.files?.[0] || null)}
-                    style={{ display: "none" }}
-                  />
-                </label>
-              </div>
-
-              {uploadProgress !== null && (
-                <div style={{ width: "100%", background: "#f3f4f6", borderRadius: "4px", height: "8px", overflow: "hidden", marginTop: "4px" }}>
-                  <div style={{ width: `${uploadProgress}%`, background: "#b45309", height: "100%", transition: "width 0.2s" }} />
-                </div>
-              )}
 
               {feedbackError && <p style={{ fontSize: "11px", color: "#e11d48", margin: 0 }}>{feedbackError}</p>}
               
@@ -1689,18 +2107,9 @@ export default function TeacherPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="admin-stat-card">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
 function StatusBadge({ status }: { status: ReviewStatus }) {
   return (
-    <span className={`teacher-status teacher-status--${status.toLowerCase()}`}>
+    <span className={`teacher-status-pill-v2 teacher-status-pill-v2--${status === "Pending_Review" ? "pending" : status === "Published" ? "published" : "rejected"}`}>
       {getStatusLabel(status)}
     </span>
   );
@@ -1793,15 +2202,6 @@ function QuizPreview({
           Ngân hàng Quiz
         </span>
         <h3 className="font-display text-lg font-bold text-amber-950 mt-1">{title}</h3>
-        <div className="flex gap-4 mt-2 text-xs text-amber-800">
-          {quizDetails?.timeLimit ? (
-            <span>Hạn giờ: {quizDetails.timeLimit}s</span>
-          ) : (
-            <span>Hạn giờ: Vô hạn</span>
-          )}
-          <span>Điểm đạt: {quizDetails?.passScore || 60}%</span>
-          {quizDetails?.shuffleQuestions && <span>Xáo trộn câu hỏi</span>}
-        </div>
       </div>
 
       <div className="space-y-4">
@@ -1821,37 +2221,6 @@ function QuizPreview({
                 className="max-h-40 rounded-lg border border-amber-200 object-cover"
               />
             )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-6">
-              {q.options.map((opt: string, optIdx: number) => {
-                const isCorrect = optIdx === q.correctIndex;
-                return (
-                  <div
-                    key={optIdx}
-                    className={`text-xs p-2 rounded-lg border transition-colors ${
-                      isCorrect
-                        ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-medium"
-                        : "bg-white border-amber-100 text-amber-900"
-                    }`}
-                  >
-                    <span className="font-bold mr-1.5">{String.fromCharCode(65 + optIdx)}.</span>
-                    {opt}
-                    {isCorrect && (
-                      <svg className="w-3 h-3 text-emerald-600 inline ml-1.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {q.explanation && (
-              <div className="text-[11px] bg-amber-50/70 border-l-2 border-emerald-500 text-amber-850 p-2 rounded-r-lg pl-3 italic">
-                <strong className="text-emerald-700 not-italic mr-1">Giải thích:</strong>
-                {q.explanation}
-              </div>
-            )}
           </div>
         ))}
 
@@ -1865,7 +2234,6 @@ function QuizPreview({
 
 function StudyUnitPreview({
   studyUnitDetails,
-  title,
   lessons = [],
   podcasts = [],
   quizzes = [],
@@ -1913,32 +2281,6 @@ function StudyUnitPreview({
                 <p style={{ whiteSpace: "pre-wrap", color: "#451a03" }}>{data.text}</p>
               )}
 
-              {block.type === "image" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  {data.imageUrl && <img src={data.imageUrl} style={{ maxHeight: "120px", width: "auto", objectFit: "cover", borderRadius: "4px" }} alt="preview" />}
-                  <p style={{ fontStyle: "italic", color: "#78716c" }}>Chú thích: {data.caption || "Không có"}</p>
-                </div>
-              )}
-
-              {block.type === "audio" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <p style={{ fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg><span>{data.title || "Tệp âm thanh"}</span></p>
-                  {data.audioUrl && <audio src={data.audioUrl} controls style={{ width: "100%" }} />}
-                </div>
-              )}
-
-              {block.type === "video" && (
-                <p>Link Youtube: <a href={data.url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", textDecoration: "underline" }}>{data.title || data.url}</a></p>
-              )}
-
-              {block.type === "quote" && (
-                <p style={{ fontStyle: "italic", borderLeft: "2px solid #b45309", paddingLeft: "8px" }}>"{data.text}" — {data.author || "Khuyết danh"}</p>
-              )}
-
-              {block.type === "map" && (
-                <p>Bản đồ nhúng: <a href={data.embedUrl} target="_blank" rel="noreferrer" style={{ color: "#2563eb", textDecoration: "underline" }}>{data.title || data.embedUrl}</a></p>
-              )}
-
               {block.type === "podcast" && (
                 <p>Podcast liên kết: <strong>{getPodcastTitle(data.podcastId)}</strong></p>
               )}
@@ -1949,16 +2291,6 @@ function StudyUnitPreview({
 
               {block.type === "quiz" && (
                 <p>Quiz trắc nghiệm: <strong>{getQuizTitle(data.quizId)}</strong></p>
-              )}
-
-              {block.type === "timeline" && (
-                <ul style={{ paddingLeft: "16px", color: "#44403c" }}>
-                  {(data.events || []).map((ev: any, evIdx: number) => (
-                    <li key={evIdx} style={{ listStyleType: "disc", marginTop: "4px" }}>
-                      <strong>{ev.date}</strong>: {ev.title} — {ev.description}
-                    </li>
-                  ))}
-                </ul>
               )}
             </div>
           );
@@ -1972,13 +2304,13 @@ function StudyUnitPreview({
   );
 }
 
-function ContentDetailModal({
+function TeacherItemDetailFullView({
   item,
   saving,
   lessons = [],
   podcasts = [],
   quizzes = [],
-  onClose,
+  onBack,
   onApprove,
   onReject,
 }: {
@@ -1987,64 +2319,125 @@ function ContentDetailModal({
   lessons?: any[];
   podcasts?: any[];
   quizzes?: any[];
-  onClose: () => void;
+  onBack: () => void;
   onApprove: (item: TeacherReviewItem) => void;
   onReject: (item: TeacherReviewItem) => void;
 }) {
   const canReview = item.status === "Pending_Review";
+  const creator = formatCreatorDisplay(item.createdBy);
+  const creatorAvatarSrc = item.creatorAvatar
+    ? item.creatorAvatar
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.name)}&background=8C4210&color=fff`;
 
   return (
-    <div className="teacher-modal-backdrop" role="dialog" aria-modal="true">
-      <div className="teacher-modal teacher-detail-modal">
-        <div className="teacher-modal-header">
-          <div>
-            <p className="admin-kicker">Chi tiết {item.type === "Lesson" ? "game" : item.type === "Podcast" ? "podcast" : "bài học"}</p>
-            <h2>{item.title}</h2>
-          </div>
-          <button type="button" onClick={onClose} className="teacher-close-button">
-            Đóng
+    <div className="teacher-full-detail-view space-y-6">
+      {/* Top Header Navigation Bar */}
+      <div className="teacher-detail-header-bar flex flex-wrap items-center justify-between bg-[#FFFDF8] p-4 rounded-xl border border-[#E6D8BC] shadow-xs gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-2 text-[#53270D] font-bold hover:text-[#3C1E0A] transition-colors bg-[#FDF8ED] px-3.5 py-2 rounded-lg border border-[#D8C49A] hover:bg-[#F5EBD4] cursor-pointer font-sans"
+          >
+            <span className="text-base font-bold">←</span>
+            <span className="text-sm font-semibold">Quay lại danh sách</span>
           </button>
+          <div>
+            <div className="text-[11px] font-bold text-[#8C6A34] uppercase font-sans">
+              Chi tiết {item.type === "Lesson" ? "Game 2D" : item.type === "Podcast" ? "Podcast Audio" : "Bài học"}
+            </div>
+            <h2 className="text-xl font-bold text-[#2A1407] font-sans leading-snug">{item.title}</h2>
+          </div>
         </div>
 
-        <div className="teacher-detail-grid">
-          <div className="teacher-detail-main">
-            <InfoRow label="Loại nội dung" value={item.type === "Lesson" ? "Game" : item.type === "Podcast" ? "Podcast" : "Lý thuyết"} />
-            <div className="teacher-info-row">
-              <span>Người tạo</span>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                <strong style={{ color: "#451a03", fontWeight: "700" }}>{formatCreatorDisplay(item.createdBy).name}</strong>
-                {formatCreatorDisplay(item.createdBy).email && (
-                  <span style={{ fontSize: "11px", color: "#d97706" }}>{formatCreatorDisplay(item.createdBy).email}</span>
-                )}
+        <div className="flex items-center gap-3">
+          {canReview ? (
+            <>
+              <button
+                type="button"
+                className="teacher-btn-reject-v2"
+                onClick={() => onReject(item)}
+                disabled={saving}
+              >
+                <XCircleIcon className="w-4 h-4" />
+                <span>Từ chối</span>
+              </button>
+              <button
+                type="button"
+                className="teacher-btn-approve-v2"
+                onClick={() => onApprove(item)}
+                disabled={saving}
+              >
+                <CheckCircleIcon className="w-4 h-4" />
+                <span>{saving ? "Đang xử lý..." : "Duyệt xuất bản"}</span>
+              </button>
+            </>
+          ) : (
+            <span className="teacher-status-pill-v2 teacher-status-pill-v2--published">
+              {item.status === "Published" ? <CheckCircleIcon className="w-4 h-4" /> : <XCircleIcon className="w-4 h-4" />}
+              <span>{getStatusLabel(item.status)}</span>
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Main 2-Column Full Page Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans">
+        {/* Left Column (1/3): Metadata & Summary */}
+        <div className="space-y-4">
+          <div className="teacher-summary-card">
+            <h4>Thông tin chung</h4>
+            <div className="space-y-3 mt-3">
+              <div className="flex justify-between items-center py-2 border-b border-[#E6D8BC]">
+                <span className="text-xs font-bold text-[#8C6A34] uppercase font-sans">Loại nội dung</span>
+                <span className="text-sm font-semibold text-[#2A1407]">
+                  {item.type === "Lesson" ? "Game 2D" : item.type === "Podcast" ? "Podcast Audio" : "Lý thuyết"}
+                </span>
               </div>
-            </div>
-            <InfoRow label="Ngày gửi duyệt" value={formatDate(item.submittedAt)} />
-            <div className="teacher-info-row">
-              <span>Trạng thái hiện tại</span>
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+
+              <div className="flex justify-between items-center py-2 border-b border-[#E6D8BC]">
+                <span className="text-xs font-bold text-[#8C6A34] uppercase font-sans">Người tạo</span>
+                <div className="flex items-center gap-2">
+                  <img
+                    src={creatorAvatarSrc}
+                    alt={creator.name}
+                    className="w-7 h-7 rounded-full object-cover border border-[#D8C49A]"
+                  />
+                  <div className="text-right">
+                    <div className="text-xs font-bold text-[#2A1407]">{creator.name}</div>
+                    {creator.email && <div className="text-[10px] text-[#8C6A34]">{creator.email}</div>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center py-2 border-b border-[#E6D8BC]">
+                <span className="text-xs font-bold text-[#8C6A34] uppercase font-sans">Ngày gửi duyệt</span>
+                <span className="text-xs font-semibold text-stone-700">{formatDate(item.submittedAt)}</span>
+              </div>
+
+              <div className="flex justify-between items-center py-2">
+                <span className="text-xs font-bold text-[#8C6A34] uppercase font-sans">Trạng thái</span>
                 <StatusBadge status={item.status} />
-                {item.isDraftUpdate && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                    Bản thảo chỉnh sửa
-                  </span>
-                )}
               </div>
             </div>
-
-            <div className="teacher-section">
-              <h3>Nội dung tóm tắt</h3>
-              <p style={{ whiteSpace: "pre-wrap" }}>{item.summary}</p>
-            </div>
-
-            {item.reviewFeedback && (
-              <div className="teacher-feedback-box">
-                <strong>Feedback từ chối</strong>
-                <p>{item.reviewFeedback}</p>
-              </div>
-            )}
           </div>
 
-          <div className="teacher-preview-column">
+          <div className="teacher-summary-card">
+            <h4>Nội dung tóm tắt</h4>
+            <p className="mt-2 text-[#3C2415] text-sm leading-relaxed">{item.summary || "Chưa có tóm tắt cho nội dung này."}</p>
+          </div>
+
+          {item.reviewFeedback && (
+            <div className="teacher-summary-card border-l-4 border-rose-600 bg-rose-50/60">
+              <h4 className="text-rose-700">Lý do từ chối trước đó</h4>
+              <p className="mt-2 text-rose-950 text-sm">{item.reviewFeedback}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column (2/3): Full Interactive Preview Screen */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="bg-[#FFFDF8] p-5 rounded-xl border border-[#E6D8BC] shadow-xs">
             {item.type === "Lesson" && item.game ? (
               <LessonGamePreview game={item.game} lessonTitle={item.title} />
             ) : item.type === "Podcast" && item.podcastDetails ? (
@@ -2060,39 +2453,111 @@ function ContentDetailModal({
             ) : item.type === "Quiz" && item.quizDetails ? (
               <QuizPreview quizDetails={item.quizDetails} title={item.title} />
             ) : (
-              <div className="teacher-preview">
-                <p className="admin-note">Không có xem trước cho mục này.</p>
+              <div className="text-center py-16 text-stone-500 italic">
+                Không có xem trước cho mục này.
               </div>
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
 
-        <div className="teacher-modal-actions">
-          {canReview ? (
-            <>
-              <button
-                type="button"
-                className="teacher-approve-button"
-                onClick={() => onApprove(item)}
-                disabled={saving}
-              >
-                {saving ? "Đang xử lý..." : "Duyệt"}
-              </button>
-              <button
-                type="button"
-                className="teacher-reject-button"
-                onClick={() => onReject(item)}
-                disabled={saving}
-              >
-                Từ chối
-              </button>
-            </>
-          ) : (
-            <span className="admin-note">
-              Mục này đã {item.status === "Published" ? "được duyệt" : "bị từ chối"},
-              Teacher chỉ có quyền xem lại.
-            </span>
-          )}
+function TeacherGuideView() {
+  return (
+    <div className="teacher-guide-view space-y-6 font-sans">
+      {/* Header Banner */}
+      <div className="bg-[#FFFDF8] p-6 rounded-2xl border border-[#E6D8BC] shadow-xs space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-900 font-bold text-xl border border-amber-300">
+            📖
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-[#2A1407]">Hướng Dẫn Sử Dụng Dành Cho Giáo Viên (Teacher Guide)</h2>
+            <p className="text-sm text-[#8C6A34]">
+              Tài liệu hướng dẫn chi tiết quy trình duyệt bài, tiếp nhận yêu cầu từ Học viên Pro và kiểm định chất lượng nội dung trên SuViet360.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Guide Content Sections Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Section 1: Duyệt Game & Podcast */}
+        <div className="bg-[#FFFDF8] p-5 rounded-2xl border border-[#E6D8BC] shadow-xs space-y-3">
+          <div className="flex items-center gap-2.5 border-b border-[#E6D8BC] pb-3">
+            <span className="w-8 h-8 rounded-lg bg-amber-100 text-amber-900 font-bold flex items-center justify-center text-base">🎮</span>
+            <h3 className="text-lg font-bold text-[#2A1407]">1. Quy Trình Duyệt Game & Podcast</h3>
+          </div>
+          <ul className="space-y-2.5 text-sm text-[#3C2415] leading-relaxed list-disc list-inside">
+            <li>
+              <strong>Xem danh sách bài gửi:</strong> Vào tab <em>Duyệt Game & Podcast</em> để xem tất cả nội dung do Staff biên soạn gửi lên.
+            </li>
+            <li>
+              <strong>Trải nghiệm thực tế:</strong> Nhấn vào biểu tượng mắt <span className="inline-block px-1.5 py-0.5 bg-amber-100 rounded text-xs">👁️</span> để chuyển sang trang chi tiết toàn màn hình. Bạn có thể chơi thử Game 2D, nghe file Podcast audio, xem thông tin người tạo và tóm tắt bài học.
+            </li>
+            <li>
+              <strong>Duyệt xuất bản:</strong> Nhấn nút <strong>Duyệt xuất bản</strong> (Màu xanh) để cho phép hiển thị nội dung trên ứng dụng học sinh.
+            </li>
+            <li>
+              <strong>Từ chối bài lỗi:</strong> Nhấn nút <strong>Từ chối</strong> (Màu đỏ) và nhập lý do/gợi ý sửa đổi chi tiết để Staff biên soạn lại.
+            </li>
+          </ul>
+        </div>
+
+        {/* Section 2: Yêu cầu bài học từ học viên Pro */}
+        <div className="bg-[#FFFDF8] p-5 rounded-2xl border border-[#E6D8BC] shadow-xs space-y-3">
+          <div className="flex items-center gap-2.5 border-b border-[#E6D8BC] pb-3">
+            <span className="w-8 h-8 rounded-lg bg-purple-100 text-purple-900 font-bold flex items-center justify-center text-base">📜</span>
+            <h3 className="text-lg font-bold text-[#2A1407]">2. Tiếp Nhận Yêu Cầu Từ Học Viên Pro</h3>
+          </div>
+          <ul className="space-y-2.5 text-sm text-[#3C2415] leading-relaxed list-disc list-inside">
+            <li>
+              <strong>Danh sách yêu cầu:</strong> Vào tab <em>Yêu cầu bài học (Pro)</em> để xem các đề xuất chủ đề lịch sử từ học viên gói VIP/Pro.
+            </li>
+            <li>
+              <strong>Nhận soạn bài:</strong> Nhấn nút <strong>Nhận soạn</strong>, nhập nhận định sư phạm, dự kiến ngày hoàn thành và tích chọn nếu muốn chuyển Staff thiết kế Game 2D đi kèm.
+            </li>
+            <li>
+              <strong>Bắt đầu & Hoàn thành:</strong> Chuyển trạng thái sang <em>Bắt đầu soạn</em>, sau đó liên kết bài Podcast/Quiz đã soạn để hoàn thành yêu cầu cho học sinh.
+            </li>
+          </ul>
+        </div>
+
+        {/* Section 3: Kiểm tra nội dung & Tiêu chuẩn sư phạm */}
+        <div className="bg-[#FFFDF8] p-5 rounded-2xl border border-[#E6D8BC] shadow-xs space-y-3">
+          <div className="flex items-center gap-2.5 border-b border-[#E6D8BC] pb-3">
+            <span className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-900 font-bold flex items-center justify-center text-base">🔍</span>
+            <h3 className="text-lg font-bold text-[#2A1407]">3. Kiểm Tra Nội Dung & Tiêu Chuẩn</h3>
+          </div>
+          <ul className="space-y-2.5 text-sm text-[#3C2415] leading-relaxed list-disc list-inside">
+            <li>
+              <strong>Độ chính xác lịch sử:</strong> Đảm bảo mốc thời gian, nhân vật, sự kiện và tư liệu lịch sử đúng với chương trình giáo dục phổ thông & tài liệu chính thống.
+            </li>
+            <li>
+              <strong>Tính sư phạm & thẩm mỹ:</strong> Hình ảnh minh họa phù hợp, âm thanh Podcast rõ ràng, không chứa thông tin sai lệch hay vi phạm thuần phong mỹ tục.
+            </li>
+            <li>
+              <strong>Lọc nhanh nội dung:</strong> Sử dụng tab <em>Kiểm tra nội dung</em> để lọc trực tiếp các mục đang ở trạng thái <strong>Chờ duyệt</strong>.
+            </li>
+          </ul>
+        </div>
+
+        {/* Section 4: Lịch sử phản hồi & Quản lý tài khoản */}
+        <div className="bg-[#FFFDF8] p-5 rounded-2xl border border-[#E6D8BC] shadow-xs space-y-3">
+          <div className="flex items-center gap-2.5 border-b border-[#E6D8BC] pb-3">
+            <span className="w-8 h-8 rounded-lg bg-rose-100 text-rose-900 font-bold flex items-center justify-center text-base">💬</span>
+            <h3 className="text-lg font-bold text-[#2A1407]">4. Phản Hồi & Đăng Xuất</h3>
+          </div>
+          <ul className="space-y-2.5 text-sm text-[#3C2415] leading-relaxed list-disc list-inside">
+            <li>
+              <strong>Xem nhận xét:</strong> Nhấp vào tab <em>Duyệt hoặc Từ chối kèm nhận xét</em> để xem lịch sử ghi chú nhận xét đã gửi cho Staff.
+            </li>
+            <li>
+              <strong>Bảo mật tài khoản:</strong> Luôn nhấn nút <strong>Đăng xuất</strong> ở cuối menu bên trái sau khi hoàn thành công việc để bảo vệ tài khoản Giáo viên.
+            </li>
+          </ul>
         </div>
       </div>
     </div>
@@ -2150,47 +2615,6 @@ function LessonGamePreview({
           </button>
         </div>
         <div className="teacher-game-wrapper" style={{ width: "100%", aspectRatio: "4/3", position: "relative", borderRadius: "8px", overflow: "hidden", border: "1px solid #d1c2a5", backgroundColor: "#000" }}>
-          <style>{`
-            .teacher-game-wrapper > div {
-              height: 100% !important;
-              min-height: unset !important;
-            }
-            .teacher-game-wrapper canvas {
-              max-width: 100% !important;
-              max-height: 100% !important;
-              object-fit: contain;
-            }
-            /* Thu nhỏ hộp thoại câu hỏi và chữ trên màn hình chơi thử của giáo viên */
-            .teacher-game-wrapper > div > div {
-              bottom: 8px !important;
-              padding: 8px 10px !important;
-              border-width: 1.5px !important;
-              border-radius: 6px !important;
-              max-width: 90% !important;
-              width: 90% !important;
-            }
-            .teacher-game-wrapper > div > div div {
-              font-size: 10px !important;
-              line-height: 1.2 !important;
-              margin-bottom: 4px !important;
-              padding-bottom: 4px !important;
-            }
-            .teacher-game-wrapper > div > div div:nth-child(2) {
-              font-size: 9px !important;
-              margin-bottom: 4px !important;
-            }
-            .teacher-game-wrapper > div > div > div:last-child {
-              gap: 3px !important;
-              margin-top: 4px !important;
-            }
-            .teacher-game-wrapper .quiz-opt-btn {
-              padding: 4px 6px !important;
-              font-size: 9px !important;
-              border-width: 1px !important;
-              border-radius: 4px !important;
-              line-height: 1.1 !important;
-            }
-          `}</style>
           {!isZoomed ? (
             <PhaserGame lessonGame={game} />
           ) : (
@@ -2222,10 +2646,6 @@ function LessonGamePreview({
             <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden", aspectRatio: "4/3", border: "2px solid #8B6914", padding: "10px" }}>
               <PhaserGame lessonGame={game} />
             </div>
-            
-            <div style={{ marginTop: "12px", fontSize: "12px", color: "#92400e", fontWeight: "500", textAlign: "center", fontFamily: "sans-serif" }}>
-              * Sử dụng các phím mũi tên để di chuyển nhân vật. Đến gần dấu hỏi chấm để hiển thị câu hỏi trắc nghiệm đầy đủ.
-            </div>
           </div>
         </div>
       )}
@@ -2235,18 +2655,6 @@ function LessonGamePreview({
         <p>
           X: {game.spawnPoint.x}, Y: {game.spawnPoint.y}
         </p>
-      </div>
-
-      <div className="teacher-section teacher-section--tight">
-        <h3>Tilemap JSON</h3>
-        <a
-          href={game.tilemapJsonUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="teacher-resource-link"
-        >
-          {game.tilemapJsonUrl}
-        </a>
       </div>
 
       <div className="teacher-section teacher-section--tight">
@@ -2282,9 +2690,6 @@ function LessonGamePreview({
                     </div>
                   ))}
                 </div>
-                {frames.length > 6 && (
-                  <p className="admin-note">+{frames.length - 6} frame khác</p>
-                )}
               </div>
             ))}
           </div>
