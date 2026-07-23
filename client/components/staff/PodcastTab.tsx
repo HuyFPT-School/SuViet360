@@ -29,6 +29,17 @@ export default function PodcastTab({
   const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+
+  const paginatedPodcasts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return podcasts.slice(start, start + pageSize);
+  }, [podcasts, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(podcasts.length / pageSize) || 1;
+
   const categoriesList = useMemo(() => {
     const set = new Set<string>();
     podcasts.forEach((p) => {
@@ -243,84 +254,138 @@ export default function PodcastTab({
 
   return (
     <>
-      <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
-        <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
-            <h2 className="font-display text-lg font-semibold text-amber-900">
-              Danh sách podcast
-            </h2>
-            <button
-              type="button"
-              onClick={resetPodcastForm}
-              className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-700 hover:bg-amber-50"
-            >
-              Tạo mới
-            </button>
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr] font-sans">
+        {/* LEFT COLUMN: PODCAST LIST */}
+        <div className="staff-card-v2 flex flex-col justify-between">
+          <div>
+            <div className="staff-card-header-v2">
+              <h2 className="staff-card-title-v2">
+                <span>🎙️</span>
+                <span>Danh sách podcast</span>
+              </h2>
+              <button
+                type="button"
+                onClick={resetPodcastForm}
+                className="staff-btn-brown text-xs py-1.5 px-3.5"
+              >
+                + Tạo mới
+              </button>
+            </div>
+
+            {podcastsLoading ? (
+              <div className="p-8 text-center text-[#8C6A34] text-sm">Đang tải podcast...</div>
+            ) : (
+              <div className="divide-y divide-[#F3E6CE]">
+                {paginatedPodcasts.map((podcast) => (
+                  <div
+                    key={podcast._id}
+                    onClick={() => handleSelectPodcast(podcast)}
+                    className={`staff-item-row-v2 ${
+                      selectedPodcastId === podcast._id ? "staff-item-row-v2--selected" : ""
+                    }`}
+                  >
+                    <div className="staff-thumb-wrapper">
+                      <img
+                        src={podcast.thumbnail || "/images/login_background.png"}
+                        alt={podcast.title}
+                        className="staff-thumb-img"
+                      />
+                    </div>
+                    <div className="staff-item-meta">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="staff-item-title">{podcast.title}</h3>
+                        {renderStaffStatusBadge(podcast.status)}
+                      </div>
+                      <p className="staff-item-excerpt">{podcast.description}</p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs text-[#8C6A34] font-medium">
+                        {new Date(podcast.updatedAt || podcast.createdAt).toLocaleDateString("vi-VN")}
+                      </span>
+                      <button
+                        type="button"
+                        className="text-[#8C6A34] hover:text-[#2A1407] p-1 font-bold text-base"
+                        title="Thao tác"
+                      >
+                        ⋮
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {podcasts.length === 0 && (
+                  <div className="p-8 text-center text-[#8C6A34] text-sm italic">
+                    Chưa có podcast nào.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {podcastsLoading ? (
-            <div className="p-6 text-center text-amber-600">Đang tải...</div>
-          ) : (
-            <div className="divide-y divide-amber-100">
-              {podcasts.map((podcast) => (
+          {/* Pagination bar */}
+          {podcasts.length > 0 && (
+            <div className="staff-pagination-bar">
+              <div className="flex items-center gap-1.5">
                 <button
-                  key={podcast._id}
                   type="button"
-                  onClick={() => handleSelectPodcast(podcast)}
-                  className={`w-full text-left px-5 py-4 transition flex gap-4 items-start ${selectedPodcastId === podcast._id
-                      ? "bg-amber-50"
-                      : "hover:bg-amber-50/60"
-                    }`}
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="staff-page-btn disabled:opacity-40"
                 >
-                  {podcast.thumbnail && (
-                    <img
-                      src={podcast.thumbnail}
-                      alt={podcast.title}
-                      className="w-16 h-16 object-cover rounded-lg border border-amber-200 flex-shrink-0"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-amber-900">{podcast.title}</p>
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 font-semibold">
-                        {translateLevel(podcast.level)}
-                      </span>
-                      {renderStaffStatusBadge(podcast.status)}
-                      {podcast.podcastRequest && (
-                        <span className="text-[10px] text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200 font-bold">
-                          Yêu cầu Pro
-                        </span>
-                      )}
-                      {podcast.createdBy && typeof podcast.createdBy === "object" && podcast.createdBy.role === "teacher" && (
-                        <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-250 font-bold">
-                          GV soạn
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-2 text-xs text-amber-655 line-clamp-2">
-                      {podcast.description}
-                    </p>
-                  </div>
+                  ‹
                 </button>
-              ))}
+                {Array.from({ length: totalPages }).map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCurrentPage(idx + 1)}
+                    className={`staff-page-btn ${
+                      currentPage === idx + 1 ? "staff-page-btn--active" : ""
+                    }`}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="staff-page-btn disabled:opacity-40"
+                >
+                  ›
+                </button>
+              </div>
 
-              {podcasts.length === 0 && (
-                <div className="p-6 text-center text-amber-655">Chưa có podcast nào.</div>
-              )}
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-[#FFFDF8] border border-[#E6D8BC] rounded-lg px-2.5 py-1 text-xs font-semibold text-[#2A1407] outline-none"
+              >
+                <option value={5}>5 / trang</option>
+                <option value={10}>10 / trang</option>
+                <option value={20}>20 / trang</option>
+              </select>
             </div>
           )}
         </div>
 
-        <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
-          <div className="border-b border-amber-100 px-5 py-4">
-            <h2 className="font-display text-lg font-semibold text-amber-900">
-              {podcastFormMode === "create" ? "Tạo podcast" : "Chỉnh sửa podcast"}
-            </h2>
-            <p className="text-xs text-amber-600 mt-1">
-              {podcastFormMode === "create"
-                ? "Điền đầy đủ thông tin và tải lên tệp âm thanh/ảnh giao diện."
-                : "Có thể cập nhật thông tin hoặc upload file mới để thay thế."}
-            </p>
+        {/* RIGHT COLUMN: PODCAST FORM */}
+        <div className="staff-card-v2">
+          <div className="staff-card-header-v2">
+            <div>
+              <h2 className="staff-card-title-v2">
+                <span>🎙️</span>
+                <span>{podcastFormMode === "create" ? "Tạo podcast" : "Chỉnh sửa podcast"}</span>
+              </h2>
+              <p className="text-xs text-[#8C6A34] mt-0.5">
+                {podcastFormMode === "create"
+                  ? "Điền đầy đủ thông tin và tải lên tệp âm thanh/ảnh giao diện."
+                  : "Có thể cập nhật thông tin hoặc upload file mới để thay thế."}
+              </p>
+            </div>
           </div>
 
           <div className="space-y-5 p-5">
@@ -351,26 +416,25 @@ export default function PodcastTab({
             )}
 
             {isTeacherPodcast && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                <h3 className="font-semibold text-amber-950 mb-1 flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-900">
+                <h3 className="font-bold text-emerald-950 mb-1 flex items-center gap-1.5 text-sm">
+                  <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Quyền sở hữu của Giáo viên & Học sinh Pro
+                  Quyền sở hữu của Giáo viên & Học sinh VIP
                 </h3>
-                <div className="space-y-1.5 text-xs text-amber-700 font-medium mt-1">
-                  <p>
-                    • <strong>Giáo viên biên soạn:</strong> {(selectedPodcast?.createdBy as any)?.name || "Chưa xác định"}
-                  </p>
-                  {selectedPodcast?.podcastRequest && (
-                    <p>
-                      • <strong>Học sinh yêu cầu (Pro):</strong> {selectedPodcast.podcastRequest.requester?.name || "Học sinh Pro"} ({(selectedPodcast.podcastRequest.requester as any)?.email})
-                    </p>
-                  )}
-                  <p className="mt-2 text-amber-900 font-semibold bg-amber-100/50 p-2 rounded-lg border border-amber-200">
-                    * Vì đây là podcast chuyên biệt do Giáo viên tạo theo Yêu cầu học tập riêng tư của Học sinh Pro, Staff không có quyền chỉnh sửa hoặc xóa dữ liệu này. Chỉ Giáo viên chịu trách nhiệm biên soạn mới có quyền chỉnh sửa.
-                  </p>
-                </div>
+                <p className="mb-2">
+                  Podcast này được biên soạn bởi Giáo viên <strong>{(selectedPodcast?.createdBy as any)?.name}</strong> ({(selectedPodcast?.createdBy as any)?.email}).
+                </p>
+                {selectedPodcast?.podcastRequest && (
+                  <div className="pt-2 border-t border-emerald-200/60 text-[11px] space-y-1 text-emerald-800">
+                    <p>• <strong>Thời kỳ Lịch sử:</strong> {(selectedPodcast.podcastRequest as any).historicalPeriod || "Chưa rõ"}</p>
+                    <p>• <strong>Học sinh yêu cầu (VIP):</strong> {selectedPodcast.podcastRequest.requester?.name || "Học sinh VIP"} ({(selectedPodcast.podcastRequest.requester as any)?.email})</p>
+                  </div>
+                )}
+                <p className="mt-2 text-[11px] text-emerald-700 italic">
+                  * Vì đây là podcast chuyên biệt do Giáo viên tạo theo Yêu cầu học tập riêng tư của Học sinh gói VIP, Staff không có quyền chỉnh sửa hoặc xóa dữ liệu này. Chỉ Giáo viên chịu trách nhiệm biên soạn mới có quyền chỉnh sửa.
+                </p>
               </div>
             )}
 
@@ -587,21 +651,21 @@ export default function PodcastTab({
               )}
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 pt-2">
               {!isTeacherPodcast && (
                 <button
                   type="button"
                   onClick={handlePodcastSubmit}
-                  className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
+                  className="staff-btn-brown w-full py-3 text-sm"
                 >
-                  {podcastFormMode === "create" ? "Tạo podcast" : "Lưu cập nhật"}
+                  🎙️ {podcastFormMode === "create" ? "Tạo podcast" : "Lưu cập nhật"}
                 </button>
               )}
               {podcastFormMode === "edit" && !isTeacherPodcast && (
                 <button
                   type="button"
                   onClick={handlePodcastDelete}
-                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
+                  className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-800 hover:bg-rose-100 transition-colors w-full"
                 >
                   Xóa podcast
                 </button>

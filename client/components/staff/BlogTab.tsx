@@ -85,12 +85,13 @@ export default function BlogTab({ setMessage, onUpdateCounts }: BlogTabProps) {
 
   return (
     <>
-      <div className="grid gap-8 lg:grid-cols-[1.15fr_1.15fr]">
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_1.15fr] font-sans">
         {/* Left side: Pending Posts */}
-        <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm flex flex-col">
-          <div className="border-b border-amber-100 px-5 py-4">
-            <h2 className="font-display text-lg font-semibold text-amber-900">
-              Bài viết chờ duyệt ({pendingPosts.length})
+        <div className="staff-card-v2 flex flex-col">
+          <div className="staff-card-header-v2">
+            <h2 className="staff-card-title-v2">
+              <span>🛡️</span>
+              <span>Bài viết chờ duyệt ({pendingPosts.length})</span>
             </h2>
           </div>
           
@@ -172,10 +173,11 @@ export default function BlogTab({ setMessage, onUpdateCounts }: BlogTabProps) {
         </div>
 
         {/* Right side: Flagged Reports */}
-        <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm flex flex-col">
-          <div className="border-b border-amber-100 px-5 py-4">
-            <h2 className="font-display text-lg font-semibold text-amber-900">
-              Báo cáo vi phạm ({pendingReports.length})
+        <div className="staff-card-v2 flex flex-col">
+          <div className="staff-card-header-v2">
+            <h2 className="staff-card-title-v2">
+              <span>⚠️</span>
+              <span>Báo cáo vi phạm ({pendingReports.length})</span>
             </h2>
           </div>
 
