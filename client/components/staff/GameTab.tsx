@@ -205,59 +205,169 @@ export default function GameTab({
     }
   };
 
+function SearchIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+  // Search & Pagination states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
+
+  const filteredLessons = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return lessons;
+    return lessons.filter(
+      (lesson) =>
+        lesson.title.toLowerCase().includes(term) ||
+        lesson.content.toLowerCase().includes(term)
+    );
+  }, [lessons, searchQuery]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
+  const paginatedLessons = useMemo(() => {
+    const start = (page - 1) * limit;
+    return filteredLessons.slice(start, start + limit);
+  }, [filteredLessons, page, limit]);
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredLessons.length / limit) || 1;
+  }, [filteredLessons, limit]);
+
   return (
     <>
       <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
-        <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
-            <h2 className="font-display text-lg font-semibold text-amber-900">
-              Danh sách trò chơi
-            </h2>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-700 hover:bg-amber-50"
-            >
-              Tạo mới
-            </button>
+        <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-amber-100 px-5 py-4 bg-amber-50/40">
+              <h2 className="font-display text-lg font-semibold text-amber-900 shrink-0">
+                Danh sách trò chơi
+              </h2>
+              
+              <div className="flex items-center gap-2 flex-1 max-w-xs">
+                <div className="relative flex-1">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-700 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Tìm tiêu đề, nội dung..."
+                    className="w-full pl-9 pr-3 py-1.5 bg-white border border-amber-200 rounded-lg text-xs text-amber-950 font-medium outline-none focus:ring-2 focus:ring-amber-500/40 transition-all"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-700 hover:bg-amber-50 cursor-pointer shadow-xs whitespace-nowrap shrink-0"
+                >
+                  Tạo mới
+                </button>
+              </div>
+            </div>
+
+            {lessonsLoading ? (
+              <div className="p-6 text-center text-amber-600">Đang tải...</div>
+            ) : (
+              <div className="divide-y divide-amber-100">
+                {paginatedLessons.map((lesson) => (
+                  <button
+                    key={lesson._id}
+                    type="button"
+                    onClick={() => handleSelectLesson(lesson)}
+                    className={`w-full text-left px-5 py-4 transition ${selectedId === lesson._id
+                        ? "bg-amber-50"
+                        : "hover:bg-amber-50/60"
+                      }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-amber-900">{lesson.title}</p>
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                          {renderStaffStatusBadge(lesson.status)}
+                        </div>
+                        <p className="mt-2 text-xs text-amber-600 line-clamp-2">
+                          {lesson.content}
+                        </p>
+                      </div>
+                      <span className="text-xs text-amber-500 whitespace-nowrap">
+                        {new Date(lesson.updatedAt).toLocaleDateString("vi-VN")}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+
+                {lessons.length === 0 && (
+                  <div className="p-6 text-center text-amber-600">Chưa có trò chơi nào.</div>
+                )}
+              </div>
+            )}
           </div>
 
-          {lessonsLoading ? (
-            <div className="p-6 text-center text-amber-600">Đang tải...</div>
-          ) : (
-            <div className="divide-y divide-amber-100">
-              {lessons.map((lesson) => (
+          {/* PAGINATION BAR */}
+          <div className="p-4 border-t border-amber-200 bg-[#FDF8ED] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold">
+            <div className="text-stone-600">
+              Hiển thị {filteredLessons.length === 0 ? 0 : (page - 1) * limit + 1} - {Math.min(page * limit, filteredLessons.length)} trong {filteredLessons.length} nội dung
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#D8C49A] bg-[#FFFDF8] text-[#2A1407] hover:bg-[#F5EBD4] disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold cursor-pointer"
+              >
+                ‹
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pNum) => (
                 <button
-                  key={lesson._id}
+                  key={pNum}
                   type="button"
-                  onClick={() => handleSelectLesson(lesson)}
-                  className={`w-full text-left px-5 py-4 transition ${selectedId === lesson._id
-                      ? "bg-amber-50"
-                      : "hover:bg-amber-50/60"
-                    }`}
+                  onClick={() => setPage(pNum)}
+                  className={`w-7 h-7 flex items-center justify-center rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                    page === pNum
+                      ? "bg-[#53270D] text-white border-[#53270D] shadow-xs"
+                      : "bg-[#FFFDF8] border-[#D8C49A] text-[#2A1407] hover:bg-[#F5EBD4]"
+                  }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-amber-900">{lesson.title}</p>
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        {renderStaffStatusBadge(lesson.status)}
-                      </div>
-                      <p className="mt-2 text-xs text-amber-600 line-clamp-2">
-                        {lesson.content}
-                      </p>
-                    </div>
-                    <span className="text-xs text-amber-500 whitespace-nowrap">
-                      {new Date(lesson.updatedAt).toLocaleDateString("vi-VN")}
-                    </span>
-                  </div>
+                  {pNum}
                 </button>
               ))}
 
-              {lessons.length === 0 && (
-                <div className="p-6 text-center text-amber-600">Chưa có trò chơi nào.</div>
-              )}
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#D8C49A] bg-[#FFFDF8] text-[#2A1407] hover:bg-[#F5EBD4] disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold cursor-pointer"
+              >
+                ›
+              </button>
             </div>
-          )}
+
+            <div className="flex items-center gap-2">
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="px-2.5 py-1 bg-[#FFFDF8] border border-[#D8C49A] rounded-lg text-xs font-bold text-[#2A1407] outline-none cursor-pointer"
+              >
+                <option value={5}>5 / trang</option>
+                <option value={10}>10 / trang</option>
+                <option value={20}>20 / trang</option>
+                <option value={50}>50 / trang</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">

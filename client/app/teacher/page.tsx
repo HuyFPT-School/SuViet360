@@ -556,6 +556,19 @@ export default function TeacherPage() {
     }
   };
 
+  // Pagination States for Reviews Tab
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewLimit, setReviewLimit] = useState(5);
+
+  // Pagination States for Requests Tab
+  const [requestPage, setRequestPage] = useState(1);
+  const [requestLimit, setRequestLimit] = useState(5);
+
+  // Reset page when query or status filter changes
+  useEffect(() => {
+    setReviewPage(1);
+  }, [query, statusFilter]);
+
   const filteredItems = useMemo(() => {
     const term = query.trim().toLowerCase();
 
@@ -570,6 +583,24 @@ export default function TeacherPage() {
       return matchesStatus && matchesQuery;
     });
   }, [items, query, statusFilter]);
+
+  const paginatedReviewItems = useMemo(() => {
+    const start = (reviewPage - 1) * reviewLimit;
+    return filteredItems.slice(start, start + reviewLimit);
+  }, [filteredItems, reviewPage, reviewLimit]);
+
+  const totalReviewPages = useMemo(() => {
+    return Math.ceil(filteredItems.length / reviewLimit) || 1;
+  }, [filteredItems, reviewLimit]);
+
+  const paginatedRequests = useMemo(() => {
+    const start = (requestPage - 1) * requestLimit;
+    return requests.slice(start, start + requestLimit);
+  }, [requests, requestPage, requestLimit]);
+
+  const totalRequestPages = useMemo(() => {
+    return Math.ceil(requests.length / requestLimit) || 1;
+  }, [requests, requestLimit]);
 
   const stats = useMemo(
     () => ({
@@ -1027,7 +1058,7 @@ function EyeIcon({ className = "" }: { className?: string }) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E6D8BC]/60">
-                    {filteredItems.map((item) => {
+                    {paginatedReviewItems.map((item) => {
                       const creator = formatCreatorDisplay(item.createdBy);
                       return (
                         <tr key={item.id} className="hover:bg-[#FDF8ED]/80 transition-colors">
@@ -1100,6 +1131,64 @@ function EyeIcon({ className = "" }: { className?: string }) {
                   </tbody>
                 </table>
               </div>
+
+              {/* PAGINATION BAR FOR REVIEWS TAB */}
+              <div className="p-4 border-t border-[#E6D8BC] bg-[#FDF8ED] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold">
+                <div className="text-stone-600">
+                  Hiển thị {filteredItems.length === 0 ? 0 : (reviewPage - 1) * reviewLimit + 1} - {Math.min(reviewPage * reviewLimit, filteredItems.length)} trong {filteredItems.length} nội dung
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={reviewPage <= 1}
+                    onClick={() => setReviewPage((prev) => Math.max(1, prev - 1))}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#D8C49A] bg-[#FFFDF8] text-[#2A1407] hover:bg-[#F5EBD4] disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold cursor-pointer"
+                  >
+                    ‹
+                  </button>
+
+                  {Array.from({ length: totalReviewPages }, (_, i) => i + 1).map((pNum) => (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => setReviewPage(pNum)}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                        reviewPage === pNum
+                          ? "bg-[#53270D] text-white border-[#53270D] shadow-xs"
+                          : "bg-[#FFFDF8] border-[#D8C49A] text-[#2A1407] hover:bg-[#F5EBD4]"
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    disabled={reviewPage >= totalReviewPages}
+                    onClick={() => setReviewPage((prev) => Math.min(totalReviewPages, prev + 1))}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#D8C49A] bg-[#FFFDF8] text-[#2A1407] hover:bg-[#F5EBD4] disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold cursor-pointer"
+                  >
+                    ›
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={reviewLimit}
+                    onChange={(e) => {
+                      setReviewLimit(Number(e.target.value));
+                      setReviewPage(1);
+                    }}
+                    className="px-2.5 py-1 bg-[#FFFDF8] border border-[#D8C49A] rounded-lg text-xs font-bold text-[#2A1407] outline-none cursor-pointer"
+                  >
+                    <option value={5}>5 / trang</option>
+                    <option value={10}>10 / trang</option>
+                    <option value={20}>20 / trang</option>
+                    <option value={50}>50 / trang</option>
+                  </select>
+                </div>
+              </div>
             </div>
           ) : (
             /* PRO LESSON REQUESTS TAB CONTENT */
@@ -1125,7 +1214,7 @@ function EyeIcon({ className = "" }: { className?: string }) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E6D8BC]/60">
-                    {requests.map((req) => {
+                    {paginatedRequests.map((req) => {
                       const assignedTeacherId = req.assignedTeacherId && (typeof req.assignedTeacherId === "object" ? req.assignedTeacherId._id : req.assignedTeacherId);
                       const isMyAssignment = assignedTeacherId === user.id;
 
@@ -1292,6 +1381,64 @@ function EyeIcon({ className = "" }: { className?: string }) {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* PAGINATION BAR FOR REQUESTS TAB */}
+              <div className="p-4 border-t border-[#E6D8BC] bg-[#FDF8ED] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold">
+                <div className="text-stone-600">
+                  Hiển thị {requests.length === 0 ? 0 : (requestPage - 1) * requestLimit + 1} - {Math.min(requestPage * requestLimit, requests.length)} trong {requests.length} nội dung
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={requestPage <= 1}
+                    onClick={() => setRequestPage((prev) => Math.max(1, prev - 1))}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#D8C49A] bg-[#FFFDF8] text-[#2A1407] hover:bg-[#F5EBD4] disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold cursor-pointer"
+                  >
+                    ‹
+                  </button>
+
+                  {Array.from({ length: totalRequestPages }, (_, i) => i + 1).map((pNum) => (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => setRequestPage(pNum)}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                        requestPage === pNum
+                          ? "bg-[#53270D] text-white border-[#53270D] shadow-xs"
+                          : "bg-[#FFFDF8] border-[#D8C49A] text-[#2A1407] hover:bg-[#F5EBD4]"
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    disabled={requestPage >= totalRequestPages}
+                    onClick={() => setRequestPage((prev) => Math.min(totalRequestPages, prev + 1))}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#D8C49A] bg-[#FFFDF8] text-[#2A1407] hover:bg-[#F5EBD4] disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold cursor-pointer"
+                  >
+                    ›
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={requestLimit}
+                    onChange={(e) => {
+                      setRequestLimit(Number(e.target.value));
+                      setRequestPage(1);
+                    }}
+                    className="px-2.5 py-1 bg-[#FFFDF8] border border-[#D8C49A] rounded-lg text-xs font-bold text-[#2A1407] outline-none cursor-pointer"
+                  >
+                    <option value={5}>5 / trang</option>
+                    <option value={10}>10 / trang</option>
+                    <option value={20}>20 / trang</option>
+                    <option value={50}>50 / trang</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}

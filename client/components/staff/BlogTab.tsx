@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { blogApi } from "@/lib/blogApi";
 import type { BlogPost, BlogReport } from "@/types/blog";
 
@@ -83,24 +83,57 @@ export default function BlogTab({ setMessage, onUpdateCounts }: BlogTabProps) {
     }
   };
 
+function SearchIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={`w-4 h-4 shrink-0 ${className}`} style={{ width: "16px", height: "16px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredPendingPosts = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return pendingPosts;
+    return pendingPosts.filter(
+      (post) =>
+        post.title.toLowerCase().includes(term) ||
+        post.content.toLowerCase().includes(term) ||
+        (post.author?.name && post.author.name.toLowerCase().includes(term))
+    );
+  }, [pendingPosts, searchQuery]);
+
   return (
     <>
       <div className="grid gap-8 lg:grid-cols-[1.15fr_1.15fr]">
         {/* Left side: Pending Posts */}
         <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm flex flex-col">
-          <div className="border-b border-amber-100 px-5 py-4">
-            <h2 className="font-display text-lg font-semibold text-amber-900">
-              Bài viết chờ duyệt ({pendingPosts.length})
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-amber-100 px-5 py-4 bg-amber-50/40">
+            <h2 className="font-display text-lg font-semibold text-amber-900 shrink-0">
+              Bài viết chờ duyệt ({filteredPendingPosts.length})
             </h2>
+
+            <div className="relative flex-1 max-w-xs">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-700 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm bài viết, tác giả..."
+                className="w-full pl-9 pr-3 py-1.5 bg-white border border-amber-200 rounded-lg text-xs text-amber-950 font-medium outline-none focus:ring-2 focus:ring-amber-500/40 transition-all"
+              />
+            </div>
           </div>
           
           {blogLoading && pendingPosts.length === 0 ? (
             <div className="p-8 text-center text-amber-800 font-medium">Đang tải danh sách bài viết...</div>
-          ) : pendingPosts.length === 0 ? (
-            <div className="p-8 text-center text-amber-850 italic">Không có bài viết nào đang chờ duyệt.</div>
+          ) : filteredPendingPosts.length === 0 ? (
+            <div className="p-8 text-center text-amber-850 italic">Không tìm thấy bài viết nào phù hợp.</div>
           ) : (
             <div className="divide-y divide-amber-100 max-h-[700px] overflow-y-auto">
-              {pendingPosts.map((post) => (
+              {filteredPendingPosts.map((post) => (
                 <div key={post._id} className="p-5 hover:bg-amber-50/30 transition">
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1">
