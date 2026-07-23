@@ -47,6 +47,7 @@ export default function AdminScreen() {
   const [userSubscriptions, setUserSubscriptions] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [loadingUserDetail, setLoadingUserDetail] = useState(false);
+  const [rolePickerUser, setRolePickerUser] = useState<any>(null);
 
   // Gói VIP
   const [tiers, setTiers] = useState<any[]>([]);
@@ -110,8 +111,9 @@ export default function AdminScreen() {
       await adminApi.updateUserRole(userId, role);
       Alert.alert('Thành công', 'Vai trò đã được cập nhật.');
       loadData();
-    } catch {
-      Alert.alert('Lỗi', 'Không thể cập nhật vai trò.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Không thể cập nhật vai trò.';
+      Alert.alert('Lỗi', msg);
     }
   };
 
@@ -126,7 +128,7 @@ export default function AdminScreen() {
   };
 
   const handleViewTransactions = async (userId: string) => {
-    setSelectedUser(users.find((u) => u._id === userId));
+    setSelectedUser(users.find((u) => u.id === userId));
     setLoadingUserDetail(true);
     try {
       const res = await adminApi.getUserTransactions(userId);
@@ -365,7 +367,7 @@ export default function AdminScreen() {
 
               {/* User list */}
               {users.filter((u: any) => !userQuery || u.name?.toLowerCase().includes(userQuery.toLowerCase()) || u.email?.toLowerCase().includes(userQuery.toLowerCase())).map((u: any) => (
-                <TouchableOpacity key={u._id} style={styles.userCard} onPress={() => handleViewTransactions(u._id)} activeOpacity={0.7}>
+                <TouchableOpacity key={u.id} style={styles.userCard} onPress={() => handleViewTransactions(u.id)} activeOpacity={0.7}>
                   <View style={styles.userAvatar}>
                     <Text style={styles.userAvatarText}>{u.name?.charAt(0)?.toUpperCase() || '?'}</Text>
                   </View>
@@ -373,29 +375,49 @@ export default function AdminScreen() {
                     <Text style={styles.userName}>{u.name}</Text>
                     <Text style={styles.userEmail}>{u.email}</Text>
                   </View>
-                  {/* Role — tappable to change */}
+                  {/* Role — tappable dropdown */}
                   <TouchableOpacity
                     style={styles.userRoleBadge}
-                    onPress={() => {
-                      Alert.alert('Đổi vai trò', `${u.name}\nVai trò hiện tại: ${u.role}`, [
-                        { text: 'Admin', onPress: () => handleUpdateRole(u._id, 'admin') },
-                        { text: 'Staff', onPress: () => handleUpdateRole(u._id, 'staff') },
-                        { text: 'Teacher', onPress: () => handleUpdateRole(u._id, 'teacher') },
-                        { text: 'Student', onPress: () => handleUpdateRole(u._id, 'student') },
-                        { text: 'Hủy', style: 'cancel' },
-                      ]);
-                    }}
+                    onPress={() => setRolePickerUser(u)}
                   >
                     <Text style={styles.userRoleText}>{u.role} ▾</Text>
                   </TouchableOpacity>
                   <View style={[styles.statusDot, { backgroundColor: u.isLocked ? '#f87171' : '#34d399' }]} />
-                  <TouchableOpacity onPress={() => handleToggleLock(u._id)} style={styles.smallBtn}>
+                  <TouchableOpacity onPress={() => handleToggleLock(u.id)} style={styles.smallBtn}>
                     <Ionicons name={u.isLocked ? 'lock-closed' : 'lock-open-outline'} size={16} color={u.isLocked ? '#f87171' : '#34d399'} />
                   </TouchableOpacity>
                 </TouchableOpacity>
               ))}
             </>
           )}
+
+          {/* Role Picker Modal */}
+          <Modal visible={!!rolePickerUser} transparent animationType="fade">
+            <TouchableOpacity style={styles.roleOverlay} activeOpacity={1} onPress={() => setRolePickerUser(null)}>
+              <View style={styles.rolePicker}>
+                <Text style={styles.rolePickerTitle}>{rolePickerUser?.name}</Text>
+                <Text style={styles.rolePickerSub}>Vai trò hiện tại: {rolePickerUser?.role}</Text>
+                {['admin', 'staff', 'teacher', 'student'].map((role) => (
+                  <TouchableOpacity
+                    key={role}
+                    style={[styles.roleOption, rolePickerUser?.role === role && styles.roleOptionActive]}
+                    onPress={() => {
+                      if (rolePickerUser) handleUpdateRole(rolePickerUser.id, role);
+                      setRolePickerUser(null);
+                    }}
+                  >
+                    <Text style={[styles.roleOptionText, rolePickerUser?.role === role && styles.roleOptionTextActive]}>
+                      {role.charAt(0).toUpperCase() + role.slice(1)}
+                    </Text>
+                    {rolePickerUser?.role === role && <Ionicons name="checkmark" size={16} color="#f0ddb7" />}
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity style={styles.roleCloseBtn} onPress={() => setRolePickerUser(null)}>
+                  <Text style={styles.roleCloseText}>✕ Đóng</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Modal>
 
           {/* Gói VIP Tab */}
           {activeTab === 'Gói VIP' && (
@@ -698,6 +720,25 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(201, 161, 90, 0.3)',
   },
   userRoleText: { color: '#c9a15a', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+  // Role Picker Modal
+  roleOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 32 },
+  rolePicker: {
+    backgroundColor: '#1e1508', borderRadius: BorderRadius.xl,
+    borderWidth: 1, borderColor: 'rgba(201, 161, 90, 0.3)',
+    padding: 20, width: 260,
+  },
+  rolePickerTitle: { color: '#f0ddb7', fontSize: FontSizes.sm, fontWeight: '700', textAlign: 'center' },
+  rolePickerSub: { color: '#6b4f14', fontSize: FontSizes.xs, textAlign: 'center', marginBottom: 16, marginTop: 4 },
+  roleOption: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 10, paddingHorizontal: 14, borderRadius: BorderRadius.md,
+    borderWidth: 1, borderColor: 'transparent', marginBottom: 4,
+  },
+  roleOptionActive: { backgroundColor: 'rgba(201, 161, 90, 0.1)', borderColor: 'rgba(201, 161, 90, 0.3)' },
+  roleOptionText: { color: '#8c6a34', fontSize: FontSizes.sm, fontWeight: '600', textTransform: 'uppercase' },
+  roleOptionTextActive: { color: '#f0ddb7' },
+  roleCloseBtn: { marginTop: 12, paddingVertical: 8, alignItems: 'center' },
+  roleCloseText: { color: '#6b4f14', fontSize: FontSizes.xs, fontWeight: '600' },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   userActions: { flexDirection: 'row', gap: 4 },
   smallBtn: { padding: 4 },

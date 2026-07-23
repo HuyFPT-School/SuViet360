@@ -142,10 +142,7 @@ export const adminApi = {
   },
 
   updateUserRole: async (id: string, role: string) => {
-    const token = await ensureCsrfToken();
-    const res = await api.patch(`/auth/users/${id}/role`, { role }, {
-      headers: { 'x-csrf-token': token },
-    });
+    const res = await api.patch(`/auth/users/${id}/role`, { role });
     return res.data;
   },
 
