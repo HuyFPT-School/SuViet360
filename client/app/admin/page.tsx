@@ -9,7 +9,7 @@ import type { SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
 import type { User } from "@/types/auth";
 
-type AdminTab = "dashboard" | "lessons" | "users" | "subscriptions" | "coupons" | "gift-codes" | "lesson-requests";
+type AdminTab = "dashboard" | "lessons" | "users" | "subscriptions" | "coupons" | "gift-codes";
 
 const emptyForm: LessonFormValues = {
   title: "",
@@ -29,7 +29,6 @@ const tabs: Array<{ id: AdminTab; label: string }> = [
   { id: "subscriptions", label: "Quản lý Gói VIP" },
   { id: "coupons", label: "Quản lý Coupon" },
   { id: "gift-codes", label: "Quản lý Mã quà tặng" },
-  { id: "lesson-requests", label: "Yêu cầu bài học" },
 ];
 
 function formatDate(value?: string) {
@@ -72,28 +71,6 @@ export default function AdminPage() {
   const [subStats, setSubStats] = useState<AdminSubscriptionStats | null>(null);
   const [tiers, setTiers] = useState<SubscriptionTier[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-
-  // Lesson request states
-  const [lessonRequests, setLessonRequests] = useState<any[]>([]);
-  const [loadingRequests, setLoadingRequests] = useState(false);
-
-  useEffect(() => {
-    if (activeTab === "lesson-requests") {
-      const fetchRequests = async () => {
-        setLoadingRequests(true);
-        setError("");
-        try {
-          const data = await subscriptionApi.getAllLessonRequestsForAdmin();
-          setLessonRequests(data);
-        } catch (err) {
-          setError("Không thể tải danh sách yêu cầu bài học.");
-        } finally {
-          setLoadingRequests(false);
-        }
-      };
-      fetchRequests();
-    }
-  }, [activeTab]);
 
   useEffect(() => {
     let mounted = true;
@@ -500,13 +477,6 @@ export default function AdminPage() {
           {activeTab === "gift-codes" && (
             <GiftCodesPanel
               tiers={tiers}
-            />
-          )}
-
-          {activeTab === "lesson-requests" && (
-            <LessonRequestsAdminPanel
-              requests={lessonRequests}
-              loading={loadingRequests}
             />
           )}
         </div>
@@ -2340,104 +2310,4 @@ function GiftCodesPanel({
   );
 }
 
-function LessonRequestsAdminPanel({
-  requests,
-  loading,
-}: {
-  requests: any[];
-  loading: boolean;
-}) {
-  return (
-    <div className="admin-stack">
-      <div className="admin-heading">
-        <div>
-          <p className="admin-kicker">Tổng quan hệ thống</p>
-          <h2>Quản lý Yêu cầu bài học</h2>
-        </div>
-      </div>
 
-      <div className="admin-panel">
-        <div className="admin-panel-heading">
-          <h3>Tất cả yêu cầu soạn thảo từ học sinh Pro</h3>
-          <span>{requests.length} yêu cầu</span>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-20">
-            <div className="inline-block w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-gold italic">Đang tải danh sách yêu cầu...</p>
-          </div>
-        ) : (
-          <div className="admin-table">
-            <div className="admin-table-head">
-              <span>Học sinh</span>
-              <span>Chi tiết yêu cầu</span>
-              <span>Thời kỳ</span>
-              <span>Giáo viên</span>
-              <span>Trạng thái</span>
-              <span>Ngày gửi</span>
-            </div>
-            {requests.map((req) => (
-              <div key={req._id} className="admin-table-row">
-                <span className="flex flex-col justify-center">
-                  <span className="font-semibold text-amber-900 text-sm">
-                    {req.requesterId?.name || "Học viên Pro"}
-                  </span>
-                  <span className="text-[10px] text-stone-500">
-                    {req.requesterId?.email || ""}
-                  </span>
-                </span>
-                <div>
-                  <strong className="text-stone-800 text-sm">{req.title}</strong>
-                  <p className="text-stone-600 text-xs mt-1 line-clamp-3">{req.description}</p>
-                  {req.teacherResponse && (
-                    <div className="mt-2 text-rose-700 bg-rose-50 p-2 rounded border border-rose-200 text-xs">
-                      <strong>Lý do từ chối:</strong> {req.teacherResponse}
-                    </div>
-                  )}
-                  {req.resultPodcastId && (
-                    <div className="mt-2 text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200 text-xs">
-                      <strong>Podcast xuất bản:</strong> {typeof req.resultPodcastId === "object" ? req.resultPodcastId.title : req.resultPodcastId}
-                    </div>
-                  )}
-                </div>
-                <span className="text-stone-700 text-sm">{req.historicalPeriod || "Chưa rõ"}</span>
-                <span className="flex flex-col justify-center">
-                  <span className="font-medium text-stone-800 text-sm">
-                    {req.assignedTeacherId?.name || "Chưa nhận"}
-                  </span>
-                  <span className="text-[10px] text-stone-500">
-                    {req.assignedTeacherId?.email || ""}
-                  </span>
-                </span>
-                <span>
-                  <span className={`inline-block px-2.5 py-1 rounded text-xs font-semibold ${
-                    req.status === "Pending" ? "bg-amber-100 text-amber-800" :
-                    req.status === "Accepted" ? "bg-blue-100 text-blue-800" :
-                    req.status === "InProgress" ? "bg-purple-100 text-purple-800" :
-                    req.status === "Completed" ? "bg-emerald-100 text-emerald-800" :
-                    "bg-rose-100 text-rose-800"
-                  }`}>
-                    {req.status === "Pending" ? "Chờ duyệt" :
-                     req.status === "Accepted" ? "Đã nhận" :
-                     req.status === "InProgress" ? "Đang soạn" :
-                     req.status === "Completed" ? "Hoàn thành" :
-                     "Từ chối"}
-                  </span>
-                </span>
-                <span className="text-stone-500 text-xs">
-                  {new Date(req.createdAt).toLocaleDateString("vi-VN")}
-                </span>
-              </div>
-            ))}
-            {requests.length === 0 && (
-              <p className="admin-empty">
-                Chưa có yêu cầu bài học nào trên hệ thống.
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
