@@ -48,6 +48,7 @@ export type TeacherReviewItem = {
   title: string;
   type: ReviewContentType;
   createdBy: string;
+  creatorAvatar?: string;
   submittedAt: string;
   status: ReviewStatus;
   summary: string;
@@ -76,7 +77,7 @@ type LessonResponseItem = {
   reviewFeedback?: string;
   game: LessonGame;
   createdAt: string;
-  createdBy?: string | { _id: string; name: string; email: string };
+  createdBy?: string | { _id: string; name: string; email: string; avatar?: string };
   hasPendingDraft?: boolean;
   pendingDraft?: any;
 };
@@ -100,7 +101,7 @@ type PodcastResponseItem = {
   status: ReviewStatus;
   reviewFeedback?: string;
   createdAt: string;
-  createdBy?: string | { _id: string; name: string; email: string };
+  createdBy?: string | { _id: string; name: string; email: string; avatar?: string };
   pendingDraft?: any;
 };
 
@@ -111,7 +112,7 @@ type StudyUnitResponseItem = {
   status: ReviewStatus;
   reviewFeedback?: string;
   createdAt: string;
-  createdBy?: string | { _id: string; name: string; email: string };
+  createdBy?: string | { _id: string; name: string; email: string; avatar?: string };
   contentBlocks: any[];
   pendingDraft?: any;
 };
@@ -123,7 +124,7 @@ type QuizResponseItem = {
   status: ReviewStatus;
   reviewFeedback?: string;
   createdAt: string;
-  createdBy?: string | { _id: string; name: string; email: string };
+  createdBy?: string | { _id: string; name: string; email: string; avatar?: string };
   questions: any[];
   timeLimit?: number;
   passScore?: number;
@@ -144,6 +145,13 @@ const formatCreator = (creator: any): string => {
   return "Staff";
 };
 
+const getCreatorAvatar = (creator: any): string | undefined => {
+  if (creator && typeof creator === "object") {
+    return creator.avatar || creator.avatarUrl || undefined;
+  }
+  return undefined;
+};
+
 const toReviewItem = (
   lesson: LessonResponseItem
 ): TeacherReviewItem => {
@@ -155,6 +163,7 @@ const toReviewItem = (
     title: isDraftUpdate ? (draft?.title || lesson.title) : lesson.title,
     type: "Lesson",
     createdBy: formatCreator(lesson.createdBy),
+    creatorAvatar: getCreatorAvatar(lesson.createdBy),
     submittedAt: lesson.createdAt,
     status: isDraftUpdate ? "Pending_Review" : (lesson.status || "Pending_Review"),
     summary: isDraftUpdate ? (draft?.content || lesson.content) : lesson.content,
@@ -182,6 +191,7 @@ const podcastToReviewItem = (
     title: isDraftUpdate ? (draft?.title || podcast.title) : podcast.title,
     type: "Podcast",
     createdBy: formatCreator(podcast.createdBy),
+    creatorAvatar: getCreatorAvatar(podcast.createdBy),
     submittedAt: podcast.createdAt,
     status: isDraftUpdate ? "Pending_Review" : (podcast.status || "Pending_Review"),
     summary: isDraftUpdate ? (draft?.description || draft?.content || podcast.description || podcast.content || "") : (podcast.description || podcast.content || ""),
@@ -209,6 +219,7 @@ const studyUnitToReviewItem = (
     title: isDraftUpdate ? (draft?.title || unit.title) : unit.title,
     type: "StudyUnit",
     createdBy: formatCreator(unit.createdBy),
+    creatorAvatar: getCreatorAvatar(unit.createdBy),
     submittedAt: unit.createdAt,
     status: isDraftUpdate ? "Pending_Review" : (unit.status || "Pending_Review"),
     summary: isDraftUpdate ? (draft?.summary || unit.summary || "") : (unit.summary || ""),
@@ -231,6 +242,7 @@ const quizToReviewItem = (
     title: isDraftUpdate ? (draft?.title || quiz.title) : quiz.title,
     type: "Quiz",
     createdBy: formatCreator(quiz.createdBy),
+    creatorAvatar: getCreatorAvatar(quiz.createdBy),
     submittedAt: quiz.createdAt,
     status: isDraftUpdate ? "Pending_Review" : (quiz.status || "Pending_Review"),
     summary: isDraftUpdate ? (draft?.description || quiz.description || "") : (quiz.description || ""),
