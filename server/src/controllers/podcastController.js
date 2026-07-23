@@ -339,13 +339,13 @@ const deletePodcast = asyncHandler(async (req, res) => {
 const getStaffPodcasts = asyncHandler(async (req, res) => {
   const podcasts = await Podcast.find()
     .populate("lessonId")
-    .populate("createdBy", "name email role avatar")
+    .populate("createdBy", "name email role")
     .sort({ createdAt: -1 });
 
   const PodcastRequest = require("../models/PodcastRequest");
   const podcastIds = podcasts.map(p => p._id);
   const requests = await PodcastRequest.find({ resultPodcastId: { $in: podcastIds } })
-    .populate("requesterId", "name email avatar")
+    .populate("requesterId", "name email")
     .lean();
 
   const podcastsWithRequests = podcasts.map(p => {
@@ -372,7 +372,7 @@ const getStaffPodcasts = asyncHandler(async (req, res) => {
 const getStaffPodcastById = asyncHandler(async (req, res) => {
   const podcast = await Podcast.findById(req.params.id)
     .populate("lessonId")
-    .populate("createdBy", "name email avatar");
+    .populate("createdBy", "name email");
 
   if (!podcast) {
     throw new AppError("Podcast not found", 404);

@@ -30,17 +30,6 @@ export default function GameTab({
   const [saving, setSaving] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
-
-  const paginatedLessons = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return lessons.slice(start, start + pageSize);
-  }, [lessons, currentPage, pageSize]);
-
-  const totalPages = Math.ceil(lessons.length / pageSize) || 1;
-
   const selectedLesson = useMemo(() => lessons.find((l) => l._id === selectedId), [lessons, selectedId]);
 
   // Handle prefilled form from requests tab
@@ -218,146 +207,69 @@ export default function GameTab({
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr] font-sans">
-        {/* LEFT COLUMN: LIST OF GAMES */}
-        <div className="staff-card-v2 flex flex-col justify-between">
-          <div>
-            <div className="staff-card-header-v2">
-              <h2 className="staff-card-title-v2">
-                <span>🎮</span>
-                <span>Danh sách trò chơi</span>
-              </h2>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="staff-btn-brown text-xs py-1.5 px-3.5"
-              >
-                + Tạo mới
-              </button>
-            </div>
-
-            {lessonsLoading ? (
-              <div className="p-8 text-center text-[#8C6A34] text-sm">Đang tải trò chơi...</div>
-            ) : (
-              <div className="divide-y divide-[#F3E6CE]">
-                {paginatedLessons.map((lesson) => {
-                  const thumbnailSrc =
-                    lesson.game?.tilesets?.[0]?.imageUrl ||
-                    "/images/login_background.png";
-
-                  return (
-                    <div
-                      key={lesson._id}
-                      onClick={() => handleSelectLesson(lesson)}
-                      className={`staff-item-row-v2 ${
-                        selectedId === lesson._id ? "staff-item-row-v2--selected" : ""
-                      }`}
-                    >
-                      <div className="staff-thumb-wrapper">
-                        <img
-                          src={thumbnailSrc}
-                          alt={lesson.title}
-                          className="staff-thumb-img"
-                        />
-                      </div>
-
-                      <div className="staff-item-meta">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="staff-item-title">{lesson.title}</h3>
-                          {renderStaffStatusBadge(lesson.status)}
-                        </div>
-                        <p className="staff-item-excerpt">{lesson.content}</p>
-                      </div>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-xs text-[#8C6A34] font-medium">
-                          {new Date(lesson.updatedAt).toLocaleDateString("vi-VN")}
-                        </span>
-                        <button
-                          type="button"
-                          className="text-[#8C6A34] hover:text-[#2A1407] p-1 font-bold text-base"
-                          title="Thao tác"
-                        >
-                          ⋮
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {lessons.length === 0 && (
-                  <div className="p-8 text-center text-[#8C6A34] text-sm italic">
-                    Chưa có trò chơi nào.
-                  </div>
-                )}
-              </div>
-            )}
+      <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
+        <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
+          <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
+            <h2 className="font-display text-lg font-semibold text-amber-900">
+              Danh sách trò chơi
+            </h2>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-700 hover:bg-amber-50"
+            >
+              Tạo mới
+            </button>
           </div>
 
-          {/* Pagination bar */}
-          {lessons.length > 0 && (
-            <div className="staff-pagination-bar">
-              <div className="flex items-center gap-1.5">
+          {lessonsLoading ? (
+            <div className="p-6 text-center text-amber-600">Đang tải...</div>
+          ) : (
+            <div className="divide-y divide-amber-100">
+              {lessons.map((lesson) => (
                 <button
+                  key={lesson._id}
                   type="button"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="staff-page-btn disabled:opacity-40"
-                >
-                  ‹
-                </button>
-                {Array.from({ length: totalPages }).map((_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setCurrentPage(idx + 1)}
-                    className={`staff-page-btn ${
-                      currentPage === idx + 1 ? "staff-page-btn--active" : ""
+                  onClick={() => handleSelectLesson(lesson)}
+                  className={`w-full text-left px-5 py-4 transition ${selectedId === lesson._id
+                      ? "bg-amber-50"
+                      : "hover:bg-amber-50/60"
                     }`}
-                  >
-                    {idx + 1}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="staff-page-btn disabled:opacity-40"
                 >
-                  ›
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-amber-900">{lesson.title}</p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {renderStaffStatusBadge(lesson.status)}
+                      </div>
+                      <p className="mt-2 text-xs text-amber-600 line-clamp-2">
+                        {lesson.content}
+                      </p>
+                    </div>
+                    <span className="text-xs text-amber-500 whitespace-nowrap">
+                      {new Date(lesson.updatedAt).toLocaleDateString("vi-VN")}
+                    </span>
+                  </div>
                 </button>
-              </div>
+              ))}
 
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="bg-[#FFFDF8] border border-[#E6D8BC] rounded-lg px-2.5 py-1 text-xs font-semibold text-[#2A1407] outline-none"
-              >
-                <option value={5}>5 / trang</option>
-                <option value={10}>10 / trang</option>
-                <option value={20}>20 / trang</option>
-              </select>
+              {lessons.length === 0 && (
+                <div className="p-6 text-center text-amber-600">Chưa có trò chơi nào.</div>
+              )}
             </div>
           )}
         </div>
 
-        {/* RIGHT COLUMN: CREATE / EDIT GAME FORM */}
-        <div className="staff-card-v2">
-          <div className="staff-card-header-v2">
-            <div>
-              <h2 className="staff-card-title-v2">
-                <span>🎮</span>
-                <span>{formMode === "create" ? "Tạo trò chơi" : "Chỉnh sửa trò chơi"}</span>
-              </h2>
-              <p className="text-xs text-[#8C6A34] mt-0.5">
-                {formMode === "create"
-                  ? "Điền đầy đủ thông tin và upload assets để tạo trò chơi mới."
-                  : "Có thể cập nhật nội dung và thay thế file khi cần."}
-              </p>
-            </div>
+        <div className="rounded-2xl border border-amber-200 bg-white/90 backdrop-blur-sm shadow-sm">
+          <div className="border-b border-amber-100 px-5 py-4">
+            <h2 className="font-display text-lg font-semibold text-amber-900">
+              {formMode === "create" ? "Tạo trò chơi" : "Chỉnh sửa trò chơi"}
+            </h2>
+            <p className="text-xs text-amber-600 mt-1">
+              {formMode === "create"
+                ? "Điền đủ thông tin và upload assets để tạo trò chơi."
+                : "Có thể cập nhật nội dung và thay thế file khi cần."}
+            </p>
           </div>
 
           <div className="space-y-5 p-5">
@@ -388,34 +300,34 @@ export default function GameTab({
             )}
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#8C6A34]">
-                TIÊU ĐỀ *
+              <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                Tiêu đề
               </label>
               <input
                 type="text"
                 value={form.title}
                 onChange={(e) => setFormField("title", e.target.value)}
-                className="mt-2 w-full rounded-xl border border-[#E6D8BC] bg-[#FFFDF8] px-3.5 py-2.5 text-sm text-[#2A1407] outline-none focus:border-[#53270D]"
+                className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
                 placeholder="Nhập tiêu đề trò chơi"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#8C6A34]">
-                NỘI DUNG *
+              <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                Nội dung
               </label>
               <textarea
                 value={form.content}
                 onChange={(e) => setFormField("content", e.target.value)}
                 rows={4}
-                className="mt-2 w-full rounded-xl border border-[#E6D8BC] bg-[#FFFDF8] px-3.5 py-2.5 text-sm text-[#2A1407] outline-none focus:border-[#53270D]"
+                className="mt-2 w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
                 placeholder="Mô tả nội dung trò chơi"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#8C6A34]">
-                TILEMAP JSON {formMode === "create" && "(BẮT BUỘC)"}
+              <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                Tilemap JSON {formMode === "create" && "(bắt buộc)"}
               </label>
               <CustomFileInput
                 accept="application/json"
@@ -424,25 +336,25 @@ export default function GameTab({
                 singleFileName={form.tilemapFile?.name}
               />
               {formMode === "edit" && selectedLesson?.game?.tilemapJsonUrl && (
-                <p className="mt-1 text-xs text-[#8C6A34] font-medium">
-                  Tệp hiện tại: <a href={selectedLesson.game.tilemapJsonUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-[#2A1407] break-all">{selectedLesson.game.tilemapJsonUrl.split('/').pop()}</a>
+                <p className="mt-1 text-xs text-amber-600 font-medium">
+                  Tệp hiện tại: <a href={selectedLesson.game.tilemapJsonUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-800 break-all">{selectedLesson.game.tilemapJsonUrl.split('/').pop()}</a>
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#8C6A34]">
-                TILESET IMAGES {formMode === "create" && "(BẮT BUỘC)"}
+              <label className="block text-xs font-semibold uppercase tracking-wider text-amber-700">
+                Tileset images {formMode === "create" && "(bắt buộc)"}
               </label>
 
               {form.tilesetFiles.length > 0 && (
                 <div className="mt-2 space-y-2">
                   {form.tilesetFiles.map((file, idx) => (
-                    <div key={idx} className="flex items-center gap-2 rounded-xl border border-[#E6D8BC] bg-[#FAF4E8] px-3 py-2">
-                      <span className="text-xs text-[#8C6A34] font-medium shrink-0 truncate max-w-[120px]" title={file.name}>
+                    <div key={idx} className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/50 px-3 py-2">
+                      <span className="text-xs text-amber-600 font-medium shrink-0 truncate max-w-[120px]" title={file.name}>
                         {file.name}
                       </span>
-                      <span className="text-[#8C6A34] shrink-0">→</span>
+                      <span className="text-amber-400 shrink-0">→</span>
                       <input
                         type="text"
                         value={form.tilesetNames[idx] ?? ""}
@@ -451,7 +363,7 @@ export default function GameTab({
                           updated[idx] = e.target.value;
                           setFormField("tilesetNames", updated);
                         }}
-                        className="flex-1 min-w-0 rounded-lg border border-[#E6D8BC] bg-white px-2 py-1 text-xs text-[#2A1407] focus:outline-none font-mono"
+                        className="flex-1 min-w-0 rounded border border-amber-300 bg-white px-2 py-1 text-xs text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-400 font-mono"
                         placeholder="Tên tileset trong Tiled (vd: socauhoi)"
                       />
                       <button
@@ -460,7 +372,7 @@ export default function GameTab({
                           setFormField("tilesetFiles", form.tilesetFiles.filter((_, i) => i !== idx));
                           setFormField("tilesetNames", form.tilesetNames.filter((_, i) => i !== idx));
                         }}
-                        className="shrink-0 text-red-500 hover:text-red-700 text-sm font-bold leading-none px-1"
+                        className="shrink-0 text-red-400 hover:text-red-600 text-sm font-bold leading-none"
                         title="Xóa tileset này"
                       >
                         ✕
@@ -471,7 +383,7 @@ export default function GameTab({
               )}
 
               <div className="mt-2 flex items-center gap-3">
-                <label className="inline-flex items-center gap-2 px-3.5 py-2 bg-[#53270D] hover:bg-[#3D1C08] text-white text-xs font-bold rounded-xl shadow-sm cursor-pointer transition-colors duration-150 select-none">
+                <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer transition-colors duration-150 select-none">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
@@ -495,7 +407,7 @@ export default function GameTab({
                     }}
                   />
                 </label>
-                <span className="text-xs text-[#8C6A34] font-medium">
+                <span className="text-xs text-amber-700 font-medium">
                   {form.tilesetFiles.length > 0
                     ? `${form.tilesetFiles.length} tileset — nhấn để thêm nữa`
                     : "Chưa có tileset nào"}
@@ -504,11 +416,11 @@ export default function GameTab({
 
               {formMode === "edit" && selectedLesson?.game?.tilesets && selectedLesson.game.tilesets.length > 0 && (
                 <div className="mt-2">
-                  <p className="text-xs text-[#8C6A34] font-semibold mb-1">Các tileset hiện tại (sẽ bị thay thế nếu upload mới):</p>
+                  <p className="text-xs text-amber-600 font-semibold mb-1">Các tileset hiện tại (sẽ bị thay thế nếu upload mới):</p>
                   <div className="flex flex-wrap gap-2">
                     {selectedLesson.game.tilesets.map((ts, idx) => (
-                      <div key={idx} className="inline-flex items-center gap-1.5 bg-[#FAF4E8] border border-[#E6D8BC] px-2 py-1 rounded-lg text-xs text-[#2A1407] font-medium">
-                        <img src={ts.imageUrl} alt={ts.name} className="w-6 h-6 object-contain rounded bg-white border border-[#E6D8BC]" />
+                      <div key={idx} className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg text-xs text-amber-800 font-medium">
+                        <img src={ts.imageUrl} alt={ts.name} className="w-6 h-6 object-contain rounded bg-white border border-amber-100" />
                         <span className="font-mono">{ts.name}</span>
                       </div>
                     ))}
@@ -517,15 +429,15 @@ export default function GameTab({
               )}
             </div>
 
-            <details className="group border border-[#E6D8BC] bg-[#FAF4E8]/40 rounded-xl overflow-hidden">
-              <summary className="flex items-center justify-between cursor-pointer px-4 py-3 bg-[#FAF4E8] text-xs font-bold uppercase tracking-wider text-[#8C6A34] select-none">
-                <span>THAY ĐỔI NHÂN VẬT (TÙY CHỌN)</span>
-                <span className="transition-transform duration-200 group-open:rotate-180 text-[#8C6A34]">▼</span>
+            <details className="group border border-amber-200 bg-amber-50/20 rounded-xl overflow-hidden">
+              <summary className="flex items-center justify-between cursor-pointer px-4 py-3 bg-amber-50/50 text-xs font-semibold uppercase tracking-wider text-amber-700 select-none">
+                <span>Thay đổi nhân vật (Tuỳ chọn)</span>
+                <span className="transition-transform duration-200 group-open:rotate-180 text-amber-600">▼</span>
               </summary>
-              <div className="p-4 space-y-4 border-t border-[#E6D8BC] bg-[#FFFDF8]">
+              <div className="p-4 space-y-4 border-t border-amber-100 bg-white/95">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-semibold text-[#8C6A34]">
+                    <label className="block text-xs font-medium text-amber-800">
                       Idle sprites
                     </label>
                     <CustomFileInput
@@ -539,9 +451,26 @@ export default function GameTab({
                       }
                       fileCount={form.idleSprites.length}
                     />
+                    {formMode === "edit" && (() => {
+                      const idleKey = Object.keys(selectedLesson?.game?.character?.animations || {}).find(k => k.toLowerCase().includes("idle"));
+                      const idleFrames = idleKey ? selectedLesson?.game?.character?.animations[idleKey] : null;
+                      if (idleFrames && idleFrames.length > 0) {
+                        return (
+                          <div className="mt-2">
+                            <p className="text-[11px] text-amber-600 font-semibold mb-1">Idle sprites hiện tại ({idleFrames.length} frames):</p>
+                            <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1 bg-amber-50/50 rounded-lg border border-amber-100">
+                              {idleFrames.map((f, idx) => (
+                                <img key={idx} src={f.imageUrl} alt={f.key} className="w-8 h-8 object-contain rounded bg-white border border-amber-200" title={f.key} />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#8C6A34]">
+                    <label className="block text-xs font-medium text-amber-800">
                       Run sprites
                     </label>
                     <CustomFileInput
@@ -555,24 +484,44 @@ export default function GameTab({
                       }
                       fileCount={form.runSprites.length}
                     />
+                    {formMode === "edit" && (() => {
+                      const runKey = Object.keys(selectedLesson?.game?.character?.animations || {}).find(k => k.toLowerCase().includes("run"));
+                      const runFrames = runKey ? selectedLesson?.game?.character?.animations[runKey] : null;
+                      if (runFrames && runFrames.length > 0) {
+                        return (
+                          <div className="mt-2">
+                            <p className="text-[11px] text-amber-600 font-semibold mb-1">Run sprites hiện tại ({runFrames.length} frames):</p>
+                            <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1 bg-amber-50/50 rounded-lg border border-amber-100">
+                              {runFrames.map((f, idx) => (
+                                <img key={idx} src={f.imageUrl} alt={f.key} className="w-8 h-8 object-contain rounded bg-white border border-amber-200" title={f.key} />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
+                </div>
+                <div className="rounded-lg border border-amber-100 bg-amber-50/30 px-3 py-2 text-xs text-amber-700">
+                  Khi upload sprite mới, hệ thống sẽ thay toàn bộ animation hiện tại.
                 </div>
               </div>
             </details>
 
-            <div className="flex flex-wrap gap-3 pt-2">
+            <div className="flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="staff-btn-brown w-full py-3 text-sm"
+                className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
               >
-                🎮 {formMode === "create" ? "Tạo trò chơi" : "Lưu cập nhật"}
+                {formMode === "create" ? "Tạo trò chơi" : "Lưu cập nhật"}
               </button>
               {formMode === "edit" && (
                 <button
                   type="button"
                   onClick={handleDelete}
-                  className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-800 hover:bg-rose-100 transition-colors w-full"
+                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
                 >
                   Xóa trò chơi
                 </button>

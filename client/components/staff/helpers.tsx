@@ -18,10 +18,10 @@ export function CustomFileInput({
 }) {
   return (
     <div className="mt-2 flex items-center gap-3">
-      <label className={`inline-flex items-center gap-2 px-3.5 py-2 text-white text-xs font-bold rounded-xl shadow-sm transition-colors duration-150 select-none ${
+      <label className={`inline-flex items-center gap-2 px-3 py-1.5 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors duration-150 select-none ${
         disabled
           ? "bg-stone-300 cursor-not-allowed text-stone-500"
-          : "bg-[#53270D] hover:bg-[#3D1C08] active:bg-[#2A1407] cursor-pointer"
+          : "bg-amber-600 hover:bg-amber-700 active:bg-amber-800 cursor-pointer"
       }`}>
         <svg
           className="w-3.5 h-3.5"
