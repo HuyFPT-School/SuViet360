@@ -121,6 +121,15 @@ export const subscriptionApi = {
     return res.data.data;
   },
 
+  deleteLessonRequest: async (id: string) => {
+    const token = await getCsrfToken();
+    const res = await api.delete<{ success: boolean; message: string }>(
+      `/subscriptions/lesson-requests/${id}`,
+      { headers: { "x-csrf-token": token } }
+    );
+    return res.data;
+  },
+
   getTeacherLessonRequests: async () => {
     const res = await api.get<{ success: boolean; data: LessonRequest[] }>("/subscriptions/lesson-requests/teacher");
     return res.data.data;

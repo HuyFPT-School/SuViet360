@@ -172,6 +172,18 @@ export default function SubscriptionPage() {
     }
   };
 
+  const handleCancelRequest = async (id: string, title: string) => {
+    const ok = window.confirm(`Bạn có chắc chắn muốn hủy yêu cầu bài học "${title}"?`);
+    if (!ok) return;
+
+    try {
+      await subscriptionApi.deleteLessonRequest(id);
+      setLessonRequests((prev) => prev.filter((r) => r._id !== id));
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Không thể hủy yêu cầu bài học.");
+    }
+  };
+
   const getStatusText = (status: string) => {
     switch (status) {
       case "Pending":
@@ -705,9 +717,24 @@ export default function SubscriptionPage() {
                         <div key={req._id} className="request-card m-0">
                           <div className="request-header">
                             <span className="request-title-text">{req.title}</span>
-                            <span className={`request-status ${getStatusClass(req.status)}`}>
-                              {getStatusText(req.status)}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className={`request-status ${getStatusClass(req.status)}`}>
+                                {getStatusText(req.status)}
+                              </span>
+                              {req.status === "Pending" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelRequest(req._id, req.title)}
+                                  className="text-xs px-2.5 py-1 bg-rose-950/60 hover:bg-rose-900 border border-rose-700/70 text-rose-200 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                                  title="Hủy yêu cầu bài học này"
+                                >
+                                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                  Hủy yêu cầu
+                                </button>
+                              )}
+                            </div>
                           </div>
                           <p className="request-desc">{req.description}</p>
                           <div className="request-meta">
