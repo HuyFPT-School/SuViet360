@@ -217,6 +217,26 @@ const getMyLessonRequests = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: requests });
 });
 
+// DELETE /api/subscriptions/lesson-requests/:id
+const deleteLessonRequest = asyncHandler(async (req, res) => {
+  const request = await PodcastRequest.findById(req.params.id);
+  if (!request) throw new AppError("Yêu cầu không tồn tại", 404);
+
+  const isOwner = request.requesterId.toString() === req.user._id.toString();
+  const isAdmin = req.user.role === "admin" || req.user.role === "staff";
+  if (!isOwner && !isAdmin) {
+    throw new AppError("Bạn không có quyền xóa yêu cầu này", 403);
+  }
+
+  if (isOwner && !isAdmin && request.status !== "Pending") {
+    throw new AppError("Chỉ có thể hủy yêu cầu bài học khi chưa có giáo viên nhận soạn", 400);
+  }
+
+  await PodcastRequest.findByIdAndDelete(req.params.id);
+
+  res.status(200).json({ success: true, message: "Đã hủy yêu cầu bài học thành công." });
+});
+
 // GET /api/subscriptions/lesson-requests/teacher (for teachers)
 const getTeacherLessonRequests = asyncHandler(async (req, res) => {
   const requests = await PodcastRequest.find({
@@ -876,6 +896,7 @@ module.exports = {
   getGiftCodeInfo,
   createLessonRequest,
   getMyLessonRequests,
+  deleteLessonRequest,
   getTeacherLessonRequests,
   acceptLessonRequest,
   rejectLessonRequest,

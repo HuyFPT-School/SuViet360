@@ -14,6 +14,7 @@ const {
   getGiftCodeInfo,
   createLessonRequest,
   getMyLessonRequests,
+  deleteLessonRequest,
   getTeacherLessonRequests,
   acceptLessonRequest,
   rejectLessonRequest,
@@ -54,6 +55,7 @@ router.get("/gift-code/:code", getGiftCodeInfo);
 // Lesson Requests (Student Pro)
 router.post("/lesson-requests", requireTier("Student Pro"), createLessonRequest);
 router.get("/lesson-requests", getMyLessonRequests);
+router.delete("/lesson-requests/:id", deleteLessonRequest);
 
 // Teacher
 router.get("/lesson-requests/teacher", authorize("teacher"), getTeacherLessonRequests);
